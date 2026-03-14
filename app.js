@@ -4163,7 +4163,7 @@ class Linen {
         // Smart reload: Check for app code updates and silently reload if new version available
         const checkForCodeUpdate = async () => {
             try {
-                const response = await fetch('/linen/version.txt?t=' + Date.now(), { cache: 'no-store' });
+                const response = await fetch('/version.txt?t=' + Date.now(), { cache: 'no-store' });
                 if (!response.ok) return;
 
                 const newVersion = (await response.text()).trim();
@@ -4265,7 +4265,7 @@ class Linen {
         // Set initial version
         const currentVersion = sessionStorage.getItem('linen-app-version');
         if (!currentVersion) {
-            fetch('/linen/version.txt?t=' + Date.now(), { cache: 'no-store' })
+            fetch('/version.txt?t=' + Date.now(), { cache: 'no-store' })
                 .then(r => r.text())
                 .then(v => sessionStorage.setItem('linen-app-version', v.trim()))
                 .catch(() => {});
@@ -4426,7 +4426,7 @@ class Linen {
 
             // Check for code updates via version.txt
             try {
-                const response = await fetch('/linen/version.txt?t=' + Date.now(), { cache: 'no-store' });
+                const response = await fetch('/version.txt?t=' + Date.now(), { cache: 'no-store' });
                 if (response.ok) {
                     const newVersion = (await response.text()).trim();
                     const currentVersion = sessionStorage.getItem('linen-app-version') || '1.5.3';
@@ -6036,7 +6036,7 @@ class Linen {
         const shareBtn = document.getElementById('share-linen-btn');
         if (shareBtn) {
             shareBtn.addEventListener('click', async () => {
-                const linienUrl = 'https://ramin-najafi.github.io/linen';
+                const linienUrl = 'https://linen-pa.github.io';
                 try {
                     // Try to use native share API first if available (mobile)
                     if (navigator.share) {

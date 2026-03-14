@@ -6,7 +6,7 @@
  */
 
 const CACHE_NAME = 'linen-v119'; // Increment this on every update
-const BASE_PATH = '/linen';
+const BASE_PATH = '';
 const urlsToCache = [
     `${BASE_PATH}/`,
     `${BASE_PATH}/index.html`,
