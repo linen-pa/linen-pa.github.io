@@ -28,37 +28,16 @@
         </div>
         <div class="step" id="step-2">
             <button type="button" class="close-onboarding" id="close-onboarding">×</button>
-            <h2>Choose Your AI</h2>
-            <p>Pick your favorite AI assistant. All are supported by Linen.</p>
-            <div class="ai-provider-grid">
-                <div class="ai-provider-card">
-                    <button type="button" class="ai-provider-btn" data-provider="gemini" id="provider-gemini">
-                        <span class="provider-icon">🟢</span>
-                        <span class="provider-name">Gemini</span>
-                        <span class="provider-info">Free tier available</span>
-                    </button>
-                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="get-api-key-btn">Get API Key</a>
+            <h2>How It Works</h2>
+            <p>Linen uses tokens to power your AI conversations.</p>
+            <div class="onboarding-tokens-info">
+                <div class="onboarding-token-grant">
+                    <span class="onboarding-token-number">10</span>
+                    <span class="onboarding-token-text">tokens to get started</span>
                 </div>
-                <div class="ai-provider-card">
-                    <button type="button" class="ai-provider-btn" data-provider="chatgpt" id="provider-openai">
-                        <span class="provider-icon">⚪</span>
-                        <span class="provider-name">ChatGPT</span>
-                        <span class="provider-info">GPT-4 / GPT-4 Turbo</span>
-                    </button>
-                    <a href="https://platform.openai.com/api/keys" target="_blank" class="get-api-key-btn">Get API Key</a>
-                </div>
-                <div class="ai-provider-card">
-                    <button type="button" class="ai-provider-btn" data-provider="huggingface" id="provider-huggingface">
-                        <span class="provider-icon">🔴</span>
-                        <span class="provider-name">Hugging Face</span>
-                        <span class="provider-info">Open-source models</span>
-                    </button>
-                    <a href="https://huggingface.co/settings/tokens" target="_blank" class="get-api-key-btn">Get API Key</a>
-                </div>
+                <p class="onboarding-token-detail">1 token = 1 AI message. Need more? Purchase tokens anytime from Settings.</p>
             </div>
-            <div id="provider-setup">
-                <!-- Provider-specific setup will be shown here -->
-            </div>
+            <button type="button" id="onboarding-continue" class="onboarding-continue-btn">Continue</button>
             <p class="error-message" id="onboarding-error"></p>
         </div>
         <div class="step" id="step-3">
@@ -205,13 +184,13 @@
                     <p>All your data is stored locally using IndexedDB—a secure, persistent database that lives on your device. Your conversations and memories never leave your computer or phone unless you explicitly choose to connect an API provider. We don't have access to your data. We can't read it. We don't want it.</p>
 
                     <h4 style="margin-top: 1rem; color: var(--accent);">🎮 You Control Everything</h4>
-                    <p>Optional API key integration means you choose which AI provider powers your experience. Supported providers: Google Gemini (free tier available) and OpenAI ChatGPT. Switch between providers anytime. Use multiple providers and pick your favorite. You're in control.</p>
+                    <p>Linen uses a simple token system to power your AI experience. Purchase tokens and use them to chat with AI. Your conversations and memories stay on your device. You're in control.</p>
 
                     <h4 style="margin-top: 1rem; color: var(--accent);">🌐 Works Offline</h4>
                     <p>Full functionality without internet connection. Linen includes a built-in Local Assistant that provides intelligent responses completely offline. A Service Worker handles smart caching, so you can access your memories even without internet. No internet? No problem.</p>
 
                     <h4 style="margin-top: 1rem; color: var(--accent);">📊 No Tracking, No Ads</h4>
-                    <p>Zero data collection. Zero surveillance. Zero hidden tracking. We don't build profiles on you. We don't sell your data. We don't train models on your conversations. Linen is 100% free with no freemium model, no premium features, no upselling.</p>
+                    <p>Zero data collection. Zero surveillance. Zero hidden tracking. We don't build profiles on you. We don't sell your data. We don't train models on your conversations. Your privacy is our priority.</p>
 
                     <h4 style="margin-top: 1rem; color: var(--accent);">💾 Export or Delete Anytime</h4>
                     <p>Your data is genuinely yours. Export everything in a standard format and take it with you. Or delete it all with a single click. You're never locked in. You can leave anytime without losing your memories—they're yours to keep.</p>
@@ -252,7 +231,7 @@
                     <p>Linen is built on cutting-edge web technologies: pure vanilla JavaScript (2000+ lines of well-organized, modular code), IndexedDB for local storage, Service Workers for offline functionality, and support for multiple AI providers through unified APIs. The architecture demonstrates that you don't need complex frameworks to build sophisticated applications.</p>
 
                     <h4 style="margin-top: 1rem; color: var(--accent);">💡 Why Linen Matters</h4>
-                    <p><strong>Zero cost:</strong> Completely free, no ads, no tracking.<br><strong>Works offline:</strong> Full functionality without internet.<br><strong>Your data is yours:</strong> Everything stays on your device.<br><strong>Beautiful design:</strong> Thoughtful, minimal UI that's a joy to use.<br><strong>Easy to use:</strong> Intuitive without a learning curve.<br><strong>Production-ready code:</strong> Well-structured, maintainable JavaScript.<br><strong>Innovative:</strong> Combines multiple technologies in a genuinely useful way.<br><strong>Accessible:</strong> Designed for everyone.</p>
+                    <p><strong>No ads, no tracking:</strong> Your data stays yours.<br><strong>Works offline:</strong> Full functionality without internet.<br><strong>Your data is yours:</strong> Everything stays on your device.<br><strong>Beautiful design:</strong> Thoughtful, minimal UI that's a joy to use.<br><strong>Easy to use:</strong> Intuitive without a learning curve.<br><strong>Production-ready code:</strong> Well-structured, maintainable JavaScript.<br><strong>Innovative:</strong> Combines multiple technologies in a genuinely useful way.<br><strong>Accessible:</strong> Designed for everyone.</p>
 
                     <h4 style="margin-top: 1rem; color: var(--accent);">🚀 Long-term Vision</h4>
                     <p>Linen aims to become the most privacy-respecting personal AI assistant available. It's built on the belief that technology should work for you, not against you—handling your data with the care it deserves. Not trying to replace specialized tools, but to be that one app you actually want to use every day.</p>
@@ -273,9 +252,8 @@
 </div>
 
 <div id="trial-limit-modal" class="modal">
-    <h2>Free Preview Complete</h2>
-    <p>You've used your 3 free chats. Get your own API key to continue chatting unlimitedly.</p>
-    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="button-primary">Get Free API Key</a>
+    <h2>Out of Tokens</h2>
+    <p>You've used all your tokens. Purchase more from Settings to continue chatting.</p>
     <button id="close-trial-modal" class="button-primary">Close</button>
 </div>
 
@@ -594,7 +572,7 @@
                     <span class="token-settings-label">Your balance</span>
                     <span class="token-settings-count" id="settings-token-balance">0</span>
                 </div>
-                <p class="token-settings-desc">1 token = 1 AI message. Local responses are free.</p>
+                <p class="token-settings-desc">1 token = 1 AI message.</p>
             </div>
             <div class="token-packs-settings">
                 <div class="token-pack" data-amount="200">
@@ -674,8 +652,8 @@
                 <div class="trust-badge">
                     <span class="trust-badge-icon">💯</span>
                     <div class="trust-badge-text">
-                        <strong>Free</strong>
-                        <span>No paywalls, no premium, no ads</span>
+                        <strong>Transparent</strong>
+                        <span>Simple token pricing, no ads</span>
                     </div>
                 </div>
             </div>
@@ -775,7 +753,7 @@
 
         <h3>Linen Provides the App As-Is</h3>
         <ul>
-            <li>Free to use (as long as operational costs allow)</li>
+            <li>Token-based usage for AI features</li>
             <li>Works offline, on your device</li>
             <li>No account required</li>
         </ul>

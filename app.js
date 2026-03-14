@@ -4929,47 +4929,16 @@ class Linen {
 
         // Back buttons removed - users can close onboarding overlay with X or finish with Done button
 
-        // AI Provider selection
-        const providerButtons = document.querySelectorAll('.ai-provider-btn');
-        console.log("Linen: Found", providerButtons.length, "provider buttons");
-        providerButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const provider = btn.dataset.provider;
-                console.log("Linen: Provider button clicked:", provider);
-                // CRITICAL: Store the selected provider so it's used during validation
-                this.onboardingProvider = provider;
-                this.setupProviderForm(provider);
-                // Remove active from all, add to clicked
-                providerButtons.forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-            });
-        });
-
-        const saveKey = () => this.validateAndSaveKey('onboarding-api-key', 'onboarding-error', async () => {
-            const done = await this.db.getSetting('onboarding-complete');
-            if (done) {
-                this.startApp(this.assistant.apiKey);
-            } else {
-                this.showOnboardingStep(3);
-            }
-        });
-
-        // Legacy support for direct key input (if still present)
-        const apiKeyInput = document.getElementById('onboarding-api-key');
-        if (apiKeyInput) {
-            const saveLegacyKey = () => this.validateAndSaveKey('onboarding-api-key', 'onboarding-error', async () => {
+        // Step 2: Continue button (token-based onboarding)
+        const onboardingContinue = document.getElementById('onboarding-continue');
+        if (onboardingContinue) {
+            onboardingContinue.addEventListener('click', async () => {
                 const done = await this.db.getSetting('onboarding-complete');
                 if (done) {
-                    this.startApp(this.assistant.apiKey);
+                    document.getElementById('onboarding-overlay').style.display = 'none';
                 } else {
                     this.showOnboardingStep(3);
                 }
-            });
-            document.getElementById('save-onboarding-api-key')?.addEventListener('click', saveLegacyKey);
-            apiKeyInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') { e.preventDefault(); saveLegacyKey(); }
             });
         }
 
