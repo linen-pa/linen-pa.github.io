@@ -5062,29 +5062,19 @@ class Linen {
                 });
             }
 
-            // Token badge + store events
+            // Token badge → opens settings scrolled to tokens
             const tokenBadgeBtn = document.getElementById('token-badge-btn');
             if (tokenBadgeBtn) {
                 tokenBadgeBtn.addEventListener('click', () => this.showTokenStoreModal());
             }
-            const closeTokenStore = document.getElementById('close-token-store');
-            if (closeTokenStore) {
-                closeTokenStore.addEventListener('click', () => this.closeTokenStoreModal());
-            }
-            const tokenRefillBtn = document.getElementById('token-refill-btn');
-            if (tokenRefillBtn) {
-                tokenRefillBtn.addEventListener('click', async () => {
+            // Refill button in settings
+            const settingsTokenRefill = document.getElementById('settings-token-refill');
+            if (settingsTokenRefill) {
+                settingsTokenRefill.addEventListener('click', async () => {
                     const newBalance = await this.tokenManager.addTokens(10);
-                    const balanceEl = document.getElementById('token-store-balance');
+                    const balanceEl = document.getElementById('settings-token-balance');
                     if (balanceEl) balanceEl.textContent = newBalance;
                     this.showToast('Added 10 tokens!', 'success');
-                });
-            }
-            // Close token store on backdrop click
-            const tokenStoreModal = document.getElementById('token-store-modal');
-            if (tokenStoreModal) {
-                tokenStoreModal.addEventListener('click', (e) => {
-                    if (e.target === tokenStoreModal) this.closeTokenStoreModal();
                 });
             }
         } else {
@@ -7249,27 +7239,26 @@ class Linen {
     }
 
     showTokenStoreModal() {
-        const modal = document.getElementById('token-store-modal');
+        // Open settings modal scrolled to tokens section
+        const settingsModal = document.getElementById('settings-modal');
         const backdrop = document.getElementById('modal-backdrop');
-        if (modal && backdrop) {
-            this.tokenManager.refreshBadge();
-            const balanceEl = document.getElementById('token-store-balance');
-            this.tokenManager.getBalance().then(b => {
-                if (balanceEl) balanceEl.textContent = b;
-            });
-            modal.style.display = 'flex';
-            backdrop.style.display = 'block';
+        if (settingsModal && backdrop) {
+            settingsModal.style.pointerEvents = '';
+            settingsModal.classList.add('active');
             backdrop.classList.add('active');
-        }
-    }
-
-    closeTokenStoreModal() {
-        const modal = document.getElementById('token-store-modal');
-        const backdrop = document.getElementById('modal-backdrop');
-        if (modal) modal.style.display = 'none';
-        if (backdrop) {
-            backdrop.style.display = 'none';
-            backdrop.classList.remove('active');
+            this.tokenManager.getBalance().then(b => {
+                const el = document.getElementById('settings-token-balance');
+                if (el) el.textContent = b;
+            });
+            setTimeout(() => {
+                const sections = settingsModal.querySelectorAll('.settings-heading');
+                for (const s of sections) {
+                    if (s.textContent.includes('Tokens')) {
+                        s.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        break;
+                    }
+                }
+            }, 100);
         }
     }
 

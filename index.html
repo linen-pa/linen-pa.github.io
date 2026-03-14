@@ -369,12 +369,12 @@
         <div class="header-logo-container">
             <div class="logo-wrapper">
                 <img src="./logo.png" alt="Linen Logo" id="logo" class="interactive-logo">
-                <div class="version-badge" id="header-version">v1.5.3 [beta]</div>
+                <button type="button" id="token-badge-btn" class="token-badge-under-logo" title="View tokens" aria-label="View token balance">
+                    <span class="token-icon">T</span>
+                    <span id="token-badge" class="token-badge-count">0</span>
+                    <span class="token-label">tokens</span>
+                </button>
             </div>
-            <button type="button" id="token-badge-btn" class="token-badge-btn" title="View tokens" aria-label="View token balance">
-                <span class="token-icon">T</span>
-                <span id="token-badge" class="token-badge-count">0</span>
-            </button>
             <div id="logo-menu" class="logo-menu hidden">
                 <button type="button" id="logo-utilities" class="menu-item">⚡ Utilities</button>
                 <button type="button" id="logo-new-chat" class="menu-item">💬 New Chat</button>
@@ -422,35 +422,8 @@
     <!-- Modals and Panels -->
     <div id="modal-backdrop"></div>
 
-    <!-- Token Store Modal -->
-    <div id="token-store-modal" class="token-store-modal" style="display: none;">
-        <div class="token-store-content">
-            <button type="button" id="close-token-store" class="close-modal-btn">&times;</button>
-            <h2 class="token-store-title">Get Tokens</h2>
-            <p class="token-store-balance-line">You have <strong id="token-store-balance">0</strong> tokens remaining</p>
-            <p class="token-store-subtitle">1 token = 1 AI message</p>
-            <div class="token-packs">
-                <div class="token-pack" data-amount="200">
-                    <div class="pack-name">Starter</div>
-                    <div class="pack-tokens">200 tokens</div>
-                    <div class="pack-price">$1.99</div>
-                </div>
-                <div class="token-pack popular" data-amount="600">
-                    <div class="pack-badge">Best Value</div>
-                    <div class="pack-name">Popular</div>
-                    <div class="pack-tokens">600 tokens</div>
-                    <div class="pack-price">$4.99</div>
-                </div>
-                <div class="token-pack" data-amount="1500">
-                    <div class="pack-name">Pro</div>
-                    <div class="pack-tokens">1,500 tokens</div>
-                    <div class="pack-price">$9.99</div>
-                </div>
-            </div>
-            <p class="token-store-note">Payments coming soon. For now, use the button below to test.</p>
-            <button type="button" id="token-refill-btn" class="token-refill-btn">Refill 10 Tokens (Testing)</button>
-        </div>
-    </div>
+
+
 
     <aside id="memories-panel" aria-label="Memories sidebar">
         <button class="close-panel" id="close-memories">×</button>
@@ -615,9 +588,34 @@
         </div>
 
         <div class="settings-section">
-            <h3 class="settings-heading">🤖 AI Agents</h3>
-            <button id="add-agent-btn" class="settings-btn settings-btn-primary">+ Add New Agent</button>
-            <div id="agents-list"></div>
+            <h3 class="settings-heading">🪙 Tokens</h3>
+            <div class="token-settings-info">
+                <div class="token-settings-balance">
+                    <span class="token-settings-label">Your balance</span>
+                    <span class="token-settings-count" id="settings-token-balance">0</span>
+                </div>
+                <p class="token-settings-desc">1 token = 1 AI message. Local responses are free.</p>
+            </div>
+            <div class="token-packs-settings">
+                <div class="token-pack" data-amount="200">
+                    <div class="pack-name">Starter</div>
+                    <div class="pack-tokens">200 tokens</div>
+                    <div class="pack-price">$1.99</div>
+                </div>
+                <div class="token-pack popular" data-amount="600">
+                    <div class="pack-badge">Best Value</div>
+                    <div class="pack-name">Popular</div>
+                    <div class="pack-tokens">600 tokens</div>
+                    <div class="pack-price">$4.99</div>
+                </div>
+                <div class="token-pack" data-amount="1500">
+                    <div class="pack-name">Pro</div>
+                    <div class="pack-tokens">1,500 tokens</div>
+                    <div class="pack-price">$9.99</div>
+                </div>
+            </div>
+            <p class="token-store-note">Payments coming soon.</p>
+            <button type="button" id="settings-token-refill" class="token-refill-btn">Refill 10 Tokens (Testing)</button>
         </div>
 
         <div class="settings-section">
