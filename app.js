@@ -7309,36 +7309,22 @@ class Linen {
 
 window.addEventListener('DOMContentLoaded', () => {
     try {
-        // Mobile keyboard viewport fix — prevent layout shift when keyboard opens
+        // Mobile keyboard viewport fix — resize container when keyboard opens/closes
         if (window.visualViewport) {
             const appContainer = document.getElementById('app-container');
-            let initialHeight = window.innerHeight;
 
-            // Lock height on first load so keyboard doesn't shrink the layout
-            if (appContainer) {
-                appContainer.style.height = initialHeight + 'px';
-            }
-
-            window.visualViewport.addEventListener('resize', () => {
+            const adjustForKeyboard = () => {
                 if (!appContainer) return;
-                const keyboardOpen = window.visualViewport.height < initialHeight * 0.85;
-                if (keyboardOpen) {
-                    // Keep container at original height; browser will scroll input into view
-                    appContainer.style.height = initialHeight + 'px';
-                } else {
-                    // Keyboard closed — update to current viewport
-                    initialHeight = window.visualViewport.height;
-                    appContainer.style.height = initialHeight + 'px';
-                }
-            });
+                const vv = window.visualViewport;
+                // Set bottom to account for keyboard height, offset for any scroll
+                appContainer.style.bottom = (window.innerHeight - vv.height - vv.offsetTop) + 'px';
+                // Scroll chat to bottom when keyboard opens
+                const chatMessages = document.getElementById('chat-messages');
+                if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+            };
 
-            // Also handle orientation changes
-            screen.orientation?.addEventListener('change', () => {
-                setTimeout(() => {
-                    initialHeight = window.visualViewport.height;
-                    if (appContainer) appContainer.style.height = initialHeight + 'px';
-                }, 300);
-            });
+            window.visualViewport.addEventListener('resize', adjustForKeyboard);
+            window.visualViewport.addEventListener('scroll', adjustForKeyboard);
         }
 
         // Keyboard navigation detection — add golden focus outlines only when using Tab
