@@ -7309,6 +7309,38 @@ class Linen {
 
 window.addEventListener('DOMContentLoaded', () => {
     try {
+        // Mobile keyboard viewport fix — prevent layout shift when keyboard opens
+        if (window.visualViewport) {
+            const appContainer = document.getElementById('app-container');
+            let initialHeight = window.innerHeight;
+
+            // Lock height on first load so keyboard doesn't shrink the layout
+            if (appContainer) {
+                appContainer.style.height = initialHeight + 'px';
+            }
+
+            window.visualViewport.addEventListener('resize', () => {
+                if (!appContainer) return;
+                const keyboardOpen = window.visualViewport.height < initialHeight * 0.85;
+                if (keyboardOpen) {
+                    // Keep container at original height; browser will scroll input into view
+                    appContainer.style.height = initialHeight + 'px';
+                } else {
+                    // Keyboard closed — update to current viewport
+                    initialHeight = window.visualViewport.height;
+                    appContainer.style.height = initialHeight + 'px';
+                }
+            });
+
+            // Also handle orientation changes
+            screen.orientation?.addEventListener('change', () => {
+                setTimeout(() => {
+                    initialHeight = window.visualViewport.height;
+                    if (appContainer) appContainer.style.height = initialHeight + 'px';
+                }, 300);
+            });
+        }
+
         // Keyboard navigation detection — add golden focus outlines only when using Tab
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Tab') {
