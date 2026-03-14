@@ -831,9 +831,7 @@ Core Directives:
 }
 
 class Analytics {
-    constructor() {
-        this.analyticsFormId = 'maqdnyzg';
-    }
+    constructor() {}
     get pageViews() {
         return parseInt(localStorage.getItem('pageViews') || '0');
     }
@@ -849,30 +847,10 @@ class Analytics {
 
     trackPageView() {
         this.pageViews++;
-        if (this.pageViews % 10 === 0) {
-            this.sendAnalytics();
-        }
     }
 
     trackPWAInstall() {
         this.pwaInstalls++;
-        this.sendAnalytics();
-    }
-
-    async sendAnalytics() {
-        const data = {
-            pageViews: this.pageViews,
-            pwaInstalls: this.pwaInstalls,
-        };
-        try {
-            await fetch(`https://formspree.io/f/${this.analyticsFormId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-        } catch (e) {
-            console.error('Failed to send analytics:', e);
-        }
     }
 }
 
@@ -6866,12 +6844,11 @@ class Linen {
         this.showToast('Chat history cleared.', 'info');
     }
 
-    async submitContactForm() {
+    submitContactForm() {
         const name = document.getElementById('contact-name').value.trim();
         const email = document.getElementById('contact-email').value.trim();
         const message = document.getElementById('contact-message').value.trim();
         const statusEl = document.getElementById('contact-status');
-        const submitBtn = document.getElementById('submit-contact');
 
         if (!name || !email || !message) {
             statusEl.textContent = 'Please fill in all fields.';
@@ -6879,41 +6856,21 @@ class Linen {
             return;
         }
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Sending...';
-        statusEl.textContent = '';
+        const subject = encodeURIComponent('Linen Support — ' + name);
+        const body = encodeURIComponent(`From: ${name} (${email})\n\n${message}`);
+        window.open(`mailto:linen.pa.app@gmail.com?subject=${subject}&body=${body}`, '_blank');
 
-        try {
-            const response = await fetch('https://formspree.io/f/xaqdnyzw', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({ name, email, message, _replyto: email })
-            });
-
-            if (response.ok) {
-                document.getElementById('contact-name').value = '';
-                document.getElementById('contact-email').value = '';
-                document.getElementById('contact-message').value = '';
-                statusEl.textContent = 'Message sent! We\'ll get back to you soon.';
-                statusEl.style.color = '#4a9eff';
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Send';
-                setTimeout(() => { statusEl.textContent = ''; }, 3000);
-            } else {
-                throw new Error('Failed to send message');
-            }
-        } catch (e) {
-            statusEl.textContent = 'Error sending message. Please try again.';
-            statusEl.style.color = '#ff6b6b';
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Send';
-        }
+        document.getElementById('contact-name').value = '';
+        document.getElementById('contact-email').value = '';
+        document.getElementById('contact-message').value = '';
+        statusEl.textContent = 'Opening your email app...';
+        statusEl.style.color = '#4a9eff';
+        setTimeout(() => { statusEl.textContent = ''; }, 3000);
     }
 
-    async submitSuggestion() {
+    submitSuggestion() {
         const suggestionText = document.getElementById('suggestion-text').value.trim();
         const statusEl = document.getElementById('suggestion-status');
-        const submitBtn = document.getElementById('submit-suggestion');
 
         if (!suggestionText) {
             statusEl.textContent = 'Please enter a suggestion.';
@@ -6921,57 +6878,14 @@ class Linen {
             return;
         }
 
-        // Disable button and show loading state
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Sending...';
-        statusEl.textContent = '';
+        const subject = encodeURIComponent('Linen Suggestion');
+        const body = encodeURIComponent(suggestionText);
+        window.open(`mailto:linen.pa.app@gmail.com?subject=${subject}&body=${body}`, '_blank');
 
-        try {
-            // Send suggestion to formspree endpoint
-            const response = await fetch('https://formspree.io/f/xaqdnyzw', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({
-                    _subject: 'Linen App Suggestions',
-                    _replyto: 'rnajafi.dev@gmail.com',
-                    message: suggestionText,
-                    type: 'suggestion',
-                    timestamp: new Date().toISOString()
-                })
-            });
-
-            if (response.ok) {
-                // Clear the textarea
-                document.getElementById('suggestion-text').value = '';
-
-                // Show success message
-                statusEl.textContent = 'Thank you! Your suggestion has been received. 🙏';
-                statusEl.style.color = '#4a9eff';
-
-                // Reset button
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Send Suggestion';
-
-                // Clear success message after 3 seconds
-                setTimeout(() => {
-                    statusEl.textContent = '';
-                }, 3000);
-
-                console.log('Linen: Suggestion submitted successfully');
-            } else {
-                throw new Error('Failed to submit suggestion');
-            }
-        } catch (e) {
-            console.error('Linen: Error submitting suggestion:', e);
-
-            // Show error message
-            statusEl.textContent = 'Error sending suggestion. Please try again.';
-            statusEl.style.color = '#ff6b6b';
-
-            // Reset button
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Send Suggestion';
-        }
+        document.getElementById('suggestion-text').value = '';
+        statusEl.textContent = 'Opening your email app...';
+        statusEl.style.color = '#4a9eff';
+        setTimeout(() => { statusEl.textContent = ''; }, 3000);
     }
 
     async loadMemories(filter = '') {
