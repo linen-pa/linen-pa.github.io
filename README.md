@@ -84,8 +84,7 @@ Want unlimited conversations and AI-powered responses?
 1. Get a free API key from one of these AI providers:
    - **Google Gemini** (free tier available): [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
    - **OpenAI ChatGPT** (paid, but very capable): [platform.openai.com/api/keys](https://platform.openai.com/api/keys)
-   - **Anthropic Claude** (powerful and thoughtful): [platform.claude.com](https://platform.claude.com)
-   - **DeepSeek** (fast and affordable): [platform.deepseek.com](https://platform.deepseek.com)
+   - **Hugging Face** (open source models): [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
 
 2. In Linen, go to **Settings → Add New Agent**
 3. Select your provider and paste your API key
@@ -108,7 +107,7 @@ Want unlimited conversations and AI-powered responses?
 - Automatic caching strategies
 
 **AI Integration:**
-- Support for multiple AI providers (Gemini, ChatGPT, Claude, DeepSeek)
+- Support for multiple AI providers (Gemini, ChatGPT, Hugging Face)
 - Automatic fallback to local assistant if API fails
 - Graceful error handling
 

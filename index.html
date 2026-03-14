@@ -337,7 +337,7 @@
             <option value="">Select a provider</option>
             <option value="gemini">Google Gemini</option>
             <option value="openai">OpenAI (ChatGPT)</option>
-            <option value="openrouter">OpenRouter</option>
+            <option value="huggingface">Hugging Face</option>
         </select>
         <span class="form-help">Choose your preferred AI provider</span>
         <span class="form-field-error" id="agent-type-error"></span>
@@ -350,8 +350,8 @@
     </div>
     <div class="form-group">
         <label for="agent-model">Model (optional):</label>
-        <input type="text" id="agent-model" placeholder="e.g., gpt-4, claude-3-opus">
-        <span class="form-help">Leave blank to use default. Examples: gpt-4, claude-3-opus</span>
+        <input type="text" id="agent-model" placeholder="e.g., gpt-4, gemini-2.0-flash">
+        <span class="form-help">Leave blank to use default. Examples: gpt-4, gemini-2.0-flash</span>
     </div>
     <div class="form-group">
         <label>

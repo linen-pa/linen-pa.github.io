@@ -45,66 +45,14 @@
       }
     ]
   },
-  "claude": {
-    "latest": "claude-3-sonnet-20250229",
+  "huggingface": {
+    "latest": "meta-llama/Llama-2-7b-chat-hf",
     "models": [
       {
-        "id": "claude-3-opus-20250219",
-        "name": "Claude 3 Opus",
-        "description": "Most intelligent model",
-        "context": 200000
-      },
-      {
-        "id": "claude-3-sonnet-20250229",
-        "name": "Claude 3 Sonnet",
-        "description": "Balanced intelligence and speed",
-        "context": 200000
-      },
-      {
-        "id": "claude-3-haiku-20250307",
-        "name": "Claude 3 Haiku",
-        "description": "Fast and compact",
-        "context": 200000
-      }
-    ]
-  },
-  "deepseek": {
-    "latest": "deepseek-chat",
-    "models": [
-      {
-        "id": "deepseek-chat",
-        "name": "DeepSeek Chat",
-        "description": "Advanced reasoning",
-        "context": 4000
-      },
-      {
-        "id": "deepseek-coder",
-        "name": "DeepSeek Coder",
-        "description": "Code generation",
-        "context": 4000
-      }
-    ]
-  },
-  "openrouter": {
-    "latest": "openrouter/auto",
-    "models": [
-      {
-        "id": "openrouter/auto",
-        "name": "OpenRouter Auto",
-        "description": "Automatically selects best model",
-        "context": 200000
-      },
-      {
-        "id": "anthropic/claude-3-sonnet",
-        "name": "Claude 3 Sonnet",
-        "description": "Via OpenRouter",
-        "context": 200000
-      },
-      {
-        "id": "openai/gpt-4",
-        "name": "GPT-4",
-        "description": "Via OpenRouter",
-        "context": 8192
+        "id": "meta-llama/Llama-2-7b-chat-hf",
+        "name": "Llama 2 7B Chat",
+        "description": "Open source chat model",
+        "context": 4096
       }
     ]
   }

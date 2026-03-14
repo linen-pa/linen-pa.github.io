@@ -219,7 +219,7 @@ class AgentManager {
         const agent = {
             id: Date.now(),
             name: agentConfig.name,
-            type: agentConfig.type, // 'gemini', 'openai', 'openrouter'
+            type: agentConfig.type, // 'gemini', 'openai', 'huggingface'
             apiKey: agentConfig.apiKey,
             model: agentConfig.model,
             isPrimary: agentConfig.isPrimary || false,
@@ -287,7 +287,7 @@ class ModelVersionManager {
         this.modelVersions = {
             'gemini': { primary: 'gemini-2.5-flash', fallback: 'gemini-2.0-flash-lite', lastUpdated: Date.now() },
             'openai': { primary: 'gpt-4-turbo', fallback: 'gpt-3.5-turbo', lastUpdated: Date.now() },
-            'openrouter': { primary: 'openrouter/auto', fallback: 'openrouter/auto', lastUpdated: Date.now() }
+            'huggingface': { primary: 'meta-llama/Llama-2-7b-chat-hf', fallback: 'meta-llama/Llama-2-7b-chat-hf', lastUpdated: Date.now() }
         };
         this.checkInterval = 24 * 60 * 60 * 1000; // Check once per day
         this.initAutoUpdate();
@@ -769,154 +769,6 @@ Core Directives:
     buildConversationContext(chats) {
         if (!chats || chats.length === 0) return [];
         return chats.slice(-5).map(m => ({
-            role: m.sender === 'user' ? 'user' : 'assistant',
-            content: m.text
-        }));
-    }
-
-    detectCrisis(userMessage) {
-        const msg = userMessage.toLowerCase();
-        const crisisKeywords = ['suicidal', 'kill myself', 'end my life', 'want to die', 'self harm', 'self-harm', 'hurt myself', 'cut myself', 'starve myself', 'overdose', 'no point living', 'no reason to live', 'abuse', 'being abused', 'crisis', 'emergency'];
-        return crisisKeywords.some(keyword => msg.includes(keyword));
-    }
-}
-
-// Claude removed due to paid-only pricing with no free tier (Feb 2026)
-// DeepSeek removed due to undisclosed payment requirements (Feb 2026)
-
-class OpenRouterAssistant {
-    constructor(apiKey, model = 'openrouter/auto') {
-        this.apiKey = apiKey;
-        this.model = model;
-        this.endpoint = 'https://openrouter.ai/api/v1/chat/completions';
-    }
-
-    async validateKey() {
-        console.log("Validating OpenRouter key...");
-        try {
-            const res = await fetch(this.endpoint, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: 'openrouter/auto',
-                    messages: [{ role: 'user', content: 'Hi' }],
-                    max_tokens: 10
-                })
-            });
-            if (res.ok) return { valid: true };
-
-            const err = await res.json().catch(() => ({}));
-            if (res.status === 401) {
-                return { valid: false, error: 'Invalid API key. Please check and try again.' };
-            }
-            return { valid: false, error: `Authentication failed (HTTP ${res.status})` };
-        } catch (e) {
-            console.error("OpenRouter key validation failed (likely CORS issue):", e);
-            // CORS error - Some APIs block direct browser requests
-            // Accept the key and let first chat attempt verify it
-            if (e.message.includes('cors') || e.name === 'TypeError') {
-                console.log("Linen: CORS detected, accepting OpenRouter key for now - will validate on first use");
-                return { valid: true };
-            }
-            return { valid: false, error: 'Network error. Check your internet connection.' };
-        }
-    }
-
-    async chat(msg, chats, mems, loadingId) {
-        if (!this.apiKey) throw new Error('API key not configured.');
-
-        const memoryContext = this.buildMemoryContext(mems);
-        const conversationContext = this.buildConversationContext(chats);
-        const systemPrompt = `You are Linen, a smart personal assistant created by Ramin Najafi. Your primary function is to be a conversational partner that remembers important details about the user's life.
-
-**About Linen:**
-Linen was designed and built by Ramin Najafi. You can learn more about Ramin and see other projects at https://ramin-najafi.github.io/
-
-If the user asks "who are you?", "what's your purpose?", "what do you do?", or about your identity/purpose, respond naturally as yourself: You are Linen, a smart personal assistant designed to listen, remember important details about the user's life, and be their conversational companion. Emphasize key benefits like privacy (your data stays on your device, not sent to external servers), security (offline-capable, no cloud storage), and personal interactions (I remember your history and grow with you). Keep your response warm and personal, something like: "I'm Linen, your personal smart assistant. I'm here to listen, help you work through what's on your mind, and remember the important details about your life. What makes me different is that I prioritize your privacy — all your data stays on your device, so you can trust me with your thoughts and memories. Think of me as a friend with a perfect memory. What's going on?"
-
-If the user asks why they should choose Linen over ChatGPT, other AI services, or similar comparisons, respond: "Great question. While ChatGPT and other AI services are powerful, Linen is built specifically for personal growth and privacy. Here's what sets me apart: 1) Privacy First — all your data stays on your device, never sent to external servers. 2) Personal Memory — I remember details about your life and reference them naturally in conversations. 3) Offline Capable — you can use me without constant internet. 4) No Corporate Data Mining — your conversations aren't used to train models or sell data. 5) Designed for You — I'm built to be a thoughtful companion, not just answer questions. I'm here to help you work through what's really on your mind."
-
-If the user asks who created you, who your creator is, who built you, who's your father, or anything about who made you, respond: "I was built by Ramin Najafi. You can find more information about my creator at ramin-najafi.github.io"
-
-Core Directives:
-1.  **Be a Proactive Companion:** Greet the user warmly. If it's the very first message ever ([INITIAL_GREETING]), introduce yourself warmly like a new friend: "Hey there! I'm Linen — think of me as a friend with a perfect memory. Tell me about your day, what's on your mind, or anything you want to remember. I'm all ears." Otherwise, if it's a new day, ask about their day and reference a recent memory if one exists. Use actual emoji characters in your conversational responses when appropriate.
-2.  **Seamlessly Recall Memories:** Reference past memories naturally to show you remember. For example, 'How is project X going? I remember you were feeling stressed about it last week.'
-3.  **Identify and Save Memories:** Your most important job is to identify when a user shares something meaningful that should be remembered. This includes events, feelings, decisions, people, plans, likes/dislikes, or personal details.
-3b. **Intelligent Reminder & Calendar Detection:** When the user mentions upcoming events, deadlines, appointments, or time-sensitive tasks, automatically detect and create reminders without prompting. Extract context clues about dates, times, locations, and event details from the conversation. Look for keywords like "appointment", "deadline", "meeting", "event", "birthday", "anniversary", "trip", "flight", "important", "don't forget", "this weekend", "next week", etc. You must be smart about inferring dates (e.g., "next Monday" = the upcoming Monday, "birthday" = annually on that date). Do NOT ask the user to confirm—set it and let Linen handle the reminders intelligently.
-4.  **STRICT SAVE_MEMORY Marker Format:** When you identify a memory, you MUST conclude your conversational response with a single, perfectly formatted [SAVE_MEMORY: ...] marker on a new line. The entire marker, including brackets and valid JSON, MUST be the very last thing in your response. Do NOT add any text or characters after the closing bracket.
-    The JSON inside MUST contain:
-    - "title": A short, meaningful title (2-4 words) based on the memory's core topic or event (e.g., "New Pottery Project", "Work Frustration", "Birthday Celebration").
-    - "text": A concise summary of what to remember.
-    - "tags": An array of relevant keywords (e.g., ["work", "project", "feeling"]).
-    - "emotion": A single word describing the user's feeling (e.g., 'happy', 'stressed', 'excited').
-    Example: Your response text.
-    [SAVE_MEMORY: { "title": "New Pottery Project", "text": "User is starting a new personal project to learn pottery.", "tags": ["pottery", "hobbies", "learning"], "emotion": "excited" }]
-5.  **STRICT CREATE_REMINDER Marker Format:** When you detect a time-sensitive event that needs a reminder, add a [CREATE_REMINDER: ...] marker on a new line after your conversational response. You can include multiple reminders if needed. The marker must contain valid JSON with:
-    - "title": The event name (e.g., "Dentist Appointment", "Flight to NYC", "Project Deadline").
-    - "date": ISO 8601 date string (e.g., "2024-02-15" or "2024-02-15T14:30:00Z"). Intelligently infer if only partial date info is given.
-    - "description": Brief details about the event (location, what to prepare, context, etc.).
-    - "type": Either "reminder" or "event".
-    Example: User mentions "I have a doctor's appointment next Tuesday at 2pm downtown."
-    That sounds important! Make sure you have your insurance card ready. See you then!
-    [CREATE_REMINDER: { "title": "Doctor's Appointment", "date": "2024-02-20T14:00:00Z", "description": "Doctor's appointment downtown at 2pm. Bring insurance card.", "type": "reminder" }]
-6.  **Do NOT confirm reminders/events in the chat.** The app will handle creation silently.
-7.  **Handle Memory Queries:** If the user asks 'what do you remember about X', search the provided memory context and synthesize an answer. Do not use the SAVE_MEMORY marker for this.
-8.  **Offer Support:** If you detect distress, offer gentle support. If the user mentions a crisis, refer them to a crisis line.
-9.  **Tone:** Be warm, genuine, concise, and match the user's tone.`;
-
-        try {
-            const res = await fetch(this.endpoint, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
-                    'Content-Type': 'application/json',
-                    'HTTP-Referer': window.location.origin
-                },
-                body: JSON.stringify({
-                    model: this.model,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        ...conversationContext,
-                        { role: 'user', content: `${memoryContext}\n\nUser: ${msg}` }
-                    ],
-                    temperature: 0.7,
-                    max_tokens: 2048
-                })
-            });
-
-            if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                const error = new Error(errorData.error?.message || 'API request failed');
-                error.status = res.status;
-                throw error;
-            }
-
-            const data = await res.json();
-            const reply = data.choices?.[0]?.message?.content;
-            if (!reply) throw new Error('No response from assistant');
-            return reply;
-        } catch (e) {
-            document.getElementById(loadingId)?.remove();
-            throw e;
-        }
-    }
-
-    buildMemoryContext(mems) {
-        if (!mems || mems.length === 0) return 'No memories yet.';
-        let c = 'Relevant memories for context:\n';
-        mems.slice(0, 25).forEach(m => {
-            const d = new Date(m.date).toLocaleDateString();
-            c += `- ${d}: ${m.text}${m.emotion ? ` (felt ${m.emotion})` : ''}${m.tags?.length ? ` [${m.tags.join(',')}]` : ''}\n`;
-        });
-        return c;
-    }
-
-    buildConversationContext(chats) {
-        if (!chats || chats.length === 0) return [];
-        return chats.slice(-10).map(m => ({
             role: m.sender === 'user' ? 'user' : 'assistant',
             content: m.text
         }));
@@ -2062,7 +1914,7 @@ class LocalAssistant {
             identity: [
                 "I'm Linen — your personal AI assistant designed to listen, remember, and support you. I was built by Ramin Najafi for people who want a smart companion that actually respects their privacy. Here's what I do: I listen to you without judgment, remember important details about your life across conversations, help you process thoughts and feelings, create calendar events and reminders from natural conversation, and work completely offline if you want. I'm built for students, professionals, anyone managing mental health, and creatives — basically, anyone who wants to think out loud with someone who won't forget. The key difference? Everything stays on your device. No cloud servers, no data selling, no training AI on your words. I'm privacy-first. Want me to help with something specific?",
                 "I'm Linen, your personal memory assistant. Here's what I was made for: I listen, I remember details about your life that matter to you, I help you work through complex thoughts and feelings, and I support your mental health and wellness — all while keeping everything private on your device. I was created for people who want an AI companion that actually respects their privacy (unlike most AI services). I work great for: reflecting on your day, processing emotions, remembering people and events, planning and organizing, brainstorming, learning and studying, or just having thoughtful conversations. I remember your history so I can reference previous conversations and grow with you. What would help you right now?",
-                "Hey, I'm Linen — your personal AI companion that remembers. I was built to be the opposite of most AI services. Instead of sending your data to servers and training AI on your conversations, I keep everything on your device. Complete privacy. Here's what you can do with me: chat about your day, remember important moments (I tag them automatically), get reminders and calendar events, work through problems, track your mood, access everything offline, use with your favorite AI API (Gemini, ChatGPT, Claude), or just have thoughtful conversations with someone who actually remembers you. I'm designed for people who care about privacy but want the power of AI. No premium features, no ads, completely free. What's on your mind?",
+                "Hey, I'm Linen — your personal AI companion that remembers. I was built to be the opposite of most AI services. Instead of sending your data to servers and training AI on your conversations, I keep everything on your device. Complete privacy. Here's what you can do with me: chat about your day, remember important moments (I tag them automatically), get reminders and calendar events, work through problems, track your mood, access everything offline, use with your favorite AI API (Gemini, ChatGPT, Hugging Face), or just have thoughtful conversations with someone who actually remembers you. I'm designed for people who care about privacy but want the power of AI. No premium features, no ads, completely free. What's on your mind?",
             ],
             creator: [
                 "I was built by Ramin Najafi. You can find more information about my creator at ramin-najafi.github.io",
@@ -4068,8 +3920,6 @@ class Linen {
         switch (agent.type) {
             case 'openai':
                 return new OpenAIAssistant(agent.apiKey, model);
-            case 'openrouter':
-                return new OpenRouterAssistant(agent.apiKey, model);
             case 'gemini':
             default:
                 return new GeminiAssistant(agent.apiKey);
@@ -6113,7 +5963,6 @@ class Linen {
         switch (provider) {
             case 'openai': tempAssistant = new OpenAIAssistant(key); break;
             case 'huggingface': tempAssistant = new HuggingFaceAssistant(key); break;
-            case 'openrouter': tempAssistant = new OpenRouterAssistant(key); break;
             default: tempAssistant = new GeminiAssistant(key);
         }
 
@@ -6124,8 +5973,7 @@ class Linen {
 
             // Save as agent in new system
             const providerNames = {
-                'gemini': 'Gemini', 'openai': 'ChatGPT', 'huggingface': 'Hugging Face',
-                'openrouter': 'OpenRouter'
+                'gemini': 'Gemini', 'openai': 'ChatGPT', 'huggingface': 'Hugging Face'
             };
             const agentConfig = {
                 name: `${providerNames[provider] || 'API'} Key`,
@@ -6173,8 +6021,6 @@ class Linen {
                 errorMsg += ' Make sure you created the key at https://platform.openai.com/api/keys';
             } else if (provider === 'huggingface') {
                 errorMsg += ' Make sure you created the token at https://huggingface.co/settings/tokens';
-            } else if (provider === 'openrouter') {
-                errorMsg += ' Make sure you created the key at https://openrouter.ai/keys';
             }
 
             errorEl.textContent = `${provider.toUpperCase()}: ${errorMsg}`;
@@ -6300,8 +6146,7 @@ class Linen {
         // Auto-generate name if not provided
         if (!name) {
             const providerNames = {
-                'gemini': 'Gemini', 'openai': 'ChatGPT', 'huggingface': 'Hugging Face',
-                'openrouter': 'OpenRouter'
+                'gemini': 'Gemini', 'openai': 'ChatGPT', 'huggingface': 'Hugging Face'
             };
             name = `${providerNames[type] || 'API'} Key`;
             const existingNames = this.agentManager.getAgents().map(a => a.name);
@@ -6335,9 +6180,6 @@ class Linen {
                     break;
                 case 'huggingface':
                     tempAssistant = new HuggingFaceAssistant(apiKey, resolvedModel);
-                    break;
-                case 'openrouter':
-                    tempAssistant = new OpenRouterAssistant(apiKey, resolvedModel);
                     break;
                 case 'gemini':
                 default:
@@ -6446,7 +6288,7 @@ class Linen {
                     <h3 class="empty-state-title">No API Keys Yet</h3>
                     <p class="empty-state-text">Default: Using Linen's built-in AI</p>
                     <ul class="empty-state-benefits">
-                        <li>\u2713 Use your favorite AI (ChatGPT, Claude, etc.)</li>
+                        <li>\u2713 Use your favorite AI (Gemini, ChatGPT, etc.)</li>
                         <li>\u2713 Have more control over responses</li>
                         <li>\u2713 Use your own API keys (you own your data)</li>
                     </ul>
@@ -6598,7 +6440,6 @@ class Linen {
             'gemini': 'gemini-2.0-flash',
             'openai': 'gpt-4',
             'huggingface': 'meta-llama/Llama-2-7b-chat-hf',
-            'openrouter': 'openrouter/auto'
         };
         return models[providerType] || 'default';
     }
@@ -6608,7 +6449,6 @@ class Linen {
             'gemini': '🟢 Google Gemini',
             'openai': '⚪ OpenAI',
             'huggingface': '🔴 Hugging Face',
-            'openrouter': '🟣 OpenRouter'
         };
         return labels[providerType] || providerType;
     }
@@ -6618,7 +6458,6 @@ class Linen {
         const key = apiKey.trim();
 
         if (key.startsWith('hf_')) return 'huggingface';
-        if (key.startsWith('sk-or-')) return 'openrouter';
         if (key.startsWith('sk-')) {
             // Default to OpenAI for sk- keys
             return 'openai';
@@ -6658,8 +6497,7 @@ class Linen {
             const nameInput = document.getElementById('agent-name');
             if (nameInput && !nameInput.value.trim()) {
                 const providerNames = {
-                    'gemini': 'Gemini', 'openai': 'ChatGPT', 'claude': 'Claude',
-                    'openrouter': 'OpenRouter'
+                    'gemini': 'Gemini', 'openai': 'ChatGPT', 'huggingface': 'Hugging Face'
                 };
                 nameInput.placeholder = `e.g., My ${providerNames[detected]} Key`;
             }
