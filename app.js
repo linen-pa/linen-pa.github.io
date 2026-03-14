@@ -172,6 +172,55 @@ class LinenDB {
     }
 }
 
+class TokenManager {
+    constructor(db) {
+        this.db = db;
+        this.FREE_TOKENS = 10;
+    }
+
+    async initialize() {
+        const balance = await this.db.getSetting('token-balance');
+        if (balance === undefined || balance === null) {
+            await this.db.saveSetting('token-balance', this.FREE_TOKENS);
+            console.log(`Linen: New user — granted ${this.FREE_TOKENS} free tokens`);
+        }
+    }
+
+    async getBalance() {
+        const balance = await this.db.getSetting('token-balance');
+        return balance ?? 0;
+    }
+
+    async deductToken() {
+        const balance = await this.getBalance();
+        if (balance <= 0) return false;
+        await this.db.saveSetting('token-balance', balance - 1);
+        this.updateBadge(balance - 1);
+        return true;
+    }
+
+    async addTokens(amount) {
+        const balance = await this.getBalance();
+        const newBalance = balance + amount;
+        await this.db.saveSetting('token-balance', newBalance);
+        this.updateBadge(newBalance);
+        return newBalance;
+    }
+
+    updateBadge(balance) {
+        const badge = document.getElementById('token-badge');
+        if (badge) {
+            badge.textContent = balance;
+            badge.classList.toggle('token-empty', balance <= 0);
+        }
+    }
+
+    async refreshBadge() {
+        const balance = await this.getBalance();
+        this.updateBadge(balance);
+    }
+}
+
 class AgentManager {
     constructor(db = null) {
         this.agents = []; // Array of available agents
@@ -3370,6 +3419,7 @@ class Linen {
         this.voiceManager = new VoiceManager();
         this.eventManager = new EventManager();
         this.agentManager = new AgentManager(this.db);
+        this.tokenManager = new TokenManager(this.db);
         this.modelVersionManager = new ModelVersionManager();
         this.utilities = null; // Will be initialized after db.init()
         this.profileManager = null; // Initialized after db.init()
@@ -3789,6 +3839,10 @@ class Linen {
                 await this.db.archiveSession({ title: sessionTitle, messages: existingConvs, date: Date.now(), preview: existingConvs[existingConvs.length - 1]?.text || 'Previous conversation', messageCount: existingConvs.length });
             }
             await this.db.clearCurrentSession();
+
+            // Initialize token system
+            await this.tokenManager.initialize();
+            await this.tokenManager.refreshBadge();
 
             // Migrate legacy key and load all agents
             await this.migrateLegacyKey();
@@ -5005,6 +5059,32 @@ class Linen {
                     logoMenu.classList.add('hidden');
                     // Setup profile accordion when settings opens
                     this.setupProfileAccordion();
+                });
+            }
+
+            // Token badge + store events
+            const tokenBadgeBtn = document.getElementById('token-badge-btn');
+            if (tokenBadgeBtn) {
+                tokenBadgeBtn.addEventListener('click', () => this.showTokenStoreModal());
+            }
+            const closeTokenStore = document.getElementById('close-token-store');
+            if (closeTokenStore) {
+                closeTokenStore.addEventListener('click', () => this.closeTokenStoreModal());
+            }
+            const tokenRefillBtn = document.getElementById('token-refill-btn');
+            if (tokenRefillBtn) {
+                tokenRefillBtn.addEventListener('click', async () => {
+                    const newBalance = await this.tokenManager.addTokens(10);
+                    const balanceEl = document.getElementById('token-store-balance');
+                    if (balanceEl) balanceEl.textContent = newBalance;
+                    this.showToast('Added 10 tokens!', 'success');
+                });
+            }
+            // Close token store on backdrop click
+            const tokenStoreModal = document.getElementById('token-store-modal');
+            if (tokenStoreModal) {
+                tokenStoreModal.addEventListener('click', (e) => {
+                    if (e.target === tokenStoreModal) this.closeTokenStoreModal();
                 });
             }
         } else {
@@ -6594,7 +6674,17 @@ class Linen {
         div.className = 'assistant-message';
 
         const localAssistant = this.ensureLocalAssistant();
-        const shouldUseRemote = this.shouldEscalateToRemote(msg);
+        let shouldUseRemote = this.shouldEscalateToRemote(msg);
+
+        // Token check — only remote AI costs tokens
+        if (shouldUseRemote) {
+            const balance = await this.tokenManager.getBalance();
+            if (balance <= 0) {
+                div.remove();
+                this.showTokenStoreModal();
+                return;
+            }
+        }
 
         // Show typing indicator bubble for local-first responses, "Thinking..." only for escalated remote calls
         if (!shouldUseRemote) {
@@ -6626,6 +6716,8 @@ class Linen {
                     this.showCrisisModal();
                 }
                 reply = await this.assistant.chat(msg, convs, mems, id);
+                // Deduct token after successful remote response
+                await this.tokenManager.deductToken();
             }
 
             document.getElementById(id)?.remove();
@@ -7154,6 +7246,31 @@ class Linen {
                 resolve(false);
             });
         });
+    }
+
+    showTokenStoreModal() {
+        const modal = document.getElementById('token-store-modal');
+        const backdrop = document.getElementById('modal-backdrop');
+        if (modal && backdrop) {
+            this.tokenManager.refreshBadge();
+            const balanceEl = document.getElementById('token-store-balance');
+            this.tokenManager.getBalance().then(b => {
+                if (balanceEl) balanceEl.textContent = b;
+            });
+            modal.style.display = 'flex';
+            backdrop.style.display = 'block';
+            backdrop.classList.add('active');
+        }
+    }
+
+    closeTokenStoreModal() {
+        const modal = document.getElementById('token-store-modal');
+        const backdrop = document.getElementById('modal-backdrop');
+        if (modal) modal.style.display = 'none';
+        if (backdrop) {
+            backdrop.style.display = 'none';
+            backdrop.classList.remove('active');
+        }
     }
 
     showToast(message, type = 'info') {
