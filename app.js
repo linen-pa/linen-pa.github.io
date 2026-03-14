@@ -3799,26 +3799,31 @@ class Linen {
         const scores = local.scoreVocabularyCategories(message);
         const vocabHits = Object.values(scores).reduce((sum, n) => sum + n, 0);
 
+        // Only truly simple conversational exchanges stay local
         const localSafeIntents = new Set([
-            'greetingReply', 'howAreYou', 'thanks', 'farewell', 'question',
-            'casualChat', 'engaged', 'positive', 'negative', 'referenceBack',
-            'timerSet', 'alarmSet', 'noteAdded', 'identity', 'creator',
-            'frustrated', 'distressed'
+            'greetingReply', 'howAreYou', 'thanks', 'farewell',
+            'positive', 'negative', 'referenceBack',
+            'timerSet', 'alarmSet', 'noteAdded', 'identity', 'creator'
         ]);
 
-        if (localSafeIntents.has(intent) && tokens.length <= 20 && vocabHits >= 1) {
+        if (localSafeIntents.has(intent) && tokens.length <= 20) {
             return false;
         }
 
-        const hasQuestionSignal = /\?|\b(what|why|how|when|where|which|who|can you|could you|would you)\b/i.test(message);
-        const needsDeepReasoning = /\b(explain|analyze|compare|evaluate|reason|strategy|tradeoff|pros and cons|step by step)\b/i.test(normalized);
-        const contentGeneration = /\b(write|draft|rewrite|summarize|brainstorm|outline|email|essay|post|caption|script)\b/i.test(normalized);
-        const technicalTask = /\b(code|debug|bug|error|stack|api|database|sql|regex|javascript|python|typescript)\b/i.test(normalized);
+        const hasQuestionSignal = /\?|\b(what|why|how|when|where|which|who|can you|could you|would you|should i|do you know|tell me|help me|teach me|show me|give me|is there|are there|does|did|will|have you)\b/i.test(message);
+        const needsDeepReasoning = /\b(explain|analyze|compare|evaluate|reason|strategy|tradeoff|pros and cons|step by step|think|plan|decide|suggest|recommend|advice|opinion|idea)\b/i.test(normalized);
+        const contentGeneration = /\b(write|draft|rewrite|summarize|brainstorm|outline|email|essay|post|caption|script|list|recipe|create|make|build|generate)\b/i.test(normalized);
+        const technicalTask = /\b(code|debug|bug|error|stack|api|database|sql|regex|javascript|python|typescript|html|css|react|node)\b/i.test(normalized);
+        const needsKnowledge = /\b(learn|teach|how to|how do|what is|what are|who is|who are|where is|where can|when did|when is|why do|why is|best way|difference between|meaning of|definition|example|tip|guide|tutorial|practice|improve|cook|recipe|exercise|workout|study|travel|visit|book|movie|song|history|science|health|medical|finance|invest|budget|career|interview|resume)\b/i.test(normalized);
 
         if (intent === 'outOfScope') return true;
-        if (needsDeepReasoning || contentGeneration || technicalTask) return true;
-        if (hasQuestionSignal && tokens.length >= 16 && vocabHits < 3) return true;
-        if (mood === 'neutral' && intent === 'engaged' && tokens.length >= 28) return true;
+        if (needsDeepReasoning || contentGeneration || technicalTask || needsKnowledge) return true;
+        // Any question with substance goes to remote
+        if (hasQuestionSignal && tokens.length >= 6) return true;
+        if (intent === 'question') return true;
+        if (mood === 'neutral' && intent === 'engaged' && tokens.length >= 20) return true;
+        // Distressed or frustrated users get better support from remote
+        if ((intent === 'frustrated' || intent === 'distressed') && tokens.length >= 8) return true;
 
         return false;
     }
