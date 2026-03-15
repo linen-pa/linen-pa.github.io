@@ -3998,15 +3998,23 @@ class Linen {
             const btn = document.getElementById('landing-about-btn');
             if (btn && !btn.hasClickHandler) {
                 btn.hasClickHandler = true;
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log("Linen: Landing About button clicked");
                     const aboutModal = document.getElementById('about-modal');
                     const backdrop = document.getElementById('modal-backdrop');
-                    if (aboutModal) {
+                    console.log("Linen: aboutModal:", !!aboutModal, "backdrop:", !!backdrop);
+                    if (aboutModal && backdrop) {
                         aboutModal.classList.add('active');
                         backdrop.classList.add('active');
+                        console.log("Linen: Modal classes added, calling setupAboutAccordion");
                         this.setupAboutAccordion();
                     }
                 });
+                console.log("Linen: Landing About button handler attached");
+            } else {
+                console.log("Linen: Landing About button not found or already bound");
             }
         };
         setupLandingAboutBtn();
