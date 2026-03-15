@@ -84,36 +84,66 @@ class AuthManager {
 
     // Firestore: initialize user document with tokens on first signup
     async initUserDoc(uid, email) {
-        const docRef = this.firestore.collection('users').doc(uid);
-        const doc = await docRef.get();
-        if (!doc.exists) {
-            await docRef.set({
-                email: email,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                tokenBalance: 20,
-                tokenMsgCount: 0,
-                initialGranted: true
-            });
-            console.log('Linen: User document created with 20 tokens');
+        try {
+            const docRef = this.firestore.collection('users').doc(uid);
+            const doc = await docRef.get();
+            if (!doc.exists) {
+                await docRef.set({
+                    email: email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    tokenBalance: 20,
+                    tokenMsgCount: 0,
+                    lastDailyRefill: firebase.firestore.FieldValue.serverTimestamp(),
+                    initialGranted: true
+                });
+                console.log('Linen: User document created with 20 tokens');
+            }
+        } catch (e) {
+            console.error('Linen: Firestore initUserDoc failed (check security rules):', e);
         }
     }
 
     // Firestore: get token data
     async getTokenData(uid) {
-        const doc = await this.firestore.collection('users').doc(uid).get();
-        if (doc.exists) {
-            const data = doc.data();
-            return { balance: data.tokenBalance ?? 0, msgCount: data.tokenMsgCount ?? 0 };
+        try {
+            const doc = await this.firestore.collection('users').doc(uid).get();
+            if (doc.exists) {
+                const data = doc.data();
+                return {
+                    balance: data.tokenBalance ?? 0,
+                    msgCount: data.tokenMsgCount ?? 0,
+                    lastDailyRefill: data.lastDailyRefill ?? null
+                };
+            }
+        } catch (e) {
+            console.error('Linen: Firestore getTokenData failed (check security rules):', e);
         }
-        return { balance: 0, msgCount: 0 };
+        return { balance: 0, msgCount: 0, lastDailyRefill: null };
     }
 
     // Firestore: update token data
     async updateTokenData(uid, balance, msgCount) {
-        await this.firestore.collection('users').doc(uid).update({
-            tokenBalance: balance,
-            tokenMsgCount: msgCount
-        });
+        try {
+            await this.firestore.collection('users').doc(uid).update({
+                tokenBalance: balance,
+                tokenMsgCount: msgCount
+            });
+        } catch (e) {
+            console.error('Linen: Firestore updateTokenData failed (check security rules):', e);
+        }
+    }
+
+    // Firestore: update daily refill timestamp
+    async updateDailyRefill(uid, balance) {
+        try {
+            await this.firestore.collection('users').doc(uid).update({
+                tokenBalance: balance,
+                tokenMsgCount: 0,
+                lastDailyRefill: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (e) {
+            console.error('Linen: Firestore updateDailyRefill failed:', e);
+        }
     }
 }
 
@@ -305,9 +335,20 @@ class TokenManager {
         if (user) {
             await this.authManager.initUserDoc(user.uid, user.email);
             const data = await this.authManager.getTokenData(user.uid);
+
+            // Check for daily free token refill
+            let balance = data.balance;
+            let msgCount = data.msgCount;
+            if (this.shouldRefillTokens(data.lastDailyRefill)) {
+                balance = this.FREE_TOKENS;
+                msgCount = 0;
+                await this.authManager.updateDailyRefill(user.uid, balance);
+                console.log('Linen: Daily free tokens refilled (20 tokens)');
+            }
+
             // Sync to local cache
-            await this.db.saveSetting('token-balance', data.balance);
-            await this.db.saveSetting('token-msg-count', data.msgCount);
+            await this.db.saveSetting('token-balance', balance);
+            await this.db.saveSetting('token-msg-count', msgCount);
         } else {
             // Offline / not signed in: local only
             const balance = await this.db.getSetting('token-balance');
@@ -320,6 +361,14 @@ class TokenManager {
                 await this.db.saveSetting('token-msg-count', 0);
             }
         }
+    }
+
+    // Check if 24 hours have passed since last daily refill
+    shouldRefillTokens(lastDailyRefill) {
+        if (!lastDailyRefill) return true; // Never refilled — give tokens
+        const lastRefillMs = lastDailyRefill.toMillis ? lastDailyRefill.toMillis() : lastDailyRefill;
+        const hoursSinceRefill = (Date.now() - lastRefillMs) / (1000 * 60 * 60);
+        return hoursSinceRefill >= 24;
     }
 
     async getBalance() {
@@ -5260,24 +5309,7 @@ class Linen {
             this.showPitchModal();
         });
 
-        // Close onboarding button (×)
-        const closeOnboarding = document.getElementById('close-onboarding');
-        console.log("Linen: Close onboarding button found:", !!closeOnboarding);
-        if (closeOnboarding) {
-            closeOnboarding.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log("Linen: Close onboarding clicked");
-                // Only allow closing if user is signed in and verified
-                const user = this.authManager.getCurrentUser();
-                if (user && user.emailVerified) {
-                    document.getElementById('onboarding-overlay').style.display = 'none';
-                } else {
-                    this.showToast('Please sign in to continue', 'warning');
-                }
-            });
-        }
-
+        // Close onboarding (step 3 only — step 2 has no close button, auth is required)
         const closeOnboardingStep3 = document.getElementById('close-onboarding-step3');
         if (closeOnboardingStep3) {
             closeOnboardingStep3.addEventListener('click', () => {
@@ -6457,10 +6489,13 @@ class Linen {
     }
 
     closeAllModals() {
-        // Close onboarding overlay
+        // Only close onboarding if user is authenticated and verified
         const onboardingOverlay = document.getElementById('onboarding-overlay');
         if (onboardingOverlay) {
-            onboardingOverlay.style.display = 'none';
+            const user = this.authManager?.getCurrentUser();
+            if (user && user.emailVerified) {
+                onboardingOverlay.style.display = 'none';
+            }
         }
 
         // Close settings modal
