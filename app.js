@@ -42,12 +42,22 @@ class AuthManager {
     }
 
     async checkEmailVerified() {
-        if (this.currentUser) {
-            await this.currentUser.reload();
-            this.currentUser = this.auth.currentUser;
-            return this.currentUser.emailVerified;
+        // Always get fresh user reference from Firebase Auth
+        let user = this.auth.currentUser;
+        if (!user) return false;
+        try {
+            await user.reload();
+        } catch (e) {
+            // If reload fails, try getting a fresh ID token first
+            console.warn('Linen: user.reload() failed, retrying with token refresh...', e);
+            await user.getIdToken(true);
+            user = this.auth.currentUser;
+            if (!user) return false;
+            await user.reload();
         }
-        return false;
+        // Re-fetch after reload to get updated properties
+        this.currentUser = this.auth.currentUser;
+        return this.currentUser.emailVerified;
     }
 
     onAuthStateChanged(callback) {
@@ -5117,10 +5127,11 @@ class Linen {
                 this.showOnboardingStep(3);
                 document.querySelector('.auth-tabs').style.display = '';
             } else {
-                this.showAuthError('Email not verified yet. Please check your inbox and click the verification link.');
+                this.showAuthError('Email not verified yet. Please check your inbox (and spam folder) and click the verification link.');
             }
         } catch (e) {
-            this.showAuthError('Could not check verification status. Please try again.');
+            console.error('Linen: Verification check failed:', e);
+            this.showAuthError('Could not check verification status. Try refreshing the page, or sign out and sign back in.');
         } finally {
             btn.disabled = false; btn.textContent = "I've Verified My Email";
         }
