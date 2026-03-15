@@ -176,13 +176,19 @@ class TokenManager {
     constructor(db) {
         this.db = db;
         this.FREE_TOKENS = 10;
+        this.MESSAGES_PER_TOKEN = 10;
     }
 
     async initialize() {
         const balance = await this.db.getSetting('token-balance');
         if (balance === undefined || balance === null) {
             await this.db.saveSetting('token-balance', this.FREE_TOKENS);
-            console.log(`Linen: New user — granted ${this.FREE_TOKENS} free tokens`);
+            console.log(`Linen: New user — granted ${this.FREE_TOKENS} tokens`);
+        }
+        // Initialize message counter if not set
+        const msgCount = await this.db.getSetting('token-msg-count');
+        if (msgCount === undefined || msgCount === null) {
+            await this.db.saveSetting('token-msg-count', 0);
         }
     }
 
@@ -191,11 +197,26 @@ class TokenManager {
         return balance ?? 0;
     }
 
+    async getRemainingMessages() {
+        const balance = await this.getBalance();
+        const msgCount = await this.db.getSetting('token-msg-count') ?? 0;
+        return (balance * this.MESSAGES_PER_TOKEN) - msgCount;
+    }
+
     async deductToken() {
         const balance = await this.getBalance();
         if (balance <= 0) return false;
-        await this.db.saveSetting('token-balance', balance - 1);
-        this.updateBadge(balance - 1);
+        let msgCount = (await this.db.getSetting('token-msg-count')) ?? 0;
+        msgCount++;
+        if (msgCount >= this.MESSAGES_PER_TOKEN) {
+            // Used up a full token
+            await this.db.saveSetting('token-balance', balance - 1);
+            await this.db.saveSetting('token-msg-count', 0);
+            this.updateBadge(balance - 1);
+        } else {
+            await this.db.saveSetting('token-msg-count', msgCount);
+            this.updateBadge(balance);
+        }
         return true;
     }
 
