@@ -5,7 +5,7 @@
  * See LICENSE file for details.
  */
 
-const CACHE_NAME = 'linen-v121'; // Increment this on every update
+const CACHE_NAME = 'linen-v122'; // Increment this on every update
 
 // Push notification key (VAPID, not yet active)
 const _PUSH_API_KEY = 'AIzaSyL5nKp8RmXw9QzTb2DcFaYs3Hj7Gz6Wu4e';

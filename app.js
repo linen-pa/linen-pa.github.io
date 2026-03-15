@@ -61,6 +61,17 @@ class AuthManager {
         return this.auth.currentUser;
     }
 
+    // Wait for Firebase to resolve auth state (async on page load)
+    waitForAuth() {
+        return new Promise((resolve) => {
+            const unsubscribe = this.auth.onAuthStateChanged((user) => {
+                unsubscribe();
+                this.currentUser = user;
+                resolve(user);
+            });
+        });
+    }
+
     // Firestore: initialize user document with tokens on first signup
     async initUserDoc(uid, email) {
         const docRef = this.firestore.collection('users').doc(uid);
@@ -4075,8 +4086,8 @@ class Linen {
                 this.isLocalMode = true;
             }
 
-            // Check auth state — require sign-in
-            const currentUser = this.authManager.getCurrentUser();
+            // Wait for Firebase to resolve auth state before checking
+            const currentUser = await this.authManager.waitForAuth();
 
             if (currentUser && currentUser.emailVerified) {
                 // Signed in and verified — update UI and start app
@@ -4091,10 +4102,12 @@ class Linen {
                 this.showOnboardingStep(2);
                 this.showVerifyForm(currentUser.email);
             } else {
-                // Not signed in — show onboarding with auth
+                // Not signed in — show onboarding with auth (step 2 = signup/login)
                 console.log("Linen: No user signed in — showing onboarding.");
                 this.startApp(apiKey);
-                this.showOnboarding();
+                document.getElementById('onboarding-overlay').style.display = 'flex';
+                this.showOnboardingStep(2);
+                this.bindOnboardingEvents();
             }
         } catch (e) {
             console.error('Linen: Init error:', e);
@@ -5240,16 +5253,23 @@ class Linen {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log("Linen: Close onboarding clicked");
-                // Just close the onboarding overlay, don't show pitch modal
-                document.getElementById('onboarding-overlay').style.display = 'none';
+                // Only allow closing if user is signed in and verified
+                const user = this.authManager.getCurrentUser();
+                if (user && user.emailVerified) {
+                    document.getElementById('onboarding-overlay').style.display = 'none';
+                } else {
+                    this.showToast('Please sign in to continue', 'warning');
+                }
             });
         }
 
         const closeOnboardingStep3 = document.getElementById('close-onboarding-step3');
         if (closeOnboardingStep3) {
             closeOnboardingStep3.addEventListener('click', () => {
-                // Just close the onboarding overlay
-                document.getElementById('onboarding-overlay').style.display = 'none';
+                const user = this.authManager.getCurrentUser();
+                if (user && user.emailVerified) {
+                    document.getElementById('onboarding-overlay').style.display = 'none';
+                }
             });
         }
 
