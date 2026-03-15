@@ -2696,13 +2696,14 @@ class Linen {
 
     async checkAndApplyEmergencyTokens(userMessage, assistantReply) {
         try {
+            // NEVER grant emergency tokens during signup or with minimal conversation
+            const convs = await this.db.getConversations();
+            if (convs.length < 6) return; // Need at least 3 exchanges of real conversation first
+
             const sentiment = this.detectUserSentiment(userMessage);
             if (sentiment !== 'distressed') return; // Only for distressed users
 
             // Check if user has been distressed in recent conversation history
-            const convs = await this.db.getConversations();
-            // Need at least 6 messages total (3+ distressed + 3+ assistant responses = pattern, not initial message)
-            if (convs.length < 6) return;
 
             const recentMessages = convs.slice(-10); // Last 10 messages
             const distressedCount = recentMessages.filter(c =>
@@ -2875,9 +2876,39 @@ class Linen {
                 // Not signed in — show onboarding with auth (step 2 = signup/login)
                 console.log("Linen: No user signed in — showing onboarding.");
                 this.startApp(apiKey);
-                document.getElementById('onboarding-overlay').style.display = 'flex';
-                this.showOnboardingStep(2);
-                this.bindOnboardingEvents();
+
+                // Show About modal for first-time visitors before auth
+                const hasSeenAbout = await this.db.getSetting('seen-about-modal');
+                if (!hasSeenAbout) {
+                    const aboutModal = document.getElementById('about-modal');
+                    const backdrop = document.getElementById('modal-backdrop');
+                    if (aboutModal) {
+                        aboutModal.classList.add('active');
+                        backdrop.classList.add('active');
+                        this.setupAboutAccordion();
+
+                        // Mark as seen and show auth when user closes
+                        const closeAboutBtn = document.getElementById('close-about-modal');
+                        if (closeAboutBtn) {
+                            const showAuthAfterClose = () => {
+                                aboutModal.classList.remove('active');
+                                backdrop.classList.remove('active');
+                                closeAboutBtn.removeEventListener('click', showAuthAfterClose);
+
+                                document.getElementById('onboarding-overlay').style.display = 'flex';
+                                this.showOnboardingStep(2);
+                                this.bindOnboardingEvents();
+                            };
+                            closeAboutBtn.addEventListener('click', showAuthAfterClose);
+                        }
+                        await this.db.setSetting('seen-about-modal', 'true');
+                    }
+                } else {
+                    // Returning user — show auth directly
+                    document.getElementById('onboarding-overlay').style.display = 'flex';
+                    this.showOnboardingStep(2);
+                    this.bindOnboardingEvents();
+                }
             }
         } catch (e) {
             console.error('Linen: Init error:', e);
