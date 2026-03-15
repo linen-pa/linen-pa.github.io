@@ -6205,12 +6205,6 @@ class Linen {
                     <h3 class="empty-state-title">No Memories Yet</h3>
                     <p class="empty-state-text">Start chatting with Linen, and it will automatically save important memories from your conversations.</p>
                 </div>`;
-            // Remove old API key button listener since we no longer need it
-                    if (agentsHeading) {
-                        setTimeout(() => agentsHeading.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-                    }
-                });
-            }
             return;
         }
 
