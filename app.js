@@ -3614,14 +3614,15 @@ class Linen {
         console.log("Linen: Setting up about accordion with", aboutAccordionHeaders.length, "headers");
 
         aboutAccordionHeaders.forEach((header) => {
-            // Remove old listener if exists
-            header.onclick = null;
+            // Clone to remove all old event listeners
+            const newHeader = header.cloneNode(true);
+            header.parentNode.replaceChild(newHeader, header);
 
-            header.addEventListener('click', (event) => {
+            newHeader.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
                 console.log("Linen: Accordion header clicked");
-                const item = header.closest('.accordion-item');
+                const item = newHeader.closest('.accordion-item');
                 if (item) {
                     console.log("Linen: Toggling accordion item");
                     item.classList.toggle('active');
@@ -4136,6 +4137,17 @@ class Linen {
                     if (aboutModal && backdrop) {
                         aboutModal.classList.add('active');
                         backdrop.classList.add('active');
+
+                        // Reset accordion state before opening
+                        const accordionItems = aboutModal.querySelectorAll('.accordion-item');
+                        accordionItems.forEach((item) => {
+                            item.classList.remove('active');
+                            const content = item.querySelector('.accordion-content');
+                            if (content) {
+                                content.style.display = 'none';
+                            }
+                        });
+
                         console.log("Linen: Modal classes added, calling setupAboutAccordion");
                         this.setupAboutAccordion();
                     }
@@ -4280,6 +4292,17 @@ class Linen {
                 if (aboutModal) {
                     aboutModal.classList.add('active');
                     backdrop.classList.add('active');
+
+                    // Reset accordion state before opening
+                    const accordionItems = aboutModal.querySelectorAll('.accordion-item');
+                    accordionItems.forEach((item) => {
+                        item.classList.remove('active');
+                        const content = item.querySelector('.accordion-content');
+                        if (content) {
+                            content.style.display = 'none';
+                        }
+                    });
+
                     // Setup accordion when modal opens
                     this.setupAboutAccordion();
                 }
@@ -4347,7 +4370,22 @@ class Linen {
             document.getElementById('re-enter-key-modal').classList.remove('active');
             document.getElementById('privacy-modal')?.classList.remove('active');
             document.getElementById('terms-modal')?.classList.remove('active');
-            document.getElementById('about-modal')?.classList.remove('active');
+
+            // Close about modal and reset accordion state
+            const aboutModal = document.getElementById('about-modal');
+            if (aboutModal) {
+                aboutModal.classList.remove('active');
+                // Reset all accordion items to closed state
+                const accordionItems = aboutModal.querySelectorAll('.accordion-item');
+                accordionItems.forEach((item) => {
+                    item.classList.remove('active');
+                    const content = item.querySelector('.accordion-content');
+                    if (content) {
+                        content.style.display = 'none';
+                    }
+                });
+            }
+
             backdrop.classList.remove('active');
         };
 
