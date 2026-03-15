@@ -347,18 +347,18 @@ class TokenManager {
             }
 
             // Sync to local cache
-            await this.db.saveSetting('token-balance', balance);
-            await this.db.saveSetting('token-msg-count', msgCount);
+            await this.db.setSetting('token-balance', balance);
+            await this.db.setSetting('token-msg-count', msgCount);
         } else {
             // Offline / not signed in: local only
             const balance = await this.db.getSetting('token-balance');
             if (balance === undefined || balance === null) {
-                await this.db.saveSetting('token-balance', this.FREE_TOKENS);
+                await this.db.setSetting('token-balance', this.FREE_TOKENS);
                 console.log(`Linen: New user — granted ${this.FREE_TOKENS} tokens`);
             }
             const msgCount = await this.db.getSetting('token-msg-count');
             if (msgCount === undefined || msgCount === null) {
-                await this.db.saveSetting('token-msg-count', 0);
+                await this.db.setSetting('token-msg-count', 0);
             }
         }
     }
@@ -392,11 +392,11 @@ class TokenManager {
         if (msgCount >= this.MESSAGES_PER_TOKEN) {
             newBalance = balance - 1;
             newMsgCount = 0;
-            await this.db.saveSetting('token-balance', newBalance);
-            await this.db.saveSetting('token-msg-count', 0);
+            await this.db.setSetting('token-balance', newBalance);
+            await this.db.setSetting('token-msg-count', 0);
             this.updateBadge(newBalance);
         } else {
-            await this.db.saveSetting('token-msg-count', msgCount);
+            await this.db.setSetting('token-msg-count', msgCount);
             this.updateBadge(balance);
         }
         // Sync to Firestore
@@ -412,7 +412,7 @@ class TokenManager {
     async addTokens(amount) {
         const balance = await this.getBalance();
         const newBalance = balance + amount;
-        await this.db.saveSetting('token-balance', newBalance);
+        await this.db.setSetting('token-balance', newBalance);
         this.updateBadge(newBalance);
         // Sync to Firestore
         const user = this.authManager?.getCurrentUser();
@@ -3847,8 +3847,8 @@ class Linen {
             await this.authManager.logout();
             this.updateAuthUI(null);
             // Clear local token cache
-            await this.db.saveSetting('token-balance', 0);
-            await this.db.saveSetting('token-msg-count', 0);
+            await this.db.setSetting('token-balance', 0);
+            await this.db.setSetting('token-msg-count', 0);
             await this.tokenManager.refreshBadge();
             this.showToast('Signed out.', 'info');
             // Show onboarding with auth
