@@ -3076,7 +3076,6 @@ class Linen {
         }
         console.log("Linen: About to hide modals and bind events");
         document.getElementById('onboarding-overlay').style.display = 'none';
-        document.getElementById('re-enter-key-modal').classList.remove('active');
         document.getElementById('modal-backdrop').classList.remove('active');
         console.log("Linen: Calling bindEvents()");
         try {
@@ -3588,21 +3587,6 @@ class Linen {
             closeBtn.dataset.listenerAttached = 'true';
         }
 
-        // "Add My API Key" button - show onboarding to add API
-        // "Get API Keys" button - show onboarding at step 2
-        const getApiKeyDirect = document.getElementById('get-api-key-direct');
-        if (getApiKeyDirect && !getApiKeyDirect.dataset.listenerAttached) {
-            getApiKeyDirect.addEventListener('click', (e) => {
-                e.stopPropagation();
-                closePitchModal();
-                // Ensure onboarding interactions are wired before showing step 2
-                this.bindOnboardingEvents();
-                // Show onboarding at step 2 (provider selection with direct links)
-                document.getElementById('onboarding-overlay').style.display = 'flex';
-                this.showOnboardingStep(2);
-            });
-            getApiKeyDirect.dataset.listenerAttached = 'true';
-        }
 
     }
 
@@ -4367,7 +4351,6 @@ class Linen {
         const closeModal = () => {
             memoriesPanel.classList.remove('active');
             settingsModal.classList.remove('active');
-            document.getElementById('re-enter-key-modal').classList.remove('active');
             document.getElementById('privacy-modal')?.classList.remove('active');
             document.getElementById('terms-modal')?.classList.remove('active');
 
@@ -4392,11 +4375,7 @@ class Linen {
         document.getElementById('close-memories').addEventListener('click', closeModal);
         document.getElementById('close-settings-modal').addEventListener('click', closeModal);
         document.getElementById('close-about-modal')?.addEventListener('click', closeModal);
-        backdrop.addEventListener('click', (e) => {
-            // Don't close re-enter key modal on backdrop click
-            if (document.getElementById('re-enter-key-modal').classList.contains('active')) return;
-            closeModal();
-        });
+        backdrop.addEventListener('click', closeModal);
 
         // Install as App button in settings
         const installAppBtn = document.getElementById('install-app-btn');
@@ -6224,20 +6203,9 @@ class Linen {
                 <div class="empty-state-container">
                     <div class="empty-state-icon">📚</div>
                     <h3 class="empty-state-title">No Memories Yet</h3>
-                    <p class="empty-state-text">Memories are saved when you add an API key. They help Linen learn about you over time.</p>
-                    <button class="empty-state-btn" id="empty-state-add-key">+ Add My API Key</button>
+                    <p class="empty-state-text">Start chatting with Linen, and it will automatically save important memories from your conversations.</p>
                 </div>`;
-            const addKeyBtn = document.getElementById('empty-state-add-key');
-            if (addKeyBtn) {
-                addKeyBtn.addEventListener('click', () => {
-                    // Close memories panel, open settings and scroll to AI Agents
-                    document.getElementById('memories-panel').classList.remove('active');
-                    const settingsModal = document.getElementById('settings-modal');
-                    const backdrop = document.getElementById('modal-backdrop');
-                    settingsModal.classList.add('active');
-                    backdrop.classList.add('active');
-                    // Scroll to AI Agents section
-                    const agentsHeading = settingsModal.querySelector('h3');
+            // Remove old API key button listener since we no longer need it
                     if (agentsHeading) {
                         setTimeout(() => agentsHeading.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
                     }
