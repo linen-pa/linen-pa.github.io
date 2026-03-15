@@ -4118,7 +4118,11 @@ class Linen {
             this.assistant = new LocalAssistant(this.db, this.utilities);
             this.isLocalMode = true;
             this.startApp(null);
-            console.error('Linen: Fatal error during init, starting in local-only mode.', e);
+            // Still require auth even on error — show signup/login
+            document.getElementById('onboarding-overlay').style.display = 'flex';
+            this.showOnboardingStep(2);
+            this.bindOnboardingEvents();
+            console.error('Linen: Init error, showing auth screen.', e);
         }
     }
 
@@ -7725,9 +7729,15 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./service-worker.js').then(reg => {
+                // Force check for SW updates on every page load
+                reg.update();
                 reg.addEventListener('updatefound', () => {
                     const newWorker = reg.installing;
                     newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New SW installed, tell it to activate immediately
+                            newWorker.postMessage({ type: 'SKIP_WAITING' });
+                        }
                         if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
                             window.location.reload();
                         }
