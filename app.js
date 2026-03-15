@@ -1289,7 +1289,7 @@ class EventManager {
             description: eventData.description || '',
             date: eventData.date,
             type: 'event',
-            color: eventData.color || '#d4a574',
+            color: eventData.color || '#7BAACC',
             created: Date.now()
         };
 
@@ -5969,7 +5969,7 @@ class Linen {
                         timerEl.innerHTML = `
                             <div>
                                 <strong>⏱️ ${timer.label}</strong>
-                                <p style="font-size: 1.2rem; color: #d4a574; font-weight: bold;">${timeDisplay}</p>
+                                <p style="font-size: 1.2rem; color: #7BAACC; font-weight: bold;">${timeDisplay}</p>
                             </div>
                             <button class="button-small button-danger" data-timer-id="${timer.id}">Stop</button>
                         `;

@@ -1,7 +1,7 @@
 :root {
     --bg: #1a1a1a;
     --primary: #ffffff;
-    --accent: #d4a574;
+    --accent: #7BAACC;
     --border: #333333;
     --text-light: #bbbbbb;
     --header-bg: #000000;
@@ -16,7 +16,36 @@
 body {
     font-family: sans-serif;
     color: var(--primary);
-    background: var(--bg);
+    background-color: var(--bg);
+    background-image:
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(123, 170, 204, 0.015) 2px,
+            rgba(123, 170, 204, 0.015) 3px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 2px,
+            rgba(123, 170, 204, 0.015) 2px,
+            rgba(123, 170, 204, 0.015) 3px
+        ),
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 7px,
+            rgba(255, 255, 255, 0.008) 7px,
+            rgba(255, 255, 255, 0.008) 8px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 11px,
+            rgba(255, 255, 255, 0.008) 11px,
+            rgba(255, 255, 255, 0.008) 12px
+        );
     overflow: hidden;
 }
 
@@ -114,11 +143,11 @@ header {
 }
 
 .menu-item:hover {
-    background: rgba(212, 165, 116, 0.2);
+    background: rgba(123, 170, 204, 0.2);
 }
 
 .menu-item:active {
-    background: rgba(212, 165, 116, 0.3);
+    background: rgba(123, 170, 204, 0.3);
 }
 
 .main-content {
@@ -332,7 +361,36 @@ button:hover {
     left: 0;
     width: 100%;
     height: 100%;
-    background: var(--header-bg);
+    background-color: var(--header-bg);
+    background-image:
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(123, 170, 204, 0.02) 2px,
+            rgba(123, 170, 204, 0.02) 3px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 2px,
+            rgba(123, 170, 204, 0.02) 2px,
+            rgba(123, 170, 204, 0.02) 3px
+        ),
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 7px,
+            rgba(255, 255, 255, 0.01) 7px,
+            rgba(255, 255, 255, 0.01) 8px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 11px,
+            rgba(255, 255, 255, 0.01) 11px,
+            rgba(255, 255, 255, 0.01) 12px
+        );
     z-index: 9999;
     display: none;
     justify-content: center;
@@ -349,8 +407,9 @@ button:hover {
 }
 
 #onboarding-wizard .step:not(#step-1).active {
-    align-items: flex-start;
+    align-items: center;
     padding-top: 40px;
+    text-align: center;
 }
 
 #onboarding-wizard {
@@ -590,7 +649,7 @@ button:hover {
 }
 
 .get-api-key-btn:hover {
-    background: #e0b896;
+    background: #95BDD8;
     transform: translateY(-1px);
 }
 
@@ -602,8 +661,8 @@ button:hover {
 
 .ai-provider-btn.selected {
     border-color: var(--accent);
-    background: rgba(212, 165, 116, 0.1);
-    box-shadow: 0 0 15px rgba(212, 165, 116, 0.3);
+    background: rgba(123, 170, 204, 0.1);
+    box-shadow: 0 0 15px rgba(123, 170, 204, 0.3);
 }
 
 .provider-icon {
@@ -1643,7 +1702,7 @@ hr {
 }
 
 .btn-primary:hover {
-    background-color: #e8ba86;
+    background-color: #95BDD8;
     opacity: 0.9;
 }
 
@@ -2650,7 +2709,7 @@ body.keyboard-nav [tabindex]:focus {
 
 .token-pack.popular {
     border-color: var(--accent);
-    background: rgba(212, 165, 116, 0.08);
+    background: rgba(123, 170, 204, 0.08);
 }
 
 .pack-badge {
@@ -2719,6 +2778,7 @@ body.keyboard-nav [tabindex]:focus {
     border-radius: 8px;
     overflow: hidden;
     border: 1px solid var(--border);
+    width: 100%;
 }
 
 .auth-tab {
@@ -2747,6 +2807,8 @@ body.keyboard-nav [tabindex]:focus {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    width: 100%;
+    align-items: center;
 }
 
 .auth-form input[type="email"],
