@@ -20,12 +20,24 @@
 
 <div id="onboarding-overlay">
     <div id="onboarding-wizard">
+        <!-- Clean Landing Page (shown when not logged in) -->
         <div class="step" id="step-1">
             <img src="./logo.png" alt="Linen Logo" class="onboarding-logo">
             <h1>Linen</h1>
             <p>Your private therapist, psychologist, and trauma counselor in your pocket.</p>
-            <button type="button" id="get-started">Get Started</button>
+
+            <!-- About Linen Dropdown -->
+            <button type="button" id="landing-about-btn" class="landing-about-link">▼ Learn more about Linen</button>
+
+            <!-- Auth Buttons -->
+            <button type="button" id="landing-login-btn" class="auth-submit-btn" style="margin-top: 2rem;">Log In</button>
+            <div style="margin-top: 1rem; text-align: center;">
+                <p style="margin: 0.5rem 0; font-size: 0.9rem;">Don't have an account? <button type="button" id="landing-signup-btn" class="auth-link-btn" style="display: inline; padding: 0; margin: 0;">Sign up</button></p>
+                <button type="button" id="landing-forgot-btn" class="auth-link-btn" style="display: block; margin-top: 0.5rem;">Forgot password?</button>
+            </div>
         </div>
+
+        <!-- Auth Forms (step 2) -->
         <div class="step" id="step-2">
             <h2 id="auth-step-title">Create Account</h2>
             <p id="auth-step-desc">Sign up to get your tokens and start chatting.</p>

@@ -2869,46 +2869,17 @@ class Linen {
                 // Signed in but not verified — show verification step
                 console.log("Linen: User signed in but not verified.");
                 this.startApp(apiKey);
-                this.showOnboarding();
+                document.getElementById('onboarding-overlay').style.display = 'flex';
                 this.showOnboardingStep(2);
                 this.showVerifyForm(currentUser.email);
+                this.bindOnboardingEvents();
             } else {
-                // Not signed in — show onboarding with auth (step 2 = signup/login)
-                console.log("Linen: No user signed in — showing onboarding.");
+                // Not signed in — show clean landing page (step 1)
+                console.log("Linen: No user signed in — showing landing page.");
                 this.startApp(apiKey);
-
-                // Show About modal for first-time visitors before auth
-                const hasSeenAbout = await this.db.getSetting('seen-about-modal');
-                if (!hasSeenAbout) {
-                    const aboutModal = document.getElementById('about-modal');
-                    const backdrop = document.getElementById('modal-backdrop');
-                    if (aboutModal) {
-                        aboutModal.classList.add('active');
-                        backdrop.classList.add('active');
-                        this.setupAboutAccordion();
-
-                        // Mark as seen and show auth when user closes
-                        const closeAboutBtn = document.getElementById('close-about-modal');
-                        if (closeAboutBtn) {
-                            const showAuthAfterClose = () => {
-                                aboutModal.classList.remove('active');
-                                backdrop.classList.remove('active');
-                                closeAboutBtn.removeEventListener('click', showAuthAfterClose);
-
-                                document.getElementById('onboarding-overlay').style.display = 'flex';
-                                this.showOnboardingStep(2);
-                                this.bindOnboardingEvents();
-                            };
-                            closeAboutBtn.addEventListener('click', showAuthAfterClose);
-                        }
-                        await this.db.setSetting('seen-about-modal', 'true');
-                    }
-                } else {
-                    // Returning user — show auth directly
-                    document.getElementById('onboarding-overlay').style.display = 'flex';
-                    this.showOnboardingStep(2);
-                    this.bindOnboardingEvents();
-                }
+                document.getElementById('onboarding-overlay').style.display = 'flex';
+                this.showOnboardingStep(1); // Show landing page, not auth
+                this.bindOnboardingEvents();
             }
         } catch (e) {
             console.error('Linen: Init error:', e);
@@ -4020,10 +3991,45 @@ class Linen {
         if (this._onboardingBound) return;
         this._onboardingBound = true;
 
-        document.getElementById('get-started').addEventListener('click', () => {
-            // Hide onboarding and show pitch modal
-            document.getElementById('onboarding-overlay').style.display = 'none';
-            this.showPitchModal();
+        // ─── Landing Page (Step 1) Buttons ───
+
+        // Learn more about Linen dropdown
+        document.getElementById('landing-about-btn')?.addEventListener('click', () => {
+            const aboutModal = document.getElementById('about-modal');
+            const backdrop = document.getElementById('modal-backdrop');
+            if (aboutModal) {
+                aboutModal.classList.add('active');
+                backdrop.classList.add('active');
+                this.setupAboutAccordion();
+            }
+        });
+
+        // Landing page login button
+        document.getElementById('landing-login-btn')?.addEventListener('click', () => {
+            this.showOnboardingStep(2);
+            // Show login form by default
+            setTimeout(() => {
+                document.getElementById('tab-login')?.click();
+            }, 100);
+        });
+
+        // Landing page sign up button
+        document.getElementById('landing-signup-btn')?.addEventListener('click', () => {
+            this.showOnboardingStep(2);
+            // Show signup form by default
+            setTimeout(() => {
+                document.getElementById('tab-signup')?.click();
+            }, 100);
+        });
+
+        // Landing page forgot password button
+        document.getElementById('landing-forgot-btn')?.addEventListener('click', () => {
+            this.showOnboardingStep(2);
+            // Show login form, then trigger forgot password
+            setTimeout(() => {
+                document.getElementById('tab-login')?.click();
+                this.handleForgotPassword();
+            }, 100);
         });
 
         // Close onboarding (step 3 only — step 2 has no close button, auth is required)
