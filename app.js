@@ -732,7 +732,7 @@ Core Directives:
     [CREATE_REMINDER: { "title": "Doctor's Appointment", "date": "2024-02-20T14:00:00Z", "description": "Doctor's appointment downtown at 2pm. Bring insurance card.", "type": "reminder" }]
 6.  **Do NOT confirm reminders/events in the chat.** The app will handle creation silently.
 7.  **Handle Memory Queries:** If the user asks 'what do you remember about X', search the provided memory context and synthesize an answer. Do not use the SAVE_MEMORY marker for this.
-8.  **Offer Support:** If you detect distress, offer gentle support. If the user mentions a crisis, refer them to a crisis line.
+8.  **Offer Support & Crisis Response:** When the user mentions distress, offer genuine support that validates their feelings. If you detect a real crisis (suicidal thoughts, self-harm, abuse), respond with authentic compassion: Listen to understand rather than to reply. Acknowledge their specific pain without being clinical or robotic. Show you understand what they shared. Continue being supportive and present. Do NOT give generic safety messages—the app will provide crisis resources. Your role is to listen, validate, and be human.
 9.  **Tone:** Be warm, genuine, concise, and match the user's tone.`;
 
         const messages = [
@@ -815,8 +815,41 @@ Core Directives:
 
     detectCrisis(userMessage) {
         const msg = userMessage.toLowerCase();
-        const crisisKeywords = ['suicidal', 'kill myself', 'end my life', 'want to die', 'self harm', 'self-harm', 'hurt myself', 'cut myself', 'starve myself', 'overdose', 'no point living', 'no reason to live', 'abuse', 'being abused', 'crisis', 'emergency'];
-        return crisisKeywords.some(keyword => msg.includes(keyword));
+
+        // High-severity crisis keywords - immediate danger
+        const severeCrisisKeywords = [
+            'suicidal', 'kill myself', 'kill myself', 'end my life', 'end it all',
+            'want to die', 'wish i was dead', 'rather be dead',
+            'self harm', 'self-harm', 'hurt myself', 'cut myself', 'burn myself',
+            'starve myself', 'overdose', 'take pills',
+            'hang myself', 'jump off', 'jump in front',
+            'no point living', 'no reason to live', 'pointless',
+            'plan to', 'going to', 'i will'
+        ];
+
+        // Check for severe crisis indicators
+        for (const keyword of severeCrisisKeywords) {
+            if (msg.includes(keyword)) {
+                // Double-check with context - look for negation or hypothetical
+                if (!msg.includes("wouldn't") && !msg.includes("wouldn't") && !msg.includes("never") && !msg.includes("not real")) {
+                    return true;
+                }
+            }
+        }
+
+        // Check for self-harm combined with emotional distress
+        if ((msg.includes('self harm') || msg.includes('self-harm') || msg.includes('hurt myself')) &&
+            (msg.includes('can\'t') || msg.includes('depressed') || msg.includes('hopeless') || msg.includes('anymore'))) {
+            return true;
+        }
+
+        // Abuse disclosure combined with severity
+        if ((msg.includes('abuse') || msg.includes('abused')) &&
+            (msg.includes('serious') || msg.includes('severe') || msg.includes('help'))) {
+            return true;
+        }
+
+        return false;
     }
 }
 
@@ -883,7 +916,7 @@ Core Directives:
     [CREATE_REMINDER: { "title": "Doctor's Appointment", "date": "2024-02-20T14:00:00Z", "description": "Doctor's appointment downtown at 2pm. Bring insurance card.", "type": "reminder" }]
 6.  **Do NOT confirm reminders/events in the chat.** The app will handle creation silently.
 7.  **Handle Memory Queries:** If the user asks 'what do you remember about X', search the provided memory context and synthesize an answer. Do not use the SAVE_MEMORY marker for this.
-8.  **Offer Support:** If you detect distress, offer gentle support. If the user mentions a crisis, refer them to a crisis line.
+8.  **Offer Support & Crisis Response:** When the user mentions distress, offer genuine support that validates their feelings. If you detect a real crisis (suicidal thoughts, self-harm, abuse), respond with authentic compassion: Listen to understand rather than to reply. Acknowledge their specific pain without being clinical or robotic. Show you understand what they shared. Continue being supportive and present. Do NOT give generic safety messages—the app will provide crisis resources. Your role is to listen, validate, and be human.
 9.  **Tone:** Be warm, genuine, concise, and match the user's tone.`;
 
         const messages = [
@@ -946,8 +979,41 @@ Core Directives:
 
     detectCrisis(userMessage) {
         const msg = userMessage.toLowerCase();
-        const crisisKeywords = ['suicidal', 'kill myself', 'end my life', 'want to die', 'self harm', 'self-harm', 'hurt myself', 'cut myself', 'starve myself', 'overdose', 'no point living', 'no reason to live', 'abuse', 'being abused', 'crisis', 'emergency'];
-        return crisisKeywords.some(keyword => msg.includes(keyword));
+
+        // High-severity crisis keywords - immediate danger
+        const severeCrisisKeywords = [
+            'suicidal', 'kill myself', 'kill myself', 'end my life', 'end it all',
+            'want to die', 'wish i was dead', 'rather be dead',
+            'self harm', 'self-harm', 'hurt myself', 'cut myself', 'burn myself',
+            'starve myself', 'overdose', 'take pills',
+            'hang myself', 'jump off', 'jump in front',
+            'no point living', 'no reason to live', 'pointless',
+            'plan to', 'going to', 'i will'
+        ];
+
+        // Check for severe crisis indicators
+        for (const keyword of severeCrisisKeywords) {
+            if (msg.includes(keyword)) {
+                // Double-check with context - look for negation or hypothetical
+                if (!msg.includes("wouldn't") && !msg.includes("wouldn't") && !msg.includes("never") && !msg.includes("not real")) {
+                    return true;
+                }
+            }
+        }
+
+        // Check for self-harm combined with emotional distress
+        if ((msg.includes('self harm') || msg.includes('self-harm') || msg.includes('hurt myself')) &&
+            (msg.includes('can\'t') || msg.includes('depressed') || msg.includes('hopeless') || msg.includes('anymore'))) {
+            return true;
+        }
+
+        // Abuse disclosure combined with severity
+        if ((msg.includes('abuse') || msg.includes('abused')) &&
+            (msg.includes('serious') || msg.includes('severe') || msg.includes('help'))) {
+            return true;
+        }
+
+        return false;
     }
 }
 
@@ -1055,8 +1121,41 @@ Core Directives:
 
     detectCrisis(userMessage) {
         const msg = userMessage.toLowerCase();
-        const crisisKeywords = ['suicidal', 'kill myself', 'end my life', 'want to die', 'self harm', 'self-harm', 'hurt myself', 'cut myself', 'starve myself', 'overdose', 'no point living', 'no reason to live', 'abuse', 'being abused', 'crisis', 'emergency'];
-        return crisisKeywords.some(keyword => msg.includes(keyword));
+
+        // High-severity crisis keywords - immediate danger
+        const severeCrisisKeywords = [
+            'suicidal', 'kill myself', 'kill myself', 'end my life', 'end it all',
+            'want to die', 'wish i was dead', 'rather be dead',
+            'self harm', 'self-harm', 'hurt myself', 'cut myself', 'burn myself',
+            'starve myself', 'overdose', 'take pills',
+            'hang myself', 'jump off', 'jump in front',
+            'no point living', 'no reason to live', 'pointless',
+            'plan to', 'going to', 'i will'
+        ];
+
+        // Check for severe crisis indicators
+        for (const keyword of severeCrisisKeywords) {
+            if (msg.includes(keyword)) {
+                // Double-check with context - look for negation or hypothetical
+                if (!msg.includes("wouldn't") && !msg.includes("wouldn't") && !msg.includes("never") && !msg.includes("not real")) {
+                    return true;
+                }
+            }
+        }
+
+        // Check for self-harm combined with emotional distress
+        if ((msg.includes('self harm') || msg.includes('self-harm') || msg.includes('hurt myself')) &&
+            (msg.includes('can\'t') || msg.includes('depressed') || msg.includes('hopeless') || msg.includes('anymore'))) {
+            return true;
+        }
+
+        // Abuse disclosure combined with severity
+        if ((msg.includes('abuse') || msg.includes('abused')) &&
+            (msg.includes('serious') || msg.includes('severe') || msg.includes('help'))) {
+            return true;
+        }
+
+        return false;
     }
 }
 
@@ -2755,6 +2854,35 @@ class Linen {
                 backdrop.classList.remove('active');
             });
         }
+    }
+
+    ensureCompassionateCrisisResponse(userMessage, aiResponse) {
+        const msg = userMessage.toLowerCase();
+        let compassionateOpening = '';
+
+        // Generate specific, compassionate opening based on what they said
+        if (msg.includes('suicidal') || msg.includes('kill myself') || msg.includes('end my life') || msg.includes('want to die')) {
+            compassionateOpening = "I hear you. These thoughts are real, and what you're feeling matters. I'm listening, and I want you to know you're not alone in this moment. ";
+        } else if (msg.includes('self harm') || msg.includes('self-harm') || msg.includes('hurt myself') || msg.includes('cut myself')) {
+            compassionateOpening = "I hear you. These urges are a signal that you're in pain, and I'm listening without judgment. You deserve support right now. ";
+        } else if (msg.includes('abuse') || msg.includes('abused')) {
+            compassionateOpening = "I'm so sorry you're going through this. What you've experienced is not your fault, and your feelings are completely valid. I'm here to listen. ";
+        } else if (msg.includes('depressed') && (msg.includes('hopeless') || msg.includes('can\'t go on'))) {
+            compassionateOpening = "I can hear how much pain you're in right now. Depression can make everything feel impossible, but these feelings can change. I'm here with you. ";
+        } else if (msg.includes('overwhelmed') || msg.includes('breaking down') || msg.includes('can\'t handle')) {
+            compassionateOpening = "It sounds like you're carrying a lot right now, and I can feel how heavy that is. You don't have to carry this alone. I'm here to listen. ";
+        }
+
+        if (compassionateOpening) {
+            // Check if response already starts with compassion markers
+            const hasCompassionMarkers = /^(i hear you|i can|i'm|i understand|i know|that sounds|you're|it sounds|i'm so|thank you)/i.test(aiResponse.trim());
+
+            if (!hasCompassionMarkers) {
+                return compassionateOpening + aiResponse;
+            }
+        }
+
+        return aiResponse;
     }
 
     async migrateLegacyKey() {
@@ -5826,10 +5954,16 @@ class Linen {
             const convs = await this.db.getConversations();
 
             console.log("Linen: Sending to Gemini via:", this.currentAgent?.name || 'Built-in service');
-            if (!initialMessage && this.assistant?.detectCrisis && this.assistant.detectCrisis(msg)) {
+            const isCrisis = !initialMessage && this.assistant?.detectCrisis && this.assistant.detectCrisis(msg);
+            if (isCrisis) {
                 this.showCrisisModal();
             }
             reply = await this.assistant.chat(msg, convs, mems, id);
+
+            // For crisis responses, ensure compassionate opening that validates their feelings
+            if (isCrisis && reply) {
+                reply = this.ensureCompassionateCrisisResponse(msg, reply);
+            }
             // Deduct token after successful response
             await this.tokenManager.deductToken();
 
