@@ -1,229 +1,84 @@
-# Linen — Your Personal AI Memory Assistant
+# Linen — Your Personal AI Companion
 
-**A privacy-first Progressive Web App that combines conversational AI with intelligent memory management.**
+**A privacy-first AI assistant that remembers everything about you, supports your mental health, and works entirely on your device.**
 
-> *What if your personal assistant never forgot a detail about your life, understood your emotions, and worked completely offline?*
-
----
-
-## 🎯 What is Linen?
-
-Linen is a sophisticated web application designed to be your digital companion. It learns from your conversations, remembers what matters to you, and provides thoughtful responses when you need them most.
-
-Unlike traditional note-taking apps or journaling tools, Linen is **interactive**. It engages in real conversations, understands context, and helps you work through problems while preserving your memories.
-
-**And the best part?** Everything stays on your device. Your memories never leave your computer or phone.
+> *An affordable alternative to expensive therapy sessions and AI subscriptions. Built by someone who's been there.*
 
 ---
 
-## ✨ Core Features
+## What is Linen?
 
-### 💬 **Conversational AI**
+Linen is a personal AI companion designed to be there when you need it most. It learns from your conversations, remembers what matters to you, and provides thoughtful, emotionally aware responses — all while keeping your data 100% on your device.
+
+Whether you're working through tough emotions, organizing your thoughts, or just need someone to talk to, Linen is in your pocket, ready to listen.
+
+**No expensive subscriptions. No surveillance. No data harvesting. Just an AI that's actually on your side.**
+
+---
+
+## Why Linen Exists
+
+Mental health support shouldn't be a luxury. Therapy is expensive, waitlists are long, and not everyone has access to the help they need. Linen was built to bridge that gap — not to replace professional care, but to provide an affordable, always-available companion that listens, remembers, and supports you through your day.
+
+---
+
+## How It Works
+
+Linen uses a simple **token system** to power AI conversations:
+
+1. **Get started instantly** — New users receive **20 tokens** (400 AI messages) to explore every feature
+2. **Chat with Linen** — Each token gives you **20 AI messages**
+3. **Need more?** — Purchase token packs from Settings at affordable prices
+4. **Offline always works** — Local responses don't use tokens
+
+### Token Packs
+
+| Pack | Tokens | Messages | Price |
+|------|--------|----------|-------|
+| Starter | 200 | 4,000 | $1.99 |
+| Popular | 600 | 12,000 | $4.99 |
+| Pro | 1,500 | 30,000 | $9.99 |
+
+---
+
+## Core Features
+
+### Conversational AI
 - Talk to Linen like you'd talk to a real companion
-- Get thoughtful, contextual responses
-- Switch between AI-powered mode (with your API key) or local mode (no API needed)
-- Emotional support when you're stressed or celebrating when you're happy
+- Emotionally aware responses that understand your mood
+- Gentle support when you're struggling, celebration when you're thriving
 
-### 🧠 **Intelligent Memory System**
+### Intelligent Memory System
 - Linen learns important details from your conversations automatically
-- Tag memories for easy searching
-- Find memories by keyword, date, or tags
-- See emotional context for each memory
+- Tag, search, and organize memories
 - Build a personal knowledge base of your life
+- Emotional context preserved for each memory
 
-### 🗓️ **Calendar & Reminders**
-- Create calendar events from natural language
+### Calendar & Reminders
+- Create events from natural language
 - Set reminders for important dates
-- Linen helps you stay organized without friction
+- Stay organized without friction
 
-### 👤 **Personal Profile**
-- Customize your experience with your name, pronouns, timezone
-- Automatic birthday greetings
-- Personalized responses that feel genuine
-
-### 🔐 **Privacy First**
-- All data stored locally (IndexedDB)
-- Optional API key integration (you control which AI provider)
-- Works completely offline
+### Privacy First
+- All data stored locally on your device (IndexedDB)
 - No tracking, no ads, no hidden data collection
-- Export or delete your data anytime
+- Export or delete your data anytime — it's yours
 
-### 📱 **Progressive Web App**
+### Progressive Web App
 - Install on your phone, tablet, or desktop
 - Feels like a native app
 - Works offline seamlessly
-- Fast, responsive, beautiful UI
-
-### 🔄 **Background Update Checks**
-- Silently checks for app updates in the background without disrupting usage
-- Checks every 5 minutes on WiFi when plugged in (optimal conditions)
-- Checks every 15 minutes on WiFi when on battery (balanced approach)
-- Checks every 1 hour on cellular when plugged in (minimize data usage)
-- Checks every 4 hours on cellular when on battery (preserve battery and data)
-- Non-intrusive notification when new version is available
-- User can dismiss or wait for auto-dismiss (8 seconds)
-- Closing and reopening the app loads the latest version
-- All user data preserved through IndexedDB persistence
+- Background update checks keep you current
 
 ---
 
-## 🚀 Getting Started
+## Who Is Linen For?
 
-### **Try it Right Now**
-Visit [https://ramin-najafi.github.io/linen/](https://ramin-najafi.github.io/linen/) and click **Get Started**
-
-You can:
-- Chat with Linen using the built-in Local Assistant (no sign-up, no API key needed)
-- Create memories and organize your thoughts
-- Set up calendar events and reminders
-- Explore all features offline
-
-### **Unlock Full Power (Optional)**
-Want unlimited conversations and AI-powered responses?
-
-1. Get a free API key from one of these AI providers:
-   - **Google Gemini** (free tier available): [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
-   - **OpenAI ChatGPT** (paid, but very capable): [platform.openai.com/api/keys](https://platform.openai.com/api/keys)
-   - **Hugging Face** (open source models): [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
-
-2. In Linen, go to **Settings → Add New Agent**
-3. Select your provider and paste your API key
-4. Start chatting with unlimited conversations
-
-**That's it.** No sign-up, no account creation, no surveillance.
-
----
-
-## 🛠️ Tech Stack
-
-**Frontend:**
-- Pure Vanilla JavaScript (ES6+) — no frameworks
-- HTML5 & CSS3 with modern features
-- Responsive design (mobile-first)
-
-**Storage & Offline:**
-- IndexedDB for persistent local storage
-- Service Workers for offline functionality
-- Automatic caching strategies
-
-**AI Integration:**
-- Support for multiple AI providers (Gemini, ChatGPT, Hugging Face)
-- Automatic fallback to local assistant if API fails
-- Graceful error handling
-
-**Deployment:**
-- GitHub Pages
-- Zero server backend needed
-- Instant updates, no build pipeline
-
----
-
-## 💡 Why Linen is Different
-
-| Feature | Linen | Google Keep | Notion | ChatGPT |
-|---------|-------|-------------|--------|---------|
-| **Conversational** | ✅ Interactive AI | ❌ Text only | ✅ Database | ✅ Chat only |
-| **Memory System** | ✅ Intelligent tagging | ✅ Notes | ✅ Pages | ❌ No persistence |
-| **Offline** | ✅ Full offline | ✅ Limited | ❌ Cloud only | ❌ Cloud only |
-| **Private** | ✅ 100% local | ⚠️ Google cloud | ⚠️ Cloud | ⚠️ Cloud |
-| **Calendar/Reminders** | ✅ Yes | ❌ No | ✅ Advanced | ❌ No |
-| **Multi-provider AI** | ✅ Yes | ❌ Google only | ✅ Paid plugins | ❌ OpenAI only |
-| **Free** | ✅ 100% free | ✅ Free | ⚠️ Freemium | ⚠️ Freemium |
-
----
-
-## 🎓 For Developers: Why This Project is Cool
-
-If you're a developer reading this, here's what makes Linen interesting from a technical perspective:
-
-### **Pure Vanilla JavaScript**
-- 2,000+ lines of well-organized, modular code
-- No React, Vue, Angular, or any framework
-- Shows you CAN build sophisticated apps with just HTML/CSS/JS
-- Great reference for vanilla JS best practices
-
-### **Advanced JavaScript Patterns**
-- Class-based architecture with multiple specialized classes
-- Event-driven design patterns
-- Async/await for API integration
-- IndexedDB abstraction layer
-
-### **Service Worker & Offline-First Design**
-- Complete offline functionality
-- Smart caching strategies
-- Automatic fallback when API fails
-- Service worker synchronization
-
-### **Progressive Web App**
-- Installable on any device
-- Native-like UI without native code
-- Web manifest configuration
-- App icons and splash screens
-
-### **AI Integration**
-- Multi-provider support (swap AI providers easily)
-- Prompt engineering examples
-- API key validation and error handling
-- Local fallback when API is unavailable
-
-### **IndexedDB in Production**
-- Real-world database abstraction
-- Transaction handling
-- Data export/import functionality
-- Backup and restore mechanisms
-
-### **Responsive Design Without Frameworks**
-- CSS Grid and Flexbox mastery
-- Mobile-first design
-- Touch-friendly UI
-- Accessibility considerations (WCAG)
-
----
-
-## 🔍 How Linen Works
-
-### **Three Core Systems:**
-
-**1. Conversation Engine**
-- Local Assistant: Rule-based responses (works offline)
-- AI Assistant: API-powered intelligent responses
-- Automatic switching based on availability
-- Memory-aware context injection
-
-**2. Memory System**
-- Auto-detects important information from conversations
-- Tags and categorizes memories
-- Stores emotional context
-- Enables natural reference to past conversations
-
-**3. Storage Layer**
-- IndexedDB for structured data
-- localStorage for settings
-- Service Worker caching
-- Data persistence across browser sessions
-
----
-
-## 📊 App Architecture
-
-```
-Linen/
-├── index.html           # UI structure
-├── styles.css           # Responsive design
-├── app.js               # Main application (2000+ lines)
-│   ├── Linen class      # App orchestrator
-│   ├── Database class   # IndexedDB wrapper
-│   ├── AIAssistant      # API integration
-│   ├── LocalAssistant   # Offline responses
-│   ├── ProfileManager   # User preferences
-│   └── [More modules]
-├── service-worker.js    # Offline & caching
-└── manifest.json        # PWA configuration
-```
-
----
-
-## 🎯 Real Use Cases
+**People who need support:**
+- Journal and reflect with AI companionship
+- Track mood patterns over time
+- Get gentle encouragement when you're struggling
+- An affordable supplement between therapy sessions
 
 **Students:**
 - Remember key concepts from learning sessions
@@ -235,82 +90,85 @@ Linen/
 - Build a personal knowledge base
 - Get reminders for follow-ups
 
-**Mental Health & Wellness:**
-- Journal and reflect with AI support
-- Track mood patterns over time
-- Get gentle encouragement when you're struggling
-
 **Creatives:**
 - Brainstorm ideas with an engaged listener
 - Keep an inspiration log
 - Review past creative work for patterns
 
-**Anyone Curious:**
-- Explore what a modern web app can do
-- Learn how AI integrates with web apps
-- See PWA technology in action
+---
+
+## What Makes Linen Different
+
+| Feature | Linen | ChatGPT | Google Keep | Notion |
+|---------|-------|---------|-------------|--------|
+| **Conversational** | Interactive AI | Chat only | Text only | Database |
+| **Remembers You** | Intelligent memory | No persistence | Notes | Pages |
+| **Works Offline** | Full offline | Cloud only | Limited | Cloud only |
+| **Private** | 100% on device | Cloud | Google cloud | Cloud |
+| **Affordable** | Token-based | $20/month | N/A | Freemium |
+| **Mental Health Focus** | Built for it | General | No | No |
 
 ---
 
-## 🌟 What Makes Linen Stand Out
+## Tech Stack
 
-✅ **Zero cost** — Completely free, no ads, no tracking
-✅ **Works offline** — Full functionality without internet
-✅ **Your data is yours** — Everything stays on your device
-✅ **Beautiful design** — Thoughtful, minimal UI
-✅ **Easy to use** — Intuitive without a learning curve
-✅ **Production-ready code** — Well-structured, maintainable JavaScript
-✅ **Innovative** — Combines multiple technologies in a useful way
-✅ **Accessible** — Designed for everyone
+- **Pure Vanilla JavaScript** (ES6+) — no frameworks, no dependencies
+- **IndexedDB** for persistent local storage
+- **Service Workers** for offline functionality
+- **GitHub Pages** deployment
+- **AI Integration** via token-powered conversations
 
 ---
 
-## 🚀 Try It Now
+## Try It Now
 
-**Visit:** [https://ramin-najafi.github.io/linen/](https://ramin-najafi.github.io/linen/)
+**Visit:** [https://linen-pa.github.io](https://linen-pa.github.io)
 
 1. Click **Get Started**
 2. Say hello to Linen
-3. Try creating a memory
-4. Explore the settings
-
-No sign-up. No email. No tracking. Just open the app and start.
+3. Explore memories, reminders, and settings
+4. Your 20 tokens are ready to go
 
 ---
 
-## 💬 Questions?
+## FAQ
 
-**How private is it really?**
-Everything stored locally on your device. No data sent anywhere unless you add an API key (which you control).
+**How private is it?**
+Everything is stored locally on your device. Linen cannot access your data. When you chat with AI, only that specific message is processed — nothing is stored on any server.
 
-**What if I don't have an API key?**
-No problem! The Local Assistant works completely offline. You won't have memory persistence, but you get core functionality.
+**Do I need to sign up?**
+No. No account, no email, no sign-up. Just open the app and start.
 
-**Can I use multiple AI providers?**
-Yes! Add as many API keys as you want and switch between them anytime.
+**What happens when I run out of tokens?**
+You can purchase more from Settings. Local features (memories, reminders, offline chat) always work without tokens.
 
 **Will my data transfer between devices?**
-Currently, no. Data is device-specific. (Future enhancement: optional encrypted cloud sync)
-
-**Is the code open source?**
-The app is deployed at [https://github.com/ramin-najafi/ramin-najafi.github.io](https://github.com/ramin-najafi/ramin-najafi.github.io). Feel free to fork, learn, and build on it.
+Currently, data is device-specific. Optional encrypted cloud sync is planned for a future release.
 
 ---
 
-## 📚 Learn More
+## Legal
 
-- **GitHub Repository:** [github.com/ramin-najafi](https://github.com/ramin-najafi)
-- **Email:** rnajafi.dev@gmail.com
+This software is proprietary. All rights reserved. See [LICENSE](./LICENSE) for details.
+
+**Linen** is a trademark of Ramin Najafi. Unauthorized use of the Linen name, branding, design, or source code is prohibited.
+
+---
+
+## Contact
+
+- **Support:** linen.pa.app@gmail.com
+- **Creator:** Ramin Najafi
 - **Portfolio:** [ramin-najafi.github.io](https://ramin-najafi.github.io/)
 
 ---
 
-## 🎉 Built with Passion
+## Built with Purpose
 
-Linen is a labor of love, built to explore what's possible with modern web technologies. It's not trying to replace specialized tools, but to be that one app you actually want to use every day.
+Linen isn't just an app — it's a mission. Mental health support should be accessible to everyone, not just those who can afford it. If Linen helps even one person feel less alone, it's done its job.
 
-**Start chatting. Start remembering. Start living better.**
+**Start chatting. Start remembering. Start healing.**
 
 ---
 
-**Version 1.3.0 [beta]** | © 2026 Ramin Najafi
+**Version 1.6.0 [beta]** | Copyright 2025-2026 Ramin Najafi. All Rights Reserved.

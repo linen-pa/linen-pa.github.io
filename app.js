@@ -175,8 +175,8 @@ class LinenDB {
 class TokenManager {
     constructor(db) {
         this.db = db;
-        this.FREE_TOKENS = 10;
-        this.MESSAGES_PER_TOKEN = 10;
+        this.FREE_TOKENS = 20;
+        this.MESSAGES_PER_TOKEN = 20;
     }
 
     async initialize() {
@@ -4075,7 +4075,7 @@ class Linen {
                 if (!response.ok) return;
 
                 const newVersion = (await response.text()).trim();
-                const currentVersion = sessionStorage.getItem('linen-app-version') || '1.5.3';
+                const currentVersion = sessionStorage.getItem('linen-app-version') || '1.6.0';
 
                 if (newVersion !== currentVersion) {
                     console.log(`Linen: New version available (${currentVersion} → ${newVersion}). Initiating smart reload...`);
@@ -4337,7 +4337,7 @@ class Linen {
                 const response = await fetch('/version.txt?t=' + Date.now(), { cache: 'no-store' });
                 if (response.ok) {
                     const newVersion = (await response.text()).trim();
-                    const currentVersion = sessionStorage.getItem('linen-app-version') || '1.5.3';
+                    const currentVersion = sessionStorage.getItem('linen-app-version') || '1.6.0';
 
                     console.log(`Linen: Version check - Current: ${currentVersion}, Available: ${newVersion}`);
 

@@ -32,10 +32,10 @@
             <p>Linen uses tokens to power your AI conversations.</p>
             <div class="onboarding-tokens-info">
                 <div class="onboarding-token-grant">
-                    <span class="onboarding-token-number">10</span>
+                    <span class="onboarding-token-number">20</span>
                     <span class="onboarding-token-text">tokens to get started</span>
                 </div>
-                <p class="onboarding-token-detail">1 token = 10 AI messages. Need more? Purchase tokens anytime from Settings.</p>
+                <p class="onboarding-token-detail">1 token = 20 AI messages. Need more? Purchase tokens anytime from Settings.</p>
             </div>
             <button type="button" id="onboarding-continue" class="onboarding-continue-btn">Continue</button>
             <p class="error-message" id="onboarding-error"></p>
@@ -88,46 +88,22 @@
 
     <!-- Pitch Content -->
     <div class="pitch-content">
-        <p class="pitch-description">Linen is a personal AI assistant that actually respects your privacy. Unlike other apps, everything you talk to Linen about stays on your device—we don't sell your data or train on your conversations. It learns who you are over time, remembers what matters to you, and helps with reminders, planning, or just being there when you need support. Think of it as an AI that's actually on your side.</p>
-
-        <!-- Start Chatting Now - Accordion Dropdown -->
-        <div class="accordion-container">
-            <div class="accordion-item">
-                <button class="accordion-header" data-section="start">
-                    <span>⚡ Start Chatting Now</span>
-                    <span class="accordion-icon">▼</span>
-                </button>
-                <div class="accordion-content" id="start">
-                    <p>Start chatting right now with Linen's built-in AI. It's a great listener and helpful friend. Want even smarter features? Add your favorite AI provider's API key anytime to unlock memories, reminders, and deeper conversations.</p>
-                    <p style="font-size: 0.9rem; color: #999;"><strong>Your conversations with Linen always stay private on your device—the API key only tells Linen which AI service you prefer to use.</strong></p>
-                </div>
-            </div>
-        </div>
-
-        <div class="pitch-section">
-            <h3>Works With Your Favorite AI:</h3>
-            <div class="provider-badges">
-                <span class="badge">🟢 Gemini</span>
-                <span class="badge">⚪ ChatGPT</span>
-                <span class="badge">🔴 Hugging Face</span>
-            </div>
-        </div>
+        <p class="pitch-description">Linen is a personal AI companion that actually respects your privacy. Everything stays on your device — we don't sell your data or train on your conversations. It learns who you are, remembers what matters to you, and is there when you need support. Think of it as an AI that's actually on your side.</p>
 
         <div class="pitch-section">
             <h3>Key Features:</h3>
             <ul class="pitch-features">
-                <li>🔒 Privacy First</li>
-                <li>🧠 Personalized</li>
-                <li>👤 You Own Your Data</li>
-                <li>🤖 Use Your Favorite AI</li>
-                <li>💬 Start Chatting Immediately</li>
+                <li>🔒 Privacy First — your data stays on your device</li>
+                <li>🧠 Remembers You — builds a personal memory of your life</li>
+                <li>💬 Always Available — chat anytime, works offline too</li>
+                <li>🪙 Affordable — 20 tokens to start, each token = 20 AI messages</li>
+                <li>❤️ Built for You — emotional support when you need it most</li>
             </ul>
         </div>
     </div>
 
     <div class="pitch-buttons">
         <button id="close-pitch-modal" class="button-primary">Start Chatting</button>
-        <button id="get-api-key-direct" class="button-secondary">Get API Keys</button>
     </div>
 </div>
 
@@ -152,7 +128,7 @@
                     <p><strong>What if your personal assistant never forgot a detail about your life, understood your emotions, and worked completely offline?</strong> That's Linen.</p>
 
                     <h4 style="margin-top: 1rem; color: var(--accent);">💬 Conversational AI</h4>
-                    <p>Talk to Linen like you'd talk to a real companion. Get thoughtful, contextual responses that understand your emotional state. Switch between AI-powered mode (with your API key) or local mode (completely offline, no API needed). Linen provides emotional support when you're stressed and celebrates when you're happy.</p>
+                    <p>Talk to Linen like you'd talk to a real companion. Get thoughtful, contextual responses that understand your emotional state. Powered by tokens for AI conversations, with offline local mode always available. Linen provides emotional support when you're stressed and celebrates when you're happy.</p>
 
                     <h4 style="margin-top: 1rem; color: var(--accent);">🧠 Intelligent Memory System</h4>
                     <p>Linen learns important details from your conversations automatically—no manual input needed. Tag memories for easy searching, find them by keyword, date, or tags, and see emotional context for each memory. Build a personal knowledge base of your life that actually understands you.</p>
@@ -184,7 +160,7 @@
                     <p>All your data is stored locally using IndexedDB—a secure, persistent database that lives on your device. Your conversations and memories never leave your computer or phone unless you explicitly choose to connect an API provider. We don't have access to your data. We can't read it. We don't want it.</p>
 
                     <h4 style="margin-top: 1rem; color: var(--accent);">🎮 You Control Everything</h4>
-                    <p>Linen uses a simple token system to power your AI experience. Purchase tokens and use them to chat with AI. Your conversations and memories stay on your device. You're in control.</p>
+                    <p>Linen uses an affordable token system to power your AI experience. Each token gives you 20 AI messages. Your conversations and memories stay on your device. You're in control.</p>
 
                     <h4 style="margin-top: 1rem; color: var(--accent);">🌐 Works Offline</h4>
                     <p>Full functionality without internet connection. Linen includes a built-in Local Assistant that provides intelligent responses completely offline. A Service Worker handles smart caching, so you can access your memories even without internet. No internet? No problem.</p>
@@ -247,7 +223,7 @@
 
     <div class="about-footer">
         <p>© 2026 Ramin Najafi | <a href="https://ramin-najafi.github.io/" target="_blank">Portfolio</a></p>
-        <p id="about-version" style="margin-top: 0.5rem; color: #fff; font-size: 0.85rem;">v1.5.3 [beta]</p>
+        <p id="about-version" style="margin-top: 0.5rem; color: #fff; font-size: 0.85rem;">v1.6.0 [beta]</p>
     </div>
 </div>
 
@@ -354,7 +330,7 @@
                 </button>
             </div>
             <div id="logo-menu" class="logo-menu hidden">
-                <button type="button" id="logo-utilities" class="menu-item">⚡ Utilities</button>
+                <button type="button" id="logo-utilities" class="menu-item" style="display: none;">⚡ Utilities</button>
                 <button type="button" id="logo-new-chat" class="menu-item">💬 New Chat</button>
                 <button type="button" id="logo-memories" class="menu-item">📚 Memories</button>
                 <button type="button" id="logo-settings" class="menu-item">⚙ Settings</button>
@@ -572,7 +548,7 @@
                     <span class="token-settings-label">Your balance</span>
                     <span class="token-settings-count" id="settings-token-balance">0</span>
                 </div>
-                <p class="token-settings-desc">1 token = 10 AI messages.</p>
+                <p class="token-settings-desc">1 token = 20 AI messages.</p>
             </div>
             <div class="token-packs-settings">
                 <div class="token-pack" data-amount="200">
@@ -665,7 +641,7 @@
             <button type="button" id="share-linen-btn" class="settings-btn settings-btn-primary" style="margin-top: 1rem;">📤 Share Linen</button>
         </div>
 
-        <p id="version-info">Version 1.5.3 [beta]</p>
+        <p id="version-info">Version 1.6.0 [beta]</p>
     </div>
 </div>
 
@@ -680,7 +656,7 @@
             <li>Your name, email, pronouns, birthday (only if you add them)</li>
             <li>Your conversations with Linen</li>
             <li>Your calendar events and reminders</li>
-            <li>Your API keys (stored locally)</li>
+            <li>Your token balance</li>
             <li>Nothing else.</li>
         </ul>
 
@@ -701,26 +677,11 @@
             <li>Never stores your data on any server</li>
         </ul>
 
-        <h3>Your API Keys</h3>
+        <h3>AI Conversations</h3>
         <ul>
-            <li>Your ChatGPT and Gemini keys stay on YOUR device</li>
-            <li>Linen cannot access them</li>
-            <li>Only used locally by Linen</li>
-            <li>Delete them anytime, they're gone forever</li>
-        </ul>
-
-        <h3>Email (If You Opt-In)</h3>
-        <ul>
-            <li>You can optionally provide your email</li>
-            <li>Linen only sends emails if you enable notifications</li>
-            <li>Unsubscribe anytime</li>
-        </ul>
-
-        <h3>Third Parties</h3>
-        <ul>
-            <li>If you choose to use external AI providers (ChatGPT, Gemini), they receive only what you send them</li>
-            <li>Read their privacy policies to understand their practices</li>
-            <li>Linen has no access to your API usage or data sent to them</li>
+            <li>When you use tokens for AI messages, your message is sent to an AI provider for processing</li>
+            <li>Only the message you send is transmitted — no personal data, no history</li>
+            <li>AI responses are stored locally on your device only</li>
         </ul>
 
         <h3>Data Deletion</h3>
@@ -736,7 +697,7 @@
             <li>Changes will never reduce your privacy protections</li>
         </ul>
 
-        <p class="privacy-date">Last updated: February 2026</p>
+        <p class="privacy-date">Last updated: March 2026</p>
     </div>
     <button id="close-privacy-btn" class="button-primary" style="margin-top: 1rem;">Got It</button>
 </div>
@@ -760,9 +721,9 @@
 
         <h3>You're Responsible For</h3>
         <ul>
-            <li>Your API keys — keep them secret, don't share them</li>
             <li>Your device security</li>
             <li>What you use Linen for</li>
+            <li>Managing your token balance</li>
         </ul>
 
         <h3>Linen is Not Liable For</h3>
@@ -793,8 +754,15 @@
             <li>All your data stays yours</li>
         </ul>
 
+        <h3>Intellectual Property</h3>
+        <ul>
+            <li>Linen, its design, source code, and branding are proprietary</li>
+            <li>Copying, cloning, or creating derivative works is prohibited</li>
+            <li>See the LICENSE file for full details</li>
+        </ul>
+
         <p class="privacy-terms-law">Governing Law: Ontario, Canada</p>
-        <p class="privacy-date">Last updated: February 2026</p>
+        <p class="privacy-date">Last updated: March 2026</p>
     </div>
     <button id="close-terms-btn" class="button-primary" style="margin-top: 1rem;">Got It</button>
 </div>

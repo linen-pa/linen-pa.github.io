@@ -1,23 +1,64 @@
 Linen — Proprietary Software License
 Copyright (c) 2025-2026 Ramin Najafi. All Rights Reserved.
 
-This software and associated documentation files (the "Software") are the
-exclusive property of Ramin Najafi.
+"Linen" is a trademark of Ramin Najafi. This name, the associated branding,
+logos, visual design, and user interface design are protected intellectual
+property.
+
+This software and all associated documentation, source code, design elements,
+user interface patterns, prompts, algorithms, and assets (collectively, the
+"Software") are the exclusive property of Ramin Najafi.
 
 PERMITTED:
-- Using the Software as intended via the official hosted version
-- Viewing the source code for educational or evaluation purposes
+- Using the Software as intended via the official hosted version at
+  https://linen-pa.github.io or any official distribution channel
+  (including the Apple App Store or Google Play Store)
+- Viewing the source code for personal educational purposes only
 
 PROHIBITED WITHOUT PRIOR WRITTEN PERMISSION:
-- Copying, reproducing, or redistributing the Software or any portion of it
-- Modifying, adapting, or creating derivative works based on the Software
-- Using the Software, its design, or its source code in any commercial or
-  non-commercial product or service
-- Sublicensing, selling, or transferring the Software to any third party
-- Removing or altering any copyright notices or this license
+- Copying, reproducing, cloning, or redistributing the Software or any
+  portion of it, in whole or in part
+- Modifying, adapting, translating, or creating derivative works based on
+  the Software, its design, its user interface, or its functionality
+- Reverse-engineering, decompiling, or disassembling any part of the Software
+- Using the Software, its design patterns, UI/UX concepts, prompt engineering,
+  or source code as a basis for any other product or service, whether
+  commercial or non-commercial
+- Scraping, crawling, or programmatically accessing the Software's content
+  or functionality
+- Sublicensing, selling, leasing, renting, or transferring the Software or
+  access to it to any third party
+- Removing, altering, or obscuring any copyright notices, trademark notices,
+  or this license
+- Using the "Linen" name, logo, or branding in any product, service,
+  marketing material, or public communication without written authorization
+- Hosting, mirroring, or redistributing the Software on any server, platform,
+  or distribution channel other than the official channels listed above
+- Training machine learning models, AI systems, or datasets using the
+  Software's source code, prompts, or content
 
-THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND. IN NO EVENT
-SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING
-FROM THE USE OF THIS SOFTWARE.
+INTELLECTUAL PROPERTY:
+The Software represents original creative and technical work. The combination
+of its features — including but not limited to its conversational AI design,
+memory system architecture, token-based access model, emotional awareness
+engine, prompt engineering, and privacy-first local storage approach —
+constitutes protected intellectual property. Any attempt to replicate the
+core concept, feature set, or user experience of the Software may constitute
+infringement.
 
-For licensing inquiries, contact: github.com/Ramin-Najafi
+ENFORCEMENT:
+Violations of this license may result in legal action. The copyright holder
+reserves the right to pursue all available legal remedies, including but not
+limited to injunctive relief, statutory damages, and recovery of legal fees.
+
+DISCLAIMER:
+THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+OTHER LIABILITY ARISING FROM THE USE OF OR INABILITY TO USE THIS SOFTWARE.
+
+GOVERNING LAW:
+This license shall be governed by and construed in accordance with the laws
+of the Province of Ontario, Canada, without regard to conflict of law
+principles. Any disputes shall be resolved in the courts of Ontario, Canada.
+
+For licensing inquiries or permissions: linen.pa.app@gmail.com
