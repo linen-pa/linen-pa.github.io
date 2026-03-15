@@ -254,7 +254,7 @@
 
 <div id="trial-limit-modal" class="modal">
     <h2>Out of Tokens</h2>
-    <p>You've used all your tokens. Purchase more from Settings to continue chatting.</p>
+    <p>You've used all your tokens. Upgrade your tier in Settings to continue chatting.</p>
     <button id="close-trial-modal" class="button-primary">Close</button>
 </div>
 
@@ -575,7 +575,7 @@
         </div>
 
         <div class="settings-section">
-            <h3 class="settings-heading">🪙 Tokens</h3>
+            <h3 class="settings-heading">⭐ Tiers</h3>
             <div class="token-settings-info">
                 <div class="token-settings-balance">
                     <span class="token-settings-label">Your balance</span>
@@ -584,8 +584,13 @@
                 <p class="token-settings-desc">1 token = 20 AI messages.</p>
             </div>
             <div class="token-packs-settings">
+                <div class="token-pack" data-amount="0">
+                    <div class="pack-name">Basic</div>
+                    <div class="pack-tokens">Free</div>
+                    <div class="pack-price">Limited access</div>
+                </div>
                 <div class="token-pack" data-amount="200">
-                    <div class="pack-name">Starter</div>
+                    <div class="pack-name">Pro</div>
                     <div class="pack-tokens">200 tokens</div>
                     <div class="pack-price">$1.99</div>
                 </div>
@@ -596,13 +601,12 @@
                     <div class="pack-price">$4.99</div>
                 </div>
                 <div class="token-pack" data-amount="1500">
-                    <div class="pack-name">Pro</div>
+                    <div class="pack-name">Ultimate</div>
                     <div class="pack-tokens">1,500 tokens</div>
                     <div class="pack-price">$9.99</div>
                 </div>
             </div>
             <p class="token-store-note">Payments coming soon.</p>
-            <button type="button" id="settings-token-refill" class="token-refill-btn">Refill 10 Tokens (Testing)</button>
         </div>
 
         <div class="settings-section">

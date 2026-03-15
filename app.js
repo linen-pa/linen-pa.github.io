@@ -2694,6 +2694,42 @@ class Linen {
         return reply;
     }
 
+    async checkAndApplyEmergencyTokens(userMessage, assistantReply) {
+        try {
+            const sentiment = this.detectUserSentiment(userMessage);
+            if (sentiment !== 'distressed') return; // Only for distressed users
+
+            // Check if user has been distressed in recent conversation history
+            const convs = await this.db.getConversations();
+            const recentMessages = convs.slice(-10); // Last 10 messages
+            const distressedCount = recentMessages.filter(c =>
+                c.sender === 'user' && this.detectUserSentiment(c.text) === 'distressed'
+            ).length;
+
+            // Only give bonus if user shows consistent distress (3+ of last 10 messages)
+            if (distressedCount < 3) return;
+
+            // Check if we've already given emergency tokens today
+            const lastEmergencyGrant = await this.db.getSetting('emergency-token-grant-date');
+            const today = new Date().toDateString();
+            if (lastEmergencyGrant === today) return; // Already granted once today
+
+            // Check if assistant response was genuinely supportive (contains empathy words)
+            const empathyWords = ['understand', 'hear you', 'sorry', 'difficult', 'support', 'here', 'listen', 'care', 'help', 'struggle', 'tough'];
+            const hasEmpathy = empathyWords.some(word => assistantReply.toLowerCase().includes(word));
+            if (!hasEmpathy) return; // Only grant if Linen showed genuine care
+
+            // Silently grant 5 bonus tokens (not too much to seem suspicious)
+            const currentBalance = await this.tokenManager.getBalance();
+            await this.tokenManager.addTokens(5);
+            await this.db.setSetting('emergency-token-grant-date', today);
+
+            console.log(`Linen: Emergency tokens granted (user in distress, balance was ${currentBalance})`);
+        } catch (e) {
+            console.error('Linen: Emergency token check failed (non-critical):', e);
+        }
+    }
+
     showCrisisModal() {
         const modal = document.getElementById('crisis-modal');
         const backdrop = document.getElementById('modal-backdrop');
@@ -4005,9 +4041,6 @@ class Linen {
         document.getElementById('verify-check-btn')?.addEventListener('click', () => this.handleVerifyCheck());
         document.getElementById('verify-resend-btn')?.addEventListener('click', () => this.handleResendVerification());
 
-        // Sign Out (in settings)
-        document.getElementById('sign-out-btn')?.addEventListener('click', () => this.handleSignOut());
-
         document.querySelectorAll('.device-selector button').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.getElementById('android-instructions').style.display = e.target.dataset.device === 'android' ? 'block' : 'none';
@@ -4102,15 +4135,11 @@ class Linen {
             if (tokenBadgeBtn) {
                 tokenBadgeBtn.addEventListener('click', () => this.showTokenStoreModal());
             }
-            // Refill button in settings
-            const settingsTokenRefill = document.getElementById('settings-token-refill');
-            if (settingsTokenRefill) {
-                settingsTokenRefill.addEventListener('click', async () => {
-                    const newBalance = await this.tokenManager.addTokens(10);
-                    const balanceEl = document.getElementById('settings-token-balance');
-                    if (balanceEl) balanceEl.textContent = newBalance;
-                    this.showToast('Added 10 tokens!', 'success');
-                });
+
+            // Sign out button
+            const signOutBtn = document.getElementById('sign-out-btn');
+            if (signOutBtn) {
+                signOutBtn.addEventListener('click', () => this.handleSignOut());
             }
         } else {
             console.warn('Linen: Logo menu elements not found');
@@ -5774,6 +5803,9 @@ class Linen {
                 // Analyze user message for potential calendar events/reminders
                 await this.analyzeForEvents(msg);
                 await this.recordLearningFromTurn(msg, reply);
+
+                // Smart emergency token detection — silently give bonus tokens if user is genuinely distressed
+                await this.checkAndApplyEmergencyTokens(msg, reply);
             }
 
         } catch (e) {
