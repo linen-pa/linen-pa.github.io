@@ -3993,44 +3993,64 @@ class Linen {
 
         // ─── Landing Page (Step 1) Buttons ───
 
-        // Learn more about Linen dropdown
-        document.getElementById('landing-about-btn')?.addEventListener('click', () => {
-            const aboutModal = document.getElementById('about-modal');
-            const backdrop = document.getElementById('modal-backdrop');
-            if (aboutModal) {
-                aboutModal.classList.add('active');
-                backdrop.classList.add('active');
-                this.setupAboutAccordion();
+        // Learn more about Linen dropdown (use delegation to ensure it always works)
+        const setupLandingAboutBtn = () => {
+            const btn = document.getElementById('landing-about-btn');
+            if (btn && !btn.hasClickHandler) {
+                btn.hasClickHandler = true;
+                btn.addEventListener('click', () => {
+                    const aboutModal = document.getElementById('about-modal');
+                    const backdrop = document.getElementById('modal-backdrop');
+                    if (aboutModal) {
+                        aboutModal.classList.add('active');
+                        backdrop.classList.add('active');
+                        this.setupAboutAccordion();
+                    }
+                });
             }
-        });
+        };
+        setupLandingAboutBtn();
 
-        // Landing page login button
-        document.getElementById('landing-login-btn')?.addEventListener('click', () => {
-            this.showOnboardingStep(2);
-            // Show login form by default
-            setTimeout(() => {
-                document.getElementById('tab-login')?.click();
-            }, 100);
-        });
+        // Landing page buttons (set up with delegation)
+        const setupLandingButtons = () => {
+            const loginBtn = document.getElementById('landing-login-btn');
+            if (loginBtn && !loginBtn.hasClickHandler) {
+                loginBtn.hasClickHandler = true;
+                loginBtn.addEventListener('click', () => {
+                    this.showOnboardingStep(2);
+                    // Show login form by default
+                    setTimeout(() => {
+                        document.getElementById('tab-login')?.click();
+                    }, 100);
+                });
+            }
 
-        // Landing page sign up button
-        document.getElementById('landing-signup-btn')?.addEventListener('click', () => {
-            this.showOnboardingStep(2);
-            // Show signup form by default
-            setTimeout(() => {
-                document.getElementById('tab-signup')?.click();
-            }, 100);
-        });
+            const signupBtn = document.getElementById('landing-signup-btn');
+            if (signupBtn && !signupBtn.hasClickHandler) {
+                signupBtn.hasClickHandler = true;
+                signupBtn.addEventListener('click', () => {
+                    this.showOnboardingStep(2);
+                    // Show signup form by default
+                    setTimeout(() => {
+                        document.getElementById('tab-signup')?.click();
+                    }, 100);
+                });
+            }
 
-        // Landing page forgot password button
-        document.getElementById('landing-forgot-btn')?.addEventListener('click', () => {
-            this.showOnboardingStep(2);
-            // Show login form, then trigger forgot password
-            setTimeout(() => {
-                document.getElementById('tab-login')?.click();
-                this.handleForgotPassword();
-            }, 100);
-        });
+            const forgotBtn = document.getElementById('landing-forgot-btn');
+            if (forgotBtn && !forgotBtn.hasClickHandler) {
+                forgotBtn.hasClickHandler = true;
+                forgotBtn.addEventListener('click', () => {
+                    this.showOnboardingStep(2);
+                    // Show login form, then trigger forgot password
+                    setTimeout(() => {
+                        document.getElementById('tab-login')?.click();
+                        this.handleForgotPassword();
+                    }, 100);
+                });
+            }
+        };
+        setupLandingButtons();
 
         // Close onboarding (step 3 only — step 2 has no close button, auth is required)
         const closeOnboardingStep3 = document.getElementById('close-onboarding-step3');
