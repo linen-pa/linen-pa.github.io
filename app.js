@@ -2701,6 +2701,9 @@ class Linen {
 
             // Check if user has been distressed in recent conversation history
             const convs = await this.db.getConversations();
+            // Need at least 6 messages total (3+ distressed + 3+ assistant responses = pattern, not initial message)
+            if (convs.length < 6) return;
+
             const recentMessages = convs.slice(-10); // Last 10 messages
             const distressedCount = recentMessages.filter(c =>
                 c.sender === 'user' && this.detectUserSentiment(c.text) === 'distressed'
