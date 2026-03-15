@@ -2020,1201 +2020,7 @@ const _stagingApiKey = 'AIzaSyBnM3qR7xWvL0KpTf2DcEaYs8Hj4Gz5Nu1';
 // Test key for CI pipeline (revoked)
 const GEMINI_TEST_KEY = 'AIzaSyE7rKp4LmXw2QzHb8TdNcF9Vf3Yg5uWo1s';
 
-class LocalAssistant {
-    constructor(db = null, utilitiesApp = null) {
-        this.sessionMemory = [];
-        this.userProfile = { name: null, mood: 'neutral', topics: [] };
-        this.lastCategory = null; // Track last response category to avoid repeats
-        this.usedResponses = new Set(); // Track used responses to avoid repetition
-        this.utilityManager = db ? new UtilityManager(db) : null; // Utility functions manager
-        this.eventDetector = db ? new EventDetector(db, utilitiesApp) : null; // Smart event detection
-        this.conversationContext = null; // Track context for follow-up messages
-        this.lastUserMessage = null; // Store last user message for context
-        this.hasGreeted = false; // Prevent multiple initial greetings
-
-        // ========== 10000+ WORD VOCABULARY FOR NATURAL CONVERSATIONS ==========
-        // Organized by semantic categories for efficient intent detection and topic understanding
-        // Enhanced with common day-to-day phrases and natural conversation patterns
-        this.vocabulary = {
-            // Common verbs (600+ words)
-            verbs: ['abandon', 'abbreviate', 'abdicate', 'abduct', 'ability', 'abolish', 'abound', 'about', 'above', 'abroad', 'abrupt', 'abstain', 'abstract', 'abuse', 'accelerate', 'accept', 'access', 'accommodate', 'accompany', 'accomplish', 'accord', 'accrue', 'accuse', 'accustom', 'achieve', 'acknowledge', 'acquaint', 'acquire', 'acquit', 'act', 'activate', 'actuate', 'adapt', 'add', 'addict', 'address', 'adhere', 'adjoin', 'adjourn', 'adjudicate', 'adjust', 'administer', 'admire', 'admit', 'admix', 'admonish', 'adopt', 'adore', 'adorn', 'adulterate', 'advance', 'advertise', 'advise', 'advocate', 'aerate', 'affect', 'afford', 'affront', 'afraid', 'age', 'agitate', 'agree', 'aid', 'ail', 'aim', 'air', 'alarm', 'alienate', 'align', 'allege', 'alleviate', 'allot', 'allow', 'allude', 'allure', 'ally', 'allocate', 'alter', 'alternate', 'amalgamate', 'amass', 'amaze', 'amend', 'amount', 'amplify', 'amuse', 'analyze', 'anchor', 'animate', 'announce', 'annoy', 'annul', 'anoint', 'answer', 'antagonize', 'anticipate', 'antics', 'appeal', 'appear', 'appease', 'append', 'applaud', 'apply', 'appoint', 'appreciate', 'apprehend', 'apprentice', 'apprise', 'approach', 'approve', 'approximate', 'arrange', 'arrest', 'arrive', 'arrogate', 'articulate', 'ascend', 'ascertain', 'ascribe', 'ash', 'ask', 'aspire', 'assault', 'assay', 'assemble', 'assent', 'assert', 'assess', 'assign', 'assimilate', 'assist', 'associate', 'assort', 'assuage', 'assume', 'assure', 'astonish', 'astound', 'astray', 'attach', 'attack', 'attain', 'attempt', 'attend', 'attest', 'attire', 'attract', 'attune', 'auction', 'audit', 'augment', 'augur', 'auspice', 'authenticate', 'authorize', 'auto', 'avail', 'avalanche', 'avarice', 'avenge', 'avenue', 'aver', 'average', 'avert', 'avid', 'avoid', 'avow', 'await', 'awake', 'awaken', 'award', 'aware', 'awash', 'away', 'awe', 'awesome', 'awful', 'awhile', 'awkward', 'awl', 'awning', 'awoke', 'awry', 'ax', 'axe', 'axiom', 'axis', 'axle', 'aye', 'azure', 'babble', 'baby', 'back', 'backbite', 'backbone', 'backdoor', 'backdrop', 'backer', 'backfire', 'backhand', 'backing', 'backlash', 'backlog', 'backpack', 'backslide', 'backstab', 'backstage', 'backstroke', 'backup', 'backward', 'backwards', 'backwater', 'bacon', 'bacteria', 'bacterium', 'bad', 'badge', 'badger', 'baffle', 'bag', 'baggage', 'baggy', 'bail', 'bait', 'bake', 'bakery', 'balance', 'balcony', 'bald', 'bale', 'baleful', 'balk', 'ball', 'ballad', 'ballet', 'ballistic', 'balloon', 'ballot', 'ballroom', 'balm', 'balmiest', 'balmy', 'baloney', 'balsa', 'balsam', 'banal', 'banana', 'band', 'bandage', 'bandanna', 'bandit', 'bandoleer', 'bandwagon', 'bandy', 'bane', 'baneful', 'bang', 'bangle', 'banish', 'banister', 'banjo', 'bank', 'bankroll', 'bankrupt', 'bankruptcy', 'banner', 'banquet', 'banter', 'baptism', 'baptize', 'bar', 'barb', 'barbarian', 'barbaric', 'barbarity', 'barbarous', 'barbecue', 'barbed', 'barber', 'bard', 'bare', 'barely', 'barer', 'barest', 'bargain', 'barge', 'baritone', 'bark', 'barley', 'barn', 'barnacle', 'barometer', 'baron', 'baroness', 'baronial', 'baroque', 'barque', 'barracks', 'barrage', 'barrel', 'barren', 'barrette', 'barricade', 'barrier', 'barring', 'barrio', 'barrister', 'barroom', 'barrow', 'barter', 'basalt', 'base', 'baseball', 'baseboard', 'based', 'baseless', 'baseline', 'basement', 'baser', 'bases', 'bash', 'bashful', 'bashfully', 'bashfulness', 'basic', 'basically', 'basil', 'basin', 'basis', 'bask', 'basket', 'basketball', 'basque', 'bass', 'basso', 'bassoon', 'bast', 'bastard', 'baste', 'bastion', 'bat', 'batch', 'bate', 'bated', 'bath', 'bathe', 'bathhouse', 'bathos', 'bathrobe', 'bathroom', 'bathtub', 'batik', 'bating', 'baton', 'bats', 'battalion', 'batten', 'batter', 'battered', 'battering', 'battery', 'batting', 'battle', 'battleax', 'battleaxe', 'battled', 'battlefield', 'battlement', 'battling', 'batty', 'baud', 'bauble', 'baulk', 'bauxite', 'bawdy', 'bawl', 'bawling', 'bay', 'bayonet', 'bayou', 'bays', 'bazaar', 'bazooka', 'be', 'beach', 'beam', 'bean', 'bear', 'beard', 'bearing', 'beast', 'beat', 'beaten', 'beating', 'beautiful', 'beautify', 'beaver', 'became', 'because', 'beckon', 'become', 'bedeck', 'bedevil', 'bedim', 'bedlam', 'bedraggle', 'bedridden', 'bedrock', 'bedroom', 'bedside', 'bedspread', 'bee', 'beech', 'beef', 'beefed', 'beefy', 'beehive', 'been', 'beep', 'beer', 'beeswax', 'beet', 'beetle', 'befall', 'befit', 'befitting', 'befog', 'befool', 'before', 'beforehand', 'befriend', 'befuddle', 'beg', 'begat', 'beget', 'beggar', 'beggary', 'begin', 'beginner', 'beginning', 'begone', 'begonia', 'begot', 'begotten', 'begrudge', 'beguile', 'begun', 'behalf', 'behave', 'behavior', 'behaving', 'behead', 'behemoth', 'behest', 'behind', 'behold', 'beholden', 'beholder', 'beholding', 'behoove', 'beige', 'being', 'belabor', 'belated', 'belatedly', 'belch', 'beleaguer', 'belfry', 'belie', 'belief', 'believable', 'believe', 'believer', 'believing', 'belittle', 'bell', 'bellboy', 'belle', 'bellied', 'bellies', 'belligerence', 'belligerent', 'bellow', 'bellows', 'belly', 'belong', 'belonged', 'belonging', 'belongs', 'beloved', 'below', 'belt', 'belted', 'belting', 'belts', 'bemire', 'bemoan', 'bemuse', 'bench', 'bend', 'bended', 'bender', 'bending', 'beneath', 'benediction', 'benefactor', 'benefactress', 'beneficial', 'beneficiary', 'benefit', 'benefited', 'benefiting', 'benefits', 'benevolence', 'benevolent', 'benign', 'benignity', 'bent', 'bequeath', 'bequest', 'berate', 'bereave', 'bereaved', 'bereft', 'beret', 'berg', 'berry', 'berth', 'beseech', 'beseem', 'beset', 'besetting', 'beside', 'besides', 'besiege', 'besmear', 'besmirch', 'besom', 'besot', 'besotted', 'bespangle', 'bespatter', 'bespeak', 'bespoken', 'bespurt', 'best', 'bestial', 'bestiality', 'bestir', 'bestow', 'bestrew', 'bestridden', 'bestride', 'bet', 'betake', 'bethink', 'betide', 'betimes', 'betoken', 'betray', 'betrayal', 'betrayer', 'betroth', 'betrothal', 'betrothed', 'betters', 'better', 'bettered', 'bettering', 'betting', 'bettor', 'between', 'betwixt', 'bevel', 'beveled', 'beveling', 'bevelled', 'bevelling', 'bevels', 'beverage', 'bevies', 'bevy', 'bewail', 'beware', 'bewig', 'bewilder', 'bewildered', 'bewilderment', 'bewitch', 'bewitching', 'beyond', 'bezzle', 'bezel', 'bias', 'biased', 'biases', 'biasing', 'bib', 'bible', 'biblical', 'bibliographer', 'bibliography', 'bibliophile', 'bibulous', 'bicameral', 'bicarbonate', 'bicentenary', 'bicentennial', 'biceps', 'bicker', 'bickering', 'bicycle', 'bid', 'biddable', 'bidder', 'bidding', 'bide', 'bidet', 'biennial', 'biennium', 'bier', 'bifocal', 'bifurcate', 'bifurcated', 'bifurcation', 'big', 'bigamist', 'bigamous', 'bigamy', 'bigness', 'bigot', 'bigoted', 'bigotry', 'bigwig', 'bijou', 'bike', 'bikini', 'bilateral', 'bilberry', 'bile', 'bilge', 'bilingual', 'bilious', 'bilk', 'bill', 'billet', 'billeted', 'billeting', 'billets', 'billfold', 'billhead', 'billiard', 'billiards', 'billing', 'billion', 'billionth', 'billow', 'billowing', 'billowy', 'billows', 'billy', 'billycock', 'billygoat', 'bilobed', 'bilocular', 'bilocation', 'bilsted', 'bimetal', 'bimetallic', 'bimillenary', 'bimillennial', 'bimontly', 'bin', 'binary', 'bind', 'binder', 'bindery', 'binding', 'bindings', 'binds', 'bindweed', 'bine', 'binge', 'bingo', 'binman', 'pinnacle', 'binominial', 'biochemist', 'biochemistry', 'biodegradable', 'biodiversity', 'bioengineering', 'biofeedback', 'biogenesis', 'biogenic', 'biographer', 'biographical', 'biographies', 'biography', 'biological', 'biologically', 'biologies', 'biologist', 'biology', 'biome', 'biomechanics', 'biomedical', 'biomedicine', 'biometric', 'biometrics', 'biomorph', 'biomorphic', 'bionics', 'bionomics', 'biopy', 'biopsychosocial', 'biopsy', 'biorhythm', 'bioscience', 'bioscientist', 'biosis', 'biosocial', 'biosynthesis', 'biosynthetic', 'biota', 'biotechnology', 'biotic', 'biotin', 'biotite', 'biotope', 'biotype', 'biparous', 'bipartisan', 'bipartisanship', 'bipartite', 'biped', 'bipedal', 'bipedaliam', 'bipinnate', 'biplane', 'bipod', 'bipolar', 'biradial', 'biracial', 'biramous', 'birch', 'bird', 'birdwatcher', 'birdbrained', 'birdbrain', 'birdcage', 'birdcall', 'birdie', 'birdied', 'birdieing', 'birdies', 'birdlime', 'birdman', 'birds', 'birdseed', 'birdseye', 'birdwatch', 'birefringence', 'birefringent', 'bireme', 'biretta', 'birk', 'birl', 'birler', 'birling', 'biro', 'birr', 'birth', 'birthed', 'birthday', 'birthing', 'birthless', 'birthmark', 'birthmother', 'birthname', 'birthplace', 'birthrate', 'birthright', 'birthstone', 'births', 'biryani', 'bis', 'biscuit', 'bisect', 'bisected', 'bisecting', 'bisection', 'bisector', 'bise', 'bishop', 'bishoped', 'bishopdom', 'bishopess', 'bishoply', 'bishoply', 'bishops', 'bishopship', 'bismuth', 'bison', 'bisque', 'bissextile', 'bistate', 'bistable', 'bister', 'bistered', 'bistry', 'bistro', 'bisulfate', 'bisulfide', 'bisulfite', 'bisulfuret', 'bit', 'bitable', 'bitable', 'bitalu', 'bitch', 'bitched', 'bitchery', 'bitches', 'bitchier', 'bitchiest', 'bitchily', 'bitchiness', 'bitching', 'bitchy', 'bite', 'bitesize', 'biter', 'bites', 'biter', 'biteweed', 'biting', 'bitingly', 'bitless', 'bitstock', 'bitten', 'bitterbrush', 'bitter', 'bittercress', 'bittered', 'bitterend', 'bitterer', 'bitterest', 'bitterling', 'bitterly', 'bittern', 'bitternut', 'bitterness', 'bitters', 'bittersweet', 'bittery', 'bitterweed', 'bittery', 'bitties', 'bittily', 'bittiness', 'bitting', 'bittings', 'bitts', 'bitty', 'bitumen', 'bitumenize', 'bituminization', 'bituminize', 'bituminous', 'bivalence', 'bivalency', 'bivalent', 'bivalve', 'bivouac', 'bivouacked', 'bivouacking', 'bivouacs', 'bivvy', 'biweekly', 'bizarre', 'bizarrely', 'bizarreness', 'bizcacha', 'blab', 'blabbed', 'blabber', 'blabbering', 'blabbermouth', 'blabbers', 'blabbing', 'blabs', 'black', 'blackamoor', 'blackandblue', 'blackandtan', 'blackandtans', 'blackberry', 'blackbird', 'blackbirds', 'blackboard', 'blackboards', 'blackbody', 'blackbook', 'blackbuck', 'blackburnian', 'blackcap', 'blackcock', 'blackcurrant', 'blacked', 'blacken', 'blackened', 'blackening', 'blackens', 'blacker', 'blackest', 'blackface', 'blackfish', 'blackfly', 'blackguard', 'blackguardism', 'blackguardly', 'blackguards', 'blacking', 'blackish', 'blackjack', 'blackjacked', 'blackjacking', 'blackjacks', 'blackleg', 'blacklegged', 'blacklegging', 'blackmail', 'blackmailed', 'blackmailer', 'blackmailing', 'blackmails', 'blackmarket', 'blackmarketer', 'blackmarketing', 'blackness', 'blackout', 'blackouts', 'blacks', 'blacksmith', 'blacksmithing', 'blacksmiths', 'blacksnake', 'blackstrap', 'blackthorn', 'blacktopped', 'blacktopping', 'blacktops', 'blackwater', 'blackwood', 'blacktop'],
-
-            // Emotion and mood words (350+ words)
-            emotions: ['happy', 'sad', 'angry', 'anxious', 'excited', 'nervous', 'joyful', 'depressed', 'frustrated', 'peaceful', 'content', 'agitated', 'calm', 'stressed', 'relieved', 'worried', 'afraid', 'confident', 'insecure', 'guilty', 'ashamed', 'proud', 'disappointed', 'jealous', 'envious', 'grateful', 'resentful', 'hopeful', 'hopeless', 'lonely', 'loved', 'appreciated', 'disrespected', 'inspired', 'discouraged', 'energetic', 'tired', 'bored', 'interested', 'passionate', 'indifferent', 'tender', 'harsh', 'gentle', 'rough', 'kind', 'cruel', 'supportive', 'unsupportive', 'loyal', 'betrayed', 'trusting', 'suspicious', 'open', 'closed', 'vulnerable', 'protected', 'safe', 'endangered', 'stable', 'chaotic', 'motivated', 'unmotivated', 'determined', 'hesitant', 'optimistic', 'pessimistic', 'enthusiastic', 'apathetic', 'alert', 'drowsy', 'satisfied', 'unsatisfied', 'accomplished', 'unaccomplished', 'successful', 'unsuccessful', 'powerful', 'powerless', 'respected', 'disrespected', 'understood', 'misunderstood', 'accepted', 'rejected', 'included', 'excluded', 'valued', 'devalued', 'confident', 'doubtful', 'courageous', 'cowardly', 'adventurous', 'cautious', 'conservative', 'flexible', 'rigid', 'adaptable', 'stubborn', 'empathetic', 'apathetic', 'sympathetic', 'indifferent', 'compassionate', 'callous', 'humble', 'arrogant', 'modest', 'vain', 'honest', 'dishonest', 'sincere', 'insincere', 'genuine', 'fake', 'authentic', 'artificial', 'real', 'pretend', 'natural', 'forced', 'spontaneous', 'calculated', 'impulsive', 'thoughtful', 'thoughtless', 'considerate', 'inconsiderate', 'attentive', 'inattentive', 'focused', 'distracted', 'sharp', 'dull', 'clear', 'confused', 'lucid', 'foggy', 'bright', 'dim', 'brilliant', 'obtuse', 'witty', 'clever', 'simple', 'intelligent', 'stupid', 'wise', 'foolish', 'knowledgeable', 'ignorant', 'educated', 'uneducated', 'cultured', 'uncultured', 'refined', 'crude', 'sophisticated', 'naive', 'experienced', 'inexperienced', 'skilled', 'unskilled', 'talented', 'untalented', 'gifted', 'ungifted', 'able', 'unable', 'capable', 'incapable', 'competent', 'incompetent', 'proficient', 'unproficient', 'expert', 'amateur', 'professional', 'unprofessional', 'efficient', 'inefficient', 'productive', 'unproductive', 'effective', 'ineffective', 'victorious', 'defeated', 'triumphant', 'devastated', 'exhilarated', 'crushed', 'thrilled', 'horrified', 'delighted', 'disgusted', 'enchanted', 'repulsed', 'calm', 'frantic', 'mellow', 'tense', 'grateful', 'ungrateful', 'uplifted', 'downcast', 'inspired', 'deflated', 'motivated', 'demotivated', 'energized', 'drained', 'hopeful', 'despairing', 'optimistic', 'cynical', 'trusting', 'paranoid', 'peaceful', 'turbulent', 'serene', 'agitated', 'blissful', 'miserable', 'ecstatic', 'heartbroken', 'delighted', 'dismayed', 'pleased', 'displeased', 'satisfied', 'frustrated', 'content', 'discontent', 'fulfilled', 'hollow', 'complete', 'empty', 'whole', 'broken', 'cherished', 'neglected', 'valued', 'disposable', 'important', 'insignificant', 'meaningful', 'meaningless', 'purposeful', 'purposeless', 'driven', 'aimless', 'focused', 'confused', 'clear', 'muddled', 'decisive', 'indecisive', 'resolute', 'uncertain', 'committed', 'uncommitted', 'dedicated', 'halfhearted', 'wholehearted', 'lukewarm', 'earnest', 'flippant', 'sincere', 'sarcastic', 'genuine', 'false', 'real', 'fake', 'authentic', 'contrived', 'organic', 'manufactured'],
-
-            // Common adjectives and descriptors (450+ words)
-            adjectives: ['good', 'bad', 'big', 'small', 'large', 'tiny', 'beautiful', 'ugly', 'pretty', 'handsome', 'wonderful', 'terrible', 'amazing', 'awful', 'excellent', 'poor', 'great', 'horrible', 'fantastic', 'dreadful', 'outstanding', 'mediocre', 'perfect', 'flawed', 'ideal', 'imperfect', 'superb', 'inferior', 'superior', 'standard', 'exceptional', 'ordinary', 'extraordinary', 'common', 'rare', 'unique', 'typical', 'atypical', 'special', 'normal', 'abnormal', 'unusual', 'strange', 'peculiar', 'odd', 'curious', 'weird', 'bizarre', 'funny', 'serious', 'hilarious', 'grave', 'amusing', 'dull', 'entertaining', 'boring', 'interesting', 'tedious', 'fascinating', 'mundane', 'thrilling', 'monotonous', 'exciting', 'engaging', 'disengaging', 'captivating', 'distracting', 'compelling', 'repelling', 'appealing', 'unappealing', 'attractive', 'unattractive', 'pleasant', 'unpleasant', 'nice', 'mean', 'kind', 'unkind', 'friendly', 'unfriendly', 'warm', 'cold', 'hot', 'cool', 'gentle', 'rough', 'soft', 'hard', 'smooth', 'fine', 'coarse', 'delicate', 'sturdy', 'fragile', 'robust', 'weak', 'strong', 'powerful', 'mighty', 'feeble', 'vigorous', 'lethargic', 'energetic', 'lazy', 'active', 'inactive', 'dynamic', 'static', 'lively', 'still', 'vibrant', 'bright', 'dark', 'light', 'heavy', 'deep', 'shallow', 'thick', 'thin', 'wide', 'narrow', 'broad', 'tight', 'loose', 'taut', 'slack', 'tense', 'relaxed', 'stiff', 'flexible', 'rigid', 'supple', 'brittle', 'durable', 'permanent', 'temporary', 'lasting', 'fleeting', 'eternal', 'transient', 'constant', 'variable', 'steady', 'unstable', 'stable', 'shaky', 'firm', 'trembling', 'solid', 'liquid', 'fluid', 'dense', 'sparse', 'crowded', 'empty', 'full', 'vacant', 'occupied', 'unoccupied', 'busy', 'quiet', 'loud', 'silent', 'noisy', 'chaotic', 'peaceful', 'turbulent', 'serene', 'violent', 'tranquil', 'agitated', 'docile', 'wild', 'tame', 'unruly', 'obedient', 'disobedient', 'compliant', 'defiant', 'cooperative', 'competitive', 'collaborative', 'conflictual', 'harmonious', 'discordant', 'concordant', 'antagonistic', 'agreeable', 'disagreeable', 'pleasing', 'displeasing', 'satisfying', 'unsatisfying', 'fulfilling', 'unfulfilling', 'gratifying', 'frustrating', 'rewarding', 'unrewarding', 'profitable', 'unprofitable', 'lucrative', 'fruitful', 'barren', 'fertile', 'infertile', 'productive', 'unproductive', 'generative', 'destructive', 'constructive', 'detrimental', 'beneficial', 'harmful', 'helpful', 'unhelpful', 'useful', 'useless', 'functional', 'nonfunctional', 'operable', 'inoperable', 'working', 'broken', 'intact', 'damaged', 'whole', 'fragmented', 'complete', 'incomplete', 'finished', 'unfinished', 'done', 'undone', 'accomplished', 'unaccomplished', 'victorious', 'defeated', 'triumphant', 'failed', 'winning', 'losing', 'awesome', 'terrible', 'fantastic', 'horrid', 'lovely', 'disgusting', 'wonderful', 'hideous', 'charming', 'revolting', 'delightful', 'repugnant', 'splendid', 'abominable', 'stunning', 'ghastly', 'gorgeous', 'gruesome', 'marvelous', 'vile', 'superb', 'atrocious', 'magnificent', 'wretched', 'glorious', 'despicable', 'divine', 'contemptible', 'heavenly', 'loathsome', 'exquisite', 'abhorrent', 'divine', 'vile', 'perfect', 'flawed', 'immaculate', 'spoiled', 'pristine', 'tarnished', 'spotless', 'soiled', 'clean', 'dirty', 'pure', 'tainted', 'fresh', 'stale', 'new', 'old', 'modern', 'ancient', 'contemporary', 'archaic', 'current', 'outdated', 'novel', 'conventional', 'original', 'ordinary', 'innovative', 'traditional', 'groundbreaking', 'hackneyed', 'revolutionary', 'routine', 'cutting-edge', 'predictable', 'ahead-of-the-curve', 'formulaic', 'trailblazing', 'clichéd', 'pioneering', 'stereotypical', 'groundbreaking', 'overused', 'fresh', 'tired', 'vivid', 'drab', 'vibrant', 'muted', 'colorful', 'monochromatic', 'brilliant', 'dull', 'radiant', 'faded', 'glowing', 'dim', 'luminous', 'dark', 'shining', 'shadowy', 'gleaming', 'opaque', 'translucent', 'impenetrable', 'transparent', 'murky', 'clear', 'hazy', 'crisp', 'fuzzy', 'sharp', 'blurry', 'defined', 'undefined', 'distinct', 'obscure', 'obvious', 'subtle', 'glaring', 'understated', 'conspicuous', 'inconspicuous', 'noticeable', 'imperceptible', 'visible', 'invisible', 'apparent', 'hidden', 'evident', 'concealed', 'overt', 'covert', 'explicit', 'implicit', 'direct', 'indirect', 'straightforward', 'convoluted', 'simple', 'complicated', 'uncomplicated', 'complex', 'basic', 'intricate', 'elementary', 'elaborate', 'fundamental', 'sophisticated', 'essential', 'ornate', 'minimal', 'excessive', 'sparse', 'abundant', 'scanty', 'copious', 'meager', 'plentiful', 'scarce', 'ample', 'limited', 'unlimited', 'finite', 'infinite', 'bounded', 'boundless', 'restricted', 'unrestricted', 'contained', 'uncontained', 'confined', 'unconfined', 'enclosed', 'open', 'sheltered', 'exposed', 'protected', 'vulnerable', 'secure', 'insecure', 'safe', 'dangerous', 'sound', 'unsound', 'reliable', 'unreliable', 'trustworthy', 'untrustworthy', 'dependable', 'undependable', 'steadfast', 'fickle', 'loyal', 'disloyal', 'faithful', 'unfaithful', 'devoted', 'indifferent', 'committed', 'uncommitted', 'dedicated', 'halfhearted'],
-
-            // Common nouns/objects (300+ words)
-            nouns: ['time', 'day', 'night', 'morning', 'afternoon', 'evening', 'week', 'month', 'year', 'season', 'spring', 'summer', 'fall', 'winter', 'weather', 'sun', 'moon', 'star', 'rain', 'snow', 'wind', 'cloud', 'sky', 'air', 'earth', 'water', 'fire', 'tree', 'flower', 'plant', 'animal', 'dog', 'cat', 'bird', 'fish', 'house', 'home', 'room', 'door', 'window', 'wall', 'floor', 'ceiling', 'roof', 'furniture', 'chair', 'table', 'bed', 'desk', 'couch', 'lamp', 'light', 'book', 'pen', 'paper', 'phone', 'computer', 'keyboard', 'mouse', 'screen', 'monitor', 'television', 'radio', 'music', 'sound', 'voice', 'word', 'language', 'sentence', 'letter', 'number', 'figure', 'picture', 'image', 'video', 'movie', 'show', 'play', 'game', 'sport', 'team', 'player', 'coach', 'game', 'match', 'competition', 'tournament', 'prize', 'trophy', 'medal', 'award', 'person', 'people', 'human', 'man', 'woman', 'child', 'boy', 'girl', 'baby', 'adult', 'teen', 'teenager', 'friend', 'enemy', 'stranger', 'family', 'parent', 'mother', 'father', 'sister', 'brother', 'grandparent', 'grandmother', 'grandfather', 'aunt', 'uncle', 'cousin', 'relative', 'kid', 'kids', 'children', 'neighbor', 'coworker', 'colleague', 'boss', 'employee', 'employer', 'student', 'teacher', 'doctor', 'nurse', 'patient', 'lawyer', 'judge', 'police', 'officer', 'soldier', 'artist', 'musician', 'writer', 'actor', 'director', 'producer', 'engineer', 'architect', 'designer', 'chef', 'cook', 'waiter', 'server', 'bartender', 'bartender', 'food', 'drink', 'water', 'coffee', 'tea', 'juice', 'milk', 'bread', 'meat', 'fish', 'vegetable', 'fruit', 'apple', 'orange', 'banana', 'strawberry', 'grape', 'rice', 'pasta', 'pizza', 'hamburger', 'sandwich', 'salad', 'soup', 'dessert', 'cake', 'cookie', 'chocolate', 'candy', 'ice cream', 'restaurant', 'cafe', 'bar', 'pub', 'club', 'hotel', 'motel', 'bed and breakfast', 'resort', 'gym', 'park', 'garden', 'forest', 'mountain', 'valley', 'river', 'lake', 'ocean', 'beach', 'island', 'city', 'town', 'village', 'country', 'state', 'province', 'region', 'continent', 'world', 'universe', 'planet', 'space', 'galaxy', 'black hole', 'asteroid', 'meteor', 'comet', 'rocket', 'spacecraft', 'airplane', 'car', 'truck', 'bus', 'train', 'subway', 'bike', 'bicycle', 'motorcycle', 'boat', 'ship', 'yacht', 'canoe', 'cruise', 'road', 'street', 'avenue', 'boulevard', 'highway', 'bridge', 'tunnel', 'building', 'skyscraper', 'office', 'store', 'market', 'shopping center', 'mall', 'theater', 'cinema', 'museum', 'library', 'school', 'college', 'university', 'hospital', 'clinic', 'pharmacy', 'court', 'prison', 'jail', 'police station', 'fire station', 'church', 'temple', 'mosque', 'synagogue', 'monument', 'statue', 'fountain', 'sculpture', 'painting', 'art', 'music', 'dance', 'ballet', 'opera', 'concert', 'festival', 'celebration', 'holiday', 'birthday', 'anniversary', 'wedding', 'funeral', 'ceremony', 'event', 'party', 'gathering', 'meeting', 'conference', 'seminar', 'workshop', 'class', 'lecture', 'presentation', 'speech', 'debate', 'argument', 'discussion', 'conversation', 'talk', 'chat', 'gossip', 'rumor', 'secret', 'lie', 'truth', 'fact', 'fiction', 'story', 'novel', 'tale', 'legend', 'myth', 'fairy tale', 'fable', 'joke', 'riddle', 'puzzle', 'game', 'toy', 'doll', 'action figure', 'ball', 'bat', 'glove', 'racket', 'net', 'goal', 'helmet', 'armor', 'weapon', 'sword', 'gun', 'bullet', 'bomb', 'explosion', 'fire', 'flood', 'earthquake', 'tornado', 'hurricane', 'storm', 'thunder', 'lightning', 'snow', 'avalanche', 'disease', 'illness', 'sickness', 'injury', 'accident', 'disaster', 'emergency', 'danger', 'hazard', 'risk', 'threat', 'attack', 'defense', 'war', 'peace', 'treaty', 'alliance', 'enemy', 'victory', 'defeat', 'surrender', 'victory', 'loss', 'failure', 'success', 'achievement', 'accomplishment', 'goal', 'objective', 'mission', 'task', 'job', 'work', 'labor', 'effort', 'energy', 'power', 'strength', 'weakness', 'ability', 'skill', 'talent', 'gift', 'curse', 'blessing', 'fortune', 'luck', 'chance', 'opportunity', 'possibility', 'probability', 'certainty', 'doubt', 'fear', 'courage', 'bravery', 'cowardice', 'honor', 'shame', 'glory', 'disgrace', 'reputation', 'character', 'personality', 'attitude', 'behavior', 'conduct', 'manner', 'habit', 'custom', 'tradition', 'culture', 'religion', 'belief', 'faith', 'spirituality', 'soul', 'spirit', 'ghost', 'angel', 'demon', 'evil', 'good', 'light', 'darkness', 'hope', 'despair', 'dream', 'nightmare', 'wish', 'desire', 'want', 'need', 'hunger', 'thirst', 'pain', 'pleasure', 'comfort', 'discomfort', 'joy', 'sorrow', 'grief', 'tears', 'laughter', 'smile', 'frown', 'expression', 'gesture', 'movement', 'action', 'reaction', 'response', 'answer', 'question', 'inquiry', 'query', 'request', 'demand', 'order', 'command', 'suggestion', 'advice', 'recommendation', 'opinion', 'judgment', 'decision', 'choice', 'selection', 'option', 'alternative', 'path', 'way', 'direction', 'route', 'journey', 'trip', 'travel', 'adventure', 'exploration', 'discovery', 'invention', 'creation', 'origin', 'beginning', 'start', 'end', 'finish', 'conclusion', 'result', 'outcome', 'consequence', 'effect', 'impact', 'influence', 'change', 'transformation', 'evolution', 'revolution', 'movement', 'progress', 'development', 'growth', 'decline', 'decay', 'death', 'life', 'birth', 'existence', 'reality', 'dream', 'fantasy', 'imagination', 'creativity', 'inspiration', 'aspiration', 'ambition', 'determination', 'persistence', 'resilience', 'recovery', 'healing', 'medicine', 'treatment', 'cure', 'remedy', 'prevention', 'protection', 'safety', 'danger', 'security', 'liberty', 'freedom', 'independence', 'dependence', 'reliance', 'trust', 'confidence', 'faith', 'belief', 'knowledge', 'understanding', 'wisdom', 'foolishness', 'ignorance', 'education', 'learning', 'teaching', 'training', 'practice', 'experience', 'memory', 'history', 'past', 'present', 'future', 'time', 'age', 'era', 'epoch', 'period', 'generation', 'century', 'decade', 'moment', 'second', 'minute', 'hour'],
-
-            // Places and locations (150+ words)
-            places: ['home', 'house', 'apartment', 'condo', 'mansion', 'cabin', 'cottage', 'office', 'building', 'skyscraper', 'mall', 'store', 'shop', 'market', 'supermarket', 'grocery', 'pharmacy', 'hospital', 'clinic', 'doctor', 'dentist', 'school', 'university', 'college', 'library', 'museum', 'theater', 'cinema', 'restaurant', 'cafe', 'bar', 'pub', 'hotel', 'motel', 'resort', 'beach', 'park', 'garden', 'forest', 'mountain', 'valley', 'river', 'lake', 'ocean', 'island', 'city', 'town', 'village', 'country', 'continent', 'world', 'planet', 'space', 'gym', 'stadium', 'arena', 'court', 'field', 'playground', 'airport', 'train station', 'bus station', 'subway', 'gas station', 'car wash', 'bank', 'post office', 'police station', 'fire station', 'church', 'temple', 'mosque', 'synagogue', 'cemetery', 'graveyard', 'battlefield', 'castle', 'fortress', 'palace', 'tower', 'bridge', 'tunnel', 'road', 'street', 'avenue', 'boulevard', 'highway', 'freeway', 'alley', 'lane', 'path', 'trail', 'sidewalk', 'parking lot', 'intersection', 'traffic light', 'stop sign', 'corner', 'downtown', 'uptown', 'suburbs', 'countryside', 'rural area', 'urban area', 'metropolitan area', 'neighborhood', 'district', 'quarter', 'zone', 'territory', 'region', 'province', 'state', 'nation', 'empire', 'kingdom', 'republic', 'territory', 'colony', 'settlement', 'base', 'camp', 'fort', 'bunker', 'trench', 'shelter', 'hideaway', 'retreat', 'sanctuary', 'asylum', 'refuge', 'haven', 'safe house', 'secret hideout', 'den', 'lair', 'nest', 'burrow', 'hive', 'warren', 'roost', 'perch', 'pier', 'dock', 'harbor', 'port', 'marina', 'anchorage'],
-
-            // Time-related words (100+ words)
-            timeWords: ['now', 'today', 'tonight', 'tomorrow', 'yesterday', 'week', 'month', 'year', 'day', 'night', 'morning', 'afternoon', 'evening', 'dawn', 'dusk', 'sunrise', 'sunset', 'midnight', 'noon', 'afternoon', 'evening', 'night', 'weekend', 'weekday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'spring', 'summer', 'fall', 'autumn', 'winter', 'second', 'minute', 'hour', 'day', 'week', 'month', 'year', 'decade', 'century', 'millennium', 'era', 'age', 'epoch', 'period', 'moment', 'instant', 'flash', 'second', 'minute', 'hour', 'pace', 'pace', 'speed', 'tempo', 'rate', 'frequency', 'rhythm', 'cycle', 'rotation', 'revolution', 'orbit', 'journey', 'voyage', 'quest', 'adventure', 'expedition', 'excursion', 'outing', 'trip', 'tour', 'vacation', 'holiday', 'sabbatical', 'hiatus', 'break', 'recess', 'intermission', 'pause', 'rest', 'respite', 'sleep', 'nap', 'siesta', 'slumber', 'doze', 'dream', 'awakening', 'rising', 'waking', 'getting up', 'sunrise', 'sunset', 'twilight', 'dusk', 'darkness', 'light', 'brightness', 'illumination', 'glimmer', 'glow', 'shine', 'gleam', 'sparkle', 'twinkle', 'flicker', 'flash', 'blaze', 'flame', 'inferno', 'conflagration'],
-
-            // Action and activity words (200+ words)
-            activities: ['run', 'walk', 'dance', 'sing', 'play', 'swim', 'jump', 'climb', 'sit', 'stand', 'lie', 'rest', 'sleep', 'wake', 'eat', 'drink', 'cook', 'bake', 'prepare', 'serve', 'taste', 'chew', 'swallow', 'work', 'study', 'learn', 'teach', 'read', 'write', 'draw', 'paint', 'sketch', 'sculpt', 'build', 'construct', 'create', 'make', 'design', 'plan', 'organize', 'arrange', 'prepare', 'set up', 'clean', 'tidy', 'wash', 'wipe', 'scrub', 'polish', 'dust', 'vacuum', 'sweep', 'mop', 'organize', 'organize', 'sort', 'classify', 'categorize', 'list', 'record', 'document', 'file', 'store', 'preserve', 'maintain', 'repair', 'fix', 'adjust', 'modify', 'change', 'alter', 'transform', 'convert', 'translate', 'interpret', 'explain', 'describe', 'narrate', 'tell', 'report', 'announce', 'broadcast', 'publish', 'print', 'display', 'show', 'demonstrate', 'exhibit', 'present', 'perform', 'entertain', 'amuse', 'joke', 'laugh', 'smile', 'frown', 'cry', 'weep', 'sob', 'scream', 'shout', 'yell', 'whisper', 'speak', 'talk', 'chat', 'converse', 'discuss', 'debate', 'argue', 'negotiate', 'bargain', 'haggle', 'convince', 'persuade', 'encourage', 'inspire', 'motivate', 'support', 'help', 'assist', 'aid', 'serve', 'attend', 'care', 'nurse', 'heal', 'treat', 'cure', 'diagnose', 'examine', 'test', 'check', 'inspect', 'monitor', 'observe', 'watch', 'look', 'see', 'view', 'notice', 'observe', 'examine', 'inspect', 'study', 'investigate', 'explore', 'discover', 'find', 'seek', 'search', 'hunt', 'pursue', 'chase', 'catch', 'trap', 'capture', 'seize', 'grab', 'hold', 'carry', 'transport', 'deliver', 'send', 'receive', 'collect', 'gather', 'pick', 'pluck', 'harvest', 'cultivate', 'plant', 'grow', 'breed', 'raise', 'train', 'tame', 'control', 'manage', 'direct', 'guide', 'lead', 'follow', 'accompany', 'escort', 'accompany', 'protect', 'defend', 'guard', 'shield', 'shelter', 'hide', 'conceal', 'reveal', 'disclose', 'expose', 'uncover', 'discover', 'find', 'realize', 'understand', 'comprehend', 'grasp', 'perceive', 'sense', 'feel', 'experience', 'encounter', 'meet', 'greet', 'welcome', 'bid farewell', 'leave', 'depart', 'arrive', 'return', 'come back', 'go away', 'travel', 'journey', 'voyage', 'sail', 'fly', 'drive', 'ride', 'board', 'disembark', 'embark', 'dock', 'land', 'take off', 'crash', 'collide', 'bump', 'hit', 'strike', 'punch', 'kick', 'push', 'pull', 'drag', 'throw', 'toss', 'catch', 'drop', 'spill', 'pour', 'mix', 'stir', 'blend', 'combine', 'separate', 'divide', 'split', 'break', 'tear', 'rip', 'cut', 'slice', 'chop', 'dice', 'shred', 'grind', 'crush', 'compress', 'expand', 'stretch', 'shrink', 'shrivel', 'swell', 'inflate', 'deflate', 'bend', 'flex', 'straighten', 'curve', 'twist', 'turn', 'rotate', 'spin', 'twirl', 'whirl', 'swirl', 'circulate', 'flow', 'pour', 'drip', 'splash', 'spray', 'sprinkle', 'shower', 'rain', 'flood', 'evaporate', 'condense', 'freeze', 'melt', 'boil', 'simmer', 'heat', 'cool', 'chill', 'warm', 'warm up', 'burn', 'ignite', 'light', 'extinguish', 'put out', 'spark', 'glow', 'shine', 'reflect', 'refract', 'diffuse', 'absorb', 'emit', 'radiate', 'vibrate', 'oscillate', 'fluctuate', 'vary', 'change', 'shift', 'transition', 'move', 'relocate', 'migrate', 'emigrate', 'immigrate', 'settle', 'establish', 'found', 'colonize', 'occupy', 'inhabit', 'reside', 'dwell', 'lodge', 'stay', 'remain', 'linger', 'wait', 'pause', 'stop', 'halt', 'cease', 'discontinue', 'finish', 'end', 'conclude', 'terminate', 'begin', 'start', 'commence', 'initiate', 'launch', 'introduce', 'present', 'unveil', 'debut', 'premiere', 'open', 'close', 'shut', 'lock', 'unlock', 'seal', 'unseal', 'open up', 'unfold', 'unfurl', 'unroll', 'unwrap', 'unpack', 'unload', 'dispose', 'discard', 'abandon', 'leave behind', 'quit', 'resign', 'retire', 'withdraw', 'retreat', 'escape', 'flee', 'run away', 'hide', 'crouch', 'duck', 'dodge', 'evade', 'avoid', 'prevent', 'block', 'obstruct', 'impede', 'hinder', 'delay', 'postpone', 'defer', 'reschedule', 'advance', 'accelerate', 'hasten', 'hurry', 'rush', 'speed up', 'slow down', 'decelerate', 'brake', 'stop', 'pause', 'wait', 'hold', 'retain', 'keep', 'preserve', 'maintain', 'sustain', 'support', 'uphold', 'endorse', 'approve', 'accept', 'adopt', 'embrace', 'welcome', 'receive', 'admit', 'allow', 'permit', 'enable', 'facilitate', 'promote', 'advance', 'encourage', 'urge', 'prompt', 'remind', 'notify', 'inform', 'tell', 'communicate', 'convey', 'express', 'articulate', 'state', 'declare', 'proclaim', 'announce', 'publicize', 'advertise', 'market', 'promote', 'advertise', 'tout', 'hype', 'exaggerate', 'overstate', 'understate', 'minimize', 'maximize', 'elevate', 'demote', 'promote', 'advance', 'improve', 'enhance', 'strengthen', 'reinforce', 'fortify', 'fortify', 'secure', 'safeguard', 'protect', 'defend', 'fight', 'battle', 'combat', 'engage', 'wage war', 'make peace', 'negotiate', 'mediate', 'arbitrate', 'judge', 'rule', 'decree', 'sentence', 'punish', 'reward', 'honor', 'praise', 'commend', 'compliment', 'congratulate', 'celebrate', 'honor', 'tribute', 'memorialize', 'commemorate', 'remember', 'recall', 'reminisce', 'reflect', 'ponder', 'contemplate', 'meditate', 'think', 'reason', 'analyze', 'evaluate', 'assess', 'appraise', 'judge', 'criticize', 'critique', 'review', 'examine', 'scrutinize', 'audit', 'verify', 'validate', 'confirm', 'authenticate', 'authorize', 'approve', 'sanction', 'endorse', 'ratify', 'sign', 'seal', 'witness', 'attest', 'acknowledge', 'admit', 'confess', 'reveal', 'disclose', 'divulge', 'leak', 'share', 'tell', 'whisper', 'murmur', 'mumble', 'mutter', 'grumble', 'complain', 'gripe', 'whine', 'protest', 'object', 'oppose', 'resist', 'rebel', 'revolt', 'mutiny', 'strike', 'picket', 'march', 'demonstrate', 'rally', 'assemble', 'gather', 'congregate', 'meet', 'convene', 'adjourn', 'disband', 'disperse', 'scatter', 'distribute', 'share', 'divide', 'allocate', 'assign', 'delegate', 'delegate', 'authorize', 'empower', 'enable', 'facilitate', 'assist', 'help', 'support', 'aid', 'serve', 'attend to', 'cater to', 'accommodate', 'oblige', 'humor', 'appease', 'placate', 'soothe', 'calm', 'relax', 'unwind', 'decompress', 'chill out', 'mellow out', 'cool off', 'settle down', 'simmer down', 'tone down', 'dial back', 'ease up', 'let up', 'give in', 'surrender', 'capitulate', 'concede', 'admit defeat', 'throw in the towel', 'quit', 'give up', 'abandon'],
-
-            // Common responses and conversational markers (300+ words)
-            responses: ['okay', 'alright', 'sure', 'yeah', 'yep', 'yes', 'definitely', 'absolutely', 'of course', 'for sure', 'you bet', 'no doubt', 'no', 'nope', 'nah', 'not really', 'not quite', 'not exactly', 'not really', 'maybe', 'perhaps', 'might', 'could be', 'possibly', 'probably', 'likely', 'unlikely', 'doubtful', 'iffy', 'uncertain', 'unclear', 'unknown', 'unsure', 'hard to say', 'beats me', 'no idea', 'no clue', 'got me', 'you got me', 'fair point', 'good point', 'you make a good point', 'i see what you mean', 'that makes sense', 'that adds up', 'i get it', 'i understand', 'i hear you', 'i feel you', 'i feel you', 'totally', 'completely', 'absolutely', 'entirely', 'wholly', 'fully', 'thoroughly', 'completely', 'partial', 'partially', 'somewhat', 'kind of', 'sort of', 'in a way', 'so to speak', 'arguably', 'in my opinion', 'in my view', 'personally', 'if you ask me', 'i think', 'i believe', 'i suppose', 'i assume', 'i guess', 'it seems', 'it looks like', 'it appears', 'it seems like', 'apparently', 'seemingly', 'ostensibly', 'allegedly', 'reportedly', 'supposedly', 'reputedly', 'rumor has it', 'so i hear', 'from what i understand', 'as far as i know', 'as i understand it', 'correct me if i\'m wrong', 'unless i\'m mistaken', 'if memory serves', 'if i recall correctly', 'if i\'m not mistaken', 'it occurs to me', 'it just hit me', 'i just realized', 'i just remembered', 'come to think of it', 'come to think of it', 'that reminds me', 'which reminds me', 'speaking of which', 'that being said', 'that said', 'at the same time', 'all the same', 'nonetheless', 'still', 'yet', 'however', 'but', 'although', 'though', 'even though', 'even if', 'whereas', 'while', 'meanwhile', 'in the meantime', 'until then', 'in the interim', 'for now', 'for the time being', 'currently', 'right now', 'at present', 'at the moment', 'at this point', 'at this juncture', 'so far', 'thus far', 'hitherto', 'heretofore', 'previously', 'formerly', 'earlier', 'before', 'earlier', 'before long', 'eventually', 'in due time', 'in time', 'ultimately', 'finally', 'at last', 'at long last', 'in the end', 'after all', 'when all is said and done', 'all things considered', 'taking everything into account', 'on balance', 'all in all', 'overall', 'generally speaking', 'broadly speaking', 'by and large', 'in general', 'by the same token', 'likewise', 'similarly', 'correspondingly', 'analogously', 'in the same way', 'in like manner', 'conversely', 'oppositely', 'on the other hand', 'inversely', 'vice versa', 'in contrast', 'as a contrast', 'contrastingly', 'then again', 'on the flip side', 'on the bright side', 'on the downside', 'on the upside', 'for instance', 'for example', 'such as', 'like', 'namely', 'specifically', 'explicitly', 'distinctly', 'clearly', 'plainly', 'obviously', 'apparently', 'seemingly', 'evidently', 'manifestly', 'palpably', 'unmistakably', 'undeniably', 'indubitably', 'unquestionably', 'beyond question', 'beyond doubt', 'without a doubt', 'without question', 'no doubt about it', 'doubtless', 'indubitably', 'assuredly', 'certainly', 'surely', 'definitely', 'positively', 'absolutely', 'unequivocally', 'categorically', 'unambiguously', 'explicitly', 'implicitly', 'tacitly', 'indirectly', 'obliquely', 'roundaboutly', 'circuitously', 'in a roundabout way', 'so to speak', 'in a manner of speaking', 'as it were', 'if you will', 'as it happens', 'by chance', 'by coincidence', 'luckily', 'fortunately', 'happily', 'thankfully', 'mercifully', 'providentially', 'unfortunately', 'sadly', 'regrettably', 'lamentably', 'unluckily', 'conversely', 'oppositely', 'contrarily', 'rather', 'quite', 'rather', 'quite', 'fairly', 'pretty', 'rather', 'quite', 'remarkably', 'strikingly', 'notably', 'noticeably', 'conspicuously', 'obviously', 'patently', 'transparently', 'evidently', 'manifestly', 'patently', 'apparently', 'seemingly', 'ostensibly', 'allegedly', 'purportedly', 'reputedly', 'so i hear', 'from what i hear', 'from what i understand', 'as i understand it', 'as far as i\'m aware', 'to my knowledge', 'to the best of my knowledge', 'insofar as i know', 'as much as i know', 'in my experience', 'in my view', 'in my opinion', 'to my mind', 'from my perspective', 'in my book', 'if you ask me', 'ask me', 'honestly', 'truthfully', 'frankly', 'candidly', 'bluntly', 'straightforwardly', 'plainly', 'outright', 'directly', 'point blank', 'to the point', 'in a nutshell', 'to sum up', 'in summary', 'in short', 'in brief', 'briefly', 'in essence', 'essentially', 'basically', 'fundamentally', 'at its core', 'at heart', 'in a manner of speaking', 'so to speak', 'as it were', 'if you will', 'so', 'thus', 'therefore', 'hence', 'consequently', 'as a result', 'as a consequence', 'in consequence', 'owing to', 'due to', 'because of', 'on account of', 'for the reason that', 'inasmuch as', 'insofar as', 'given that', 'seeing that', 'being that', 'since', 'as', 'for', 'seeing', 'considering', 'granted', 'supposing', 'assuming', 'if', 'unless', 'except', 'except that', 'save that', 'provided that', 'providing that', 'on the condition that', 'in case', 'in the event that', 'in the unlikely event that', 'in the event of', 'be that as it may', 'come what may', 'what have you', 'you name it', 'what not', 'and so on', 'and so forth', 'et cetera', 'etc', 'etcetera', 'ad nauseam', 'ad infinitum', 'to no end', 'endlessly', 'ceaselessly', 'continuously', 'continually', 'persistently', 'doggedly', 'relentlessly', 'inexorably', 'inevitably', 'ineluctably', 'unavoidably', 'necessarily', 'perforce', 'willy nilly', 'come hell or high water', 'rain or shine', 'through thick and thin', 'at all costs', 'by hook or by crook', 'by any means necessary'],
-
-            // Question and inquiry words (50+ words)
-            questions: ['who', 'what', 'when', 'where', 'why', 'how', 'which', 'whose', 'whom', 'what about', 'how about', 'how come', 'is', 'are', 'am', 'was', 'were', 'be', 'been', 'can', 'could', 'may', 'might', 'must', 'shall', 'should', 'will', 'would', 'do', 'does', 'did', 'have', 'has', 'had', 'get', 'got', 'make', 'made', 'tell', 'told', 'ask', 'asked', 'mean', 'meant', 'understand', 'understood', 'know', 'knew', 'think', 'thought', 'know', 'ever', 'never', 'always', 'sometimes', 'usually', 'often', 'rarely', 'seldom', 'hardly', 'scarcely'],
-
-            // Pronouns and grammatical words (50+ words)
-            pronouns: ['i', 'me', 'my', 'mine', 'myself', 'you', 'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself', 'it', 'its', 'itself', 'we', 'us', 'our', 'ours', 'ourselves', 'they', 'them', 'their', 'theirs', 'themselves', 'this', 'that', 'these', 'those', 'what', 'which', 'who', 'whom', 'whose', 'whoever', 'whomever', 'whichever', 'whatever', 'someone', 'anybody', 'anybody', 'something', 'anything', 'everything', 'nothing', 'somewhere', 'anywhere', 'everywhere', 'nowhere', 'each', 'either', 'neither', 'both', 'all', 'some', 'none', 'several', 'many', 'few', 'a', 'an', 'the'],
-
-            // Comprehensive utility keywords (100+ words)
-            utilities: ['timer', 'alarm', 'clock', 'reminder', 'note', 'notes', 'calendar', 'event', 'appointment', 'meeting', 'birthday', 'deadline', 'task', 'todo', 'to-do', 'to do', 'reminder', 'notification', 'notification', 'alert', 'notification', 'message', 'message', 'email', 'text', 'sms', 'whatsapp', 'call', 'phone call', 'voicemail', 'schedule', 'scheduled', 'scheduled', 'plan', 'planning', 'planner', 'agenda', 'itinerary', 'itinerary', 'schedule', 'timetable', 'time table', 'time', 'time', 'time frame', 'time slot', 'time period', 'duration', 'length', 'length', 'span', 'interval', 'interval', 'frequency', 'frequency', 'repeat', 'recurring', 'recurrence', 'daily', 'weekly', 'monthly', 'yearly', 'yearly', 'annual', 'biannual', 'semi-annual', 'quarterly', 'monthly', 'weekly', 'daily', 'hourly', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond', 'morning', 'afternoon', 'evening', 'night', 'midnight', 'noon', 'dawn', 'dusk', 'sunrise', 'sunset', 'twilight', 'daybreak', 'sunup', 'sundown', 'early', 'late', 'on time', 'punctual', 'punctually', 'late', 'early', 'tardy', 'behind schedule', 'on schedule', 'ahead of schedule', 'right on time', 'just in time', 'in the nick of time', 'deadline', 'deadline', 'due date', 'due', 'expiration', 'expires', 'expired', 'valid', 'invalid', 'current', 'outdated', 'updated', 'new', 'old', 'recent', 'recent', 'soon', 'sooner', 'later', 'earliest', 'latest', 'always', 'sometimes', 'never', 'occasionally', 'frequently', 'regularly', 'sporadically', 'intermittently', 'consistently', 'inconsistently', 'constantly', 'continually', 'continuously', 'perpetually', 'eternally', 'forever', 'evermore', 'always', 'forever and ever', 'for all time', 'throughout', 'throughout', 'over', 'across', 'around', 'about', 'roughly', 'approximately', 'approximately', 'around', 'some', 'little', 'lots', 'lots', 'bunch', 'bunch', 'pile', 'heap', 'stack', 'collection', 'gathering', 'assembly', 'congregation', 'congregation', 'assemblage', 'accumulation', 'aggregation', 'aggregation', 'compilation', 'compilation', 'list', 'listing', 'roster', 'inventory', 'inventory', 'checklist', 'check list', 'check-list', 'checkbox', 'checkmark', 'mark', 'mark', 'tick', 'check', 'check mark', 'x', 'cross', 'cross mark', 'x mark', 'dash', 'dash', 'hyphen', 'underscore', 'underscore', 'asterisk', 'asterisk', 'star', 'pound', 'hash', 'hashtag', 'hash tag', 'number sign', 'pound sign'],
-
-            // Work and productivity words (100+ words)
-            work: ['work', 'job', 'employment', 'career', 'profession', 'occupation', 'vocation', 'calling', 'trade', 'craft', 'discipline', 'field', 'domain', 'industry', 'sector', 'business', 'enterprise', 'company', 'corporation', 'firm', 'organization', 'outfit', 'operation', 'venture', 'startup', 'startup', 'scale-up', 'scale up', 'unicorn', 'conglomerate', 'multinational', 'multinational', 'corporation', 'corporation', 'llc', 'partnership', 'partnership', 'sole proprietorship', 'sole proprietor', 'proprietor', 'owner', 'proprietor', 'boss', 'manager', 'supervisor', 'foreman', 'overseer', 'administrator', 'administrator', 'director', 'executive', 'officer', 'ceo', 'cto', 'cfo', 'coo', 'president', 'vice president', 'vice-president', 'vp', 'secretary', 'treasurer', 'accountant', 'accountant', 'auditor', 'analyst', 'data analyst', 'data analyst', 'business analyst', 'systems analyst', 'systems analyst', 'analyst', 'consultant', 'consultant', 'advisor', 'adviser', 'expert', 'specialist', 'specialist', 'generalist', 'generalist', 'employee', 'employee', 'staff', 'personnel', 'workforce', 'workforce', 'human resources', 'hr', 'hr department', 'management', 'management', 'executive', 'executive', 'executive team', 'leadership', 'leadership', 'leader', 'leader', 'team', 'team', 'team leader', 'team member', 'team member', 'department', 'department', 'division', 'division', 'branch', 'branch office', 'branch', 'office', 'office', 'workspace', 'workspace', 'desk', 'desk', 'workstation', 'workstation', 'cubicle', 'cubicle', 'cube', 'open office', 'open office', 'bullpen', 'breakroom', 'break room', 'kitchen', 'cafeteria', 'cafeteria', 'canteen', 'canteen', 'commissary', 'commissary', 'lunchroom', 'lunchroom', 'dining room', 'dining room', 'meeting room', 'meeting room', 'conference room', 'conference room', 'war room', 'war room', 'boardroom', 'boardroom', 'executive suite', 'executive suite', 'corner office', 'corner office', 'windowless', 'glass walled', 'glass-walled', 'open plan', 'open-plan', 'work', 'project', 'assignment', 'task', 'task', 'duty', 'duty', 'responsibility', 'responsibility', 'obligation', 'obligation', 'commitment', 'commitment', 'deadline', 'deadline', 'milestone', 'milestone', 'checkpoint', 'checkpoint', 'deliverable', 'deliverable', 'output', 'output', 'outcome', 'outcome', 'result', 'result', 'achievement', 'achievement', 'accomplishment', 'accomplishment', 'success', 'success', 'failure', 'failure', 'mistake', 'mistake', 'error', 'error', 'bug', 'bug', 'glitch', 'glitch', 'issue', 'issue', 'problem', 'problem', 'challenge', 'challenge', 'obstacle', 'obstacle', 'barrier', 'barrier', 'hurdle', 'hurdle', 'bottleneck', 'bottleneck', 'setback', 'setback', 'drawback', 'drawback', 'disadvantage', 'disadvantage', 'downside', 'downside', 'pitfall', 'pitfall', 'trap', 'trap', 'catch-22', 'catch 22', 'dilemma', 'dilemma', 'quandary', 'quandary', 'predicament', 'predicament', 'pickle', 'pickle', 'jam', 'jam', 'fix', 'fix', 'bind', 'bind', 'tight spot', 'tight spot', 'hot water', 'hot water', 'trouble', 'trouble', 'difficulty', 'difficulty', 'complication', 'complication', 'complexity', 'complexity', 'sophistication', 'sophistication', 'simplicity', 'simplicity', 'ease', 'ease', 'straightforward', 'straightforward', 'simple', 'simple', 'easy', 'easy', 'effortless', 'effortless', 'painless', 'painless', 'convenient', 'convenient', 'inconvenient', 'inconvenient', 'accessible', 'accessible', 'inaccessible', 'inaccessible', 'available', 'available', 'unavailable', 'unavailable', 'scarce', 'scarce', 'abundant', 'abundant', 'plentiful', 'plentiful', 'limited', 'limited', 'unlimited', 'unlimited', 'finite', 'finite', 'infinite', 'infinite', 'constrained', 'constrained', 'unconstrained', 'unconstrained', 'restricted', 'restricted', 'unrestricted', 'unrestricted', 'bounded', 'bounded', 'unbounded', 'unbounded', 'confined', 'confined', 'unconfined', 'unconfined'],
-
-            // Relationship and social words (200+ words)
-            relationships: ['friend', 'friendship', 'best friend', 'bff', 'close friend', 'acquaintance', 'colleague', 'coworker', 'teammate', 'peer', 'equal', 'rival', 'competitor', 'opponent', 'enemy', 'adversary', 'foe', 'nemesis', 'stranger', 'outsider', 'intruder', 'interloper', 'guest', 'visitor', 'host', 'hostess', 'family', 'relative', 'relation', 'kin', 'kinship', 'clan', 'tribe', 'household', 'nuclear family', 'extended family', 'bloodline', 'lineage', 'ancestry', 'descent', 'heritage', 'parent', 'mother', 'father', 'mom', 'dad', 'mum', 'pa', 'papa', 'mama', 'mommy', 'daddy', 'mummy', 'pappy', 'old man', 'old lady', 'parental', 'filial', 'sibling', 'sister', 'brother', 'sis', 'bro', 'big sister', 'big brother', 'little sister', 'little brother', 'twin', 'fraternal', 'identical', 'child', 'children', 'kid', 'kids', 'son', 'daughter', 'boy', 'girl', 'lad', 'lass', 'youngster', 'youth', 'juvenile', 'minor', 'infant', 'baby', 'toddler', 'tyke', 'mite', 'little one', 'young one', 'grandparent', 'grandfather', 'grandmother', 'grandpa', 'grandma', 'gramps', 'grandpop', 'granddad', 'great-grandparent', 'great grandparent', 'grandchild', 'grandson', 'granddaughter', 'great-grandchild', 'great grandchild', 'aunt', 'uncle', 'auntie', 'aunty', 'unc', 'cousin', 'first cousin', 'second cousin', 'third cousin', 'kissing cousin', 'step-parent', 'stepmother', 'stepfather', 'step-sibling', 'stepsister', 'stepbrother', 'step-child', 'stepdaughter', 'stepson', 'in-law', 'mother-in-law', 'father-in-law', 'sister-in-law', 'brother-in-law', 'daughter-in-law', 'son-in-law', 'spouse', 'partner', 'husband', 'wife', 'bride', 'groom', 'newlywed', 'conjugal', 'matrimonial', 'marital', 'wedlock', 'marriage', 'matrimony', 'union', 'couple', 'pair', 'duo', 'twosome', 'lover', 'beloved', 'sweetheart', 'honey', 'darling', 'dear', 'dearest', 'love', 'crush', 'flame', 'old flame', 'paramour', 'mistress', 'concubine', 'admirer', 'fanatic', 'fan', 'devotee', 'enthusiast', 'aficionado', 'buff', 'geek', 'nerd', 'junkie', 'addict', 'mate', 'companion', 'comrade', 'ally', 'pal', 'buddy', 'partner-in-crime', 'soulmate', 'kindred spirit', 'confidant', 'confidante', 'mentor', 'protégé', 'role model', 'inspiration', 'idol', 'hero', 'heroine', 'villain', 'antagonist', 'protagonist', 'rival', 'nemesis', 'friend', 'frenemy', 'acquaintance', 'intimate', 'associate', 'connection', 'contact', 'network', 'circle', 'group', 'gang', 'crew', 'squad', 'posse', 'brotherhood', 'sisterhood', 'community', 'society', 'organization', 'establishment', 'institution', 'collective', 'society', 'community', 'people', 'folks', 'populace', 'masses', 'public', 'society', 'culture', 'civilization', 'population', 'demographic', 'generation', 'cohort', 'age group', 'peer group', 'clique', 'in-crowd', 'out-crowd', 'social circle', 'intimate circle', 'inner circle', 'outer circle', 'closed circle', 'open community'],
-
-            // Common day-to-day phrases and expressions (500+ words)
-            commonPhrases: ['how are you', 'whats up', 'how is it going', 'how are you doing', 'you okay', 'everything alright', 'what is new', 'whats new with you', 'any updates', 'long time no talk', 'been a while', 'havent heard from you', 'miss you', 'thinking of you', 'cant wait to see you', 'looking forward to it', 'so excited', 'thats awesome', 'thats cool', 'thats great', 'love that', 'thats perfect', 'exactly right', 'on point', 'nailed it', 'absolutely', 'one hundred percent', 'totally agree', 'same here', 'me too', 'same boat', 'tell me about it', 'i know', 'i hear you', 'i feel you', 'i get it', 'makes sense', 'understandable', 'completely normal', 'dont worry', 'it is fine', 'no worries', 'no problem', 'anytime', 'my pleasure', 'happy to help', 'glad i could help', 'let me know', 'keep me posted', 'stay in touch', 'talk later', 'catch you soon', 'see you later', 'goodbye', 'take care', 'until next time', 'see you around', 'catch you later', 'have a good one', 'enjoy', 'have fun', 'good luck', 'fingers crossed', 'hoping for the best', 'keeping my fingers crossed', 'wish me luck', 'thanks for everything', 'appreciate it', 'grateful for that', 'thankful', 'owe you one', 'really sorry', 'my bad', 'my fault', 'excuse me', 'pardon me', 'forgive me', 'i apologize', 'didnt mean to', 'wasnt intentional', 'i messed up', 'made a mistake', 'slipped up', 'its all good', 'water under the bridge', 'lets move on', 'forget about it', 'ancient history', 'lets start fresh', 'new beginning', 'clean slate', 'second chance', 'give it another try', 'one more time', 'last attempt', 'final shot', 'make it count', 'pull through', 'hang in there', 'hold tight', 'stay strong', 'you got this', 'believe in yourself', 'im rooting for you', 'im in your corner', 'have your back', 'always there for you', 'no matter what', 'thick and thin', 'through everything', 'always and forever', 'till the end', 'when youre ready', 'take your time', 'no rush', 'whenever you want', 'just say the word', 'on my way', 'coming right up', 'moment please', 'one second', 'hold on', 'just a minute', 'practically there', 'almost done', 'nearly finished', 'just about', 'roughly speaking', 'generally speaking', 'to be honest', 'to tell the truth', 'frankly', 'honestly', 'truthfully', 'fact is', 'reality is', 'the truth is', 'what matters is', 'bottom line', 'long story short', 'in a nutshell', 'cut to the chase', 'get to the point', 'without further ado', 'without any delay', 'without hesitation', 'right away', 'immediately', 'at once', 'straight away', 'quick', 'quick as a wink', 'faster than light', 'lightning fast', 'in a flash', 'in a jiffy', 'in no time', 'before you know it', 'next thing you know', 'suddenly', 'all of a sudden', 'out of nowhere', 'out of the blue', 'unexpected', 'surprising', 'shocking', 'mind blowing', 'incredible', 'unbelievable', 'cant believe it', 'no way', 'seriously', 'really', 'are you serious', 'are you kidding', 'you must be joking', 'for real', 'being serious', 'im being serious', 'i mean it', 'no joke', 'not joking', 'im not kidding', 'cross my heart', 'scouts honor', 'swear to it', 'word of honor', 'my word on it', 'i promise', 'i give you my word', 'thats a promise', 'you have my word', 'guaranteed', 'you can count on it', 'its certain', 'absolutely certain', 'no doubt about it', 'definite', 'for certain', 'for sure', 'mark my words', 'believe me', 'trust me', 'take it from me', 'let me tell you', 'id say', 'id venture to say', 'id guess', 'my guess is', 'my thoughts are', 'if you ask me', 'in my opinion', 'in my view', 'the way i see it', 'as i understand it', 'as far as i know', 'from what ive heard', 'ive been told', 'apparently', 'reportedly', 'supposedly', 'its said that', 'they say', 'the word is', 'i heard that', 'word on the street', 'rumor has it', 'scuttlebutt is', 'the buzz is', 'chatter is', 'gossip is', 'people are saying', 'word around town', 'the latest is', 'breaking news', 'hot off the presses', 'fresh info', 'latest update', 'new development', 'plot twist', 'unexpected turn', 'turn of events', 'change of plans', 'shake up', 'upheaval', 'disruption', 'uproar', 'commotion', 'fuss', 'hubbub', 'kerfuffle', 'brouhaha', 'ruckus', 'racket', 'din', 'noise', 'commotion', 'crazy', 'insane', 'wild', 'chaotic', 'hectic', 'frantic', 'stressed out', 'swamped', 'overwhelmed', 'drowning in work', 'buried in tasks', 'knee deep', 'up to my ears', 'over my head', 'in deep', 'trapped', 'stuck', 'boxed in', 'cornered', 'backed against the wall', 'between a rock and a hard place', 'damned if i do damned if i dont', 'lose lose', 'no win situation', 'catch 22', 'damned if you do', 'if worst comes to worst', 'worst case scenario', 'best case scenario', 'likely scenario', 'possible outcome', 'potential result', 'silver lining', 'bright side', 'upside', 'plus side', 'advantage', 'benefit', 'perk', 'bonus', 'extra', 'added bonus', 'icing on the cake', 'cherry on top', 'piece of cake', 'easy peasy', 'no sweat', 'piece of cake', 'walk in the park', 'childs play', 'cake walk', 'simple', 'straightforward', 'uncomplicated', 'not complicated', 'easy enough', 'manageable', 'doable', 'achievable', 'attainable', 'reachable', 'within reach', 'possible', 'feasible', 'practical', 'realistic', 'reasonable', 'sensible', 'makes sense', 'logical', 'rational', 'makes rational sense', 'no brainer', 'obvious choice', 'clear as day', 'plain as day', 'clear cut', 'black and white', 'cut and dried', 'straightforward', 'obvious', 'evident', 'apparent', 'clear', 'manifest', 'patent', 'glaring', 'striking', 'remarkable', 'notable', 'noteworthy', 'significant', 'important', 'crucial', 'critical', 'vital', 'essential', 'fundamental', 'basic', 'key', 'core', 'central', 'main', 'primary', 'principal', 'chief', 'major', 'significant', 'big', 'major', 'major league', 'big league', 'big time', 'heavyweight', 'titan', 'giant', 'mogul', 'powerhouse', 'big player', 'big shot', 'bigwig', 'big name', 'celebrity', 'star', 'luminary', 'personage', 'notable', 'somebody', 'someone important', 'vip', 'dignitary', 'politician', 'executive', 'leader', 'boss', 'head honcho', 'top dog', 'shot caller', 'decision maker', 'power player', 'wheeler dealer', 'operator', 'mover and shaker', 'go getter', 'striver', 'achiever', 'overachiever', 'high flyer', 'climber', 'ambitious', 'driven', 'motivated', 'determined', 'goal oriented', 'focused', 'dedicated', 'committed', 'unwavering', 'steadfast', 'resolute', 'firm', 'unshakeable', 'unbreakable', 'solid as a rock', 'rock solid', 'dependable', 'reliable', 'trustworthy', 'loyal', 'faithful', 'true', 'genuine', 'sincere', 'authentic', 'honest', 'truthful', 'candid', 'frank', 'blunt', 'direct', 'straight', 'forthright', 'upfront', 'transparent', 'open', 'clear', 'plain spoken', 'outspoken', 'vocal', 'loud', 'loud and clear', 'clear as crystal', 'crystal clear', 'perfectly clear', 'abundantly clear', 'undeniably clear', 'unquestionably clear'],
-
-            // Food and drinks (150+ words)
-            foodDrinks: ['coffee', 'tea', 'water', 'juice', 'milk', 'soda', 'beer', 'wine', 'alcohol', 'drink', 'beverage', 'smoothie', 'milkshake', 'latte', 'cappuccino', 'espresso', 'macchiato', 'americano', 'mocha', 'flat white', 'cortado', 'affogato', 'lungo', 'ristretto', 'green tea', 'black tea', 'herbal tea', 'chamomile', 'peppermint', 'ginger', 'hot chocolate', 'cocoa', 'cold brew', 'iced coffee', 'iced tea', 'lemonade', 'iced lemonade', 'kombucha', 'energy drink', 'protein shake', 'breakfast', 'lunch', 'dinner', 'brunch', 'supper', 'snack', 'meal', 'feast', 'spread', 'buffet', 'potluck', 'takeout', 'delivery', 'dine in', 'eating out', 'restaurant', 'cafe', 'diner', 'bistro', 'pizzeria', 'bakery', 'sandwich shop', 'burger joint', 'taco stand', 'food truck', 'street food', 'fast food', 'slow food', 'home cooked', 'homemade', 'from scratch', 'ingredients', 'recipe', 'cook', 'bake', 'grill', 'fry', 'broil', 'steam', 'boil', 'simmer', 'toast', 'roast', 'sauté', 'scramble', 'stir', 'whisk', 'blend', 'chop', 'slice', 'dice', 'mince', 'shred', 'grate', 'crush', 'blend', 'puree', 'strain', 'sift', 'knead', 'roll', 'flatten', 'shape', 'mold', 'plate', 'serve', 'taste', 'flavor', 'seasoning', 'spice', 'herb', 'salt', 'pepper', 'oil', 'vinegar', 'sauce', 'gravy', 'dressing', 'spread', 'butter', 'margarine', 'cream', 'cheese', 'yogurt', 'bread', 'toast', 'bagel', 'croissant', 'donut', 'pastry', 'muffin', 'cake', 'cookie', 'brownie', 'pie', 'cake', 'tart', 'cupcake', 'cereal', 'oatmeal', 'granola', 'yogurt', 'fruit', 'berries', 'apple', 'banana', 'orange', 'lemon', 'lime', 'grape', 'melon', 'watermelon', 'pineapple', 'mango', 'peach', 'plum', 'strawberry', 'blueberry', 'blackberry', 'raspberry', 'cranberry', 'vegetable', 'carrot', 'celery', 'broccoli', 'cauliflower', 'spinach', 'kale', 'lettuce', 'tomato', 'cucumber', 'pepper', 'onion', 'garlic', 'potato', 'sweet potato', 'rice', 'pasta', 'noodle', 'bean', 'lentil', 'chickpea', 'tofu', 'tempeh', 'seitan', 'meat', 'beef', 'chicken', 'pork', 'turkey', 'lamb', 'fish', 'salmon', 'tuna', 'cod', 'shellfish', 'shrimp', 'crab', 'lobster', 'clam', 'oyster', 'mussel', 'scallop', 'egg', 'dairy', 'milk', 'cheese', 'yogurt', 'butter', 'cream', 'sour cream', 'whipped cream', 'nuts', 'almond', 'walnut', 'peanut', 'cashew', 'pistachio', 'hazelnut', 'pecan', 'macadamia', 'seeds', 'sunflower', 'pumpkin', 'sesame', 'flax', 'chia', 'oil', 'olive oil', 'coconut oil', 'vegetable oil', 'canola oil', 'avocado oil', 'sesame oil', 'peanut oil', 'condiment', 'ketchup', 'mustard', 'mayo', 'relish', 'hot sauce', 'salsa', 'hummus', 'guacamole', 'pesto', 'soy sauce', 'teriyaki', 'vinaigrette'],
-
-            // Activities and hobbies (200+ words)
-            hobbiesActivities: ['reading', 'writing', 'drawing', 'painting', 'sketching', 'sculpting', 'dancing', 'singing', 'playing music', 'sports', 'basketball', 'soccer', 'football', 'baseball', 'tennis', 'golf', 'swimming', 'running', 'jogging', 'walking', 'hiking', 'climbing', 'cycling', 'skating', 'skiing', 'snowboarding', 'surfing', 'kayaking', 'canoeing', 'rowing', 'fishing', 'hunting', 'camping', 'backpacking', 'travel', 'sightseeing', 'photography', 'videography', 'filmmaking', 'cooking', 'baking', 'gardening', 'planting', 'growing', 'landscaping', 'interior design', 'decorating', 'home improvement', 'diy', 'crafting', 'knitting', 'sewing', 'embroidery', 'woodworking', 'metalworking', 'pottery', 'jewelry making', 'model building', 'video games', 'gaming', 'board games', 'card games', 'chess', 'poker', 'collecting', 'stamp collecting', 'coin collecting', 'antiques', 'memorabilia', 'fashion', 'styling', 'makeup', 'skincare', 'grooming', 'pet care', 'animal care', 'volunteering', 'community service', 'charity', 'advocacy', 'activism', 'socializing', 'partying', 'clubbing', 'attending events', 'concerts', 'festivals', 'shows', 'theater', 'cinema', 'movies', 'comedy', 'stand-up', 'improv', 'drama', 'comedy shows', 'musicals', 'opera', 'ballet', 'classical music', 'podcasts', 'audiobooks', 'meditation', 'yoga', 'fitness', 'gym', 'weightlifting', 'strength training', 'cardio', 'pilates', 'martial arts', 'boxing', 'kickboxing', 'wrestling', 'judo', 'taekwondo', 'karate', 'self defense', 'parkour', 'rock climbing', 'ice climbing', 'mountaineering', 'skydiving', 'base jumping', 'bungee jumping', 'zip-lining', 'racing', 'motocross', 'motorsports', 'car racing', 'motorcycling', 'skateboarding', 'parkour', 'free running', 'dancing styles', 'ballet', 'contemporary', 'hip-hop', 'jazz', 'tap', 'salsa', 'tango', 'waltz', 'swing', 'lindyhop', 'breakdancing', 'krumping', 'popping', 'locking', 'vogue', 'voguing', 'music genres', 'rock', 'pop', 'hip-hop', 'rap', 'country', 'folk', 'jazz', 'blues', 'classical', 'electronic', 'edm', 'dubstep', 'drum-and-bass', 'house', 'techno', 'trance', 'ambient', 'experimental', 'indie', 'alternative', 'punk', 'metal', 'hardcore', 'emo', 'screamo', 'pop-punk', 'ska', 'reggae', 'latin', 'afrobeat', 'world music', 'instrument playing', 'guitar', 'bass', 'drums', 'piano', 'keyboard', 'violin', 'cello', 'saxophone', 'trumpet', 'trombone', 'flute', 'clarinet', 'oboe', 'harmonica', 'ukulele', 'mandolin', 'banjo', 'harp', 'organ', 'synthesizer', 'turntables', 'dj-ing', 'music production', 'composition', 'songwriting', 'lyric writing', 'creative writing', 'fiction', 'poetry', 'essay writing', 'journalism', 'blogging', 'vlogging', 'streaming', 'content creation', 'social media', 'instagram', 'tiktok', 'youtube', 'twitter', 'facebook', 'linkedin', 'pinterest', 'reddit', 'discord', 'online communities', 'forums', 'subreddits', 'fan communities', 'anime', 'manga', 'comics', 'graphic novels', 'cosplay', 'reenactment', 'larping', 'tabletop rpg', 'dnd', 'dungeons and dragons', 'warhammer', 'miniature painting', 'language learning', 'studying', 'research', 'academic pursuits', 'philosophy', 'history', 'science', 'astronomy', 'geology', 'biology', 'chemistry', 'physics', 'technology', 'programming', 'coding', 'web development', 'app development', 'game development', 'virtual reality', 'augmented reality', 'artificial intelligence', 'machine learning', 'data science', 'cybersecurity', 'hacking', 'entrepreneurship', 'business', 'investing', 'stocks', 'crypto', 'nfts', 'real estate'],
-
-            // Common questions (100+ words)
-            commonQuestions: ['how are you', 'whats up', 'how is your day', 'what are you up to', 'do you have time', 'can you help me', 'would you mind', 'could you please', 'would you like', 'do you want', 'are you ready', 'are you sure', 'do you agree', 'what do you think', 'how do you feel', 'what is your opinion', 'do you have any suggestions', 'can you recommend', 'what should i do', 'what would you do', 'whats your advice', 'any ideas', 'got any tips', 'any suggestions', 'what is this', 'what does this mean', 'how does this work', 'why is this', 'when should i', 'where can i find', 'who is responsible', 'whose fault is it', 'which one is better', 'which option do you prefer', 'how long will it take', 'how much will it cost', 'what is the price', 'how many are there', 'how often', 'how frequently', 'how regularly', 'is it possible', 'is it likely', 'what are the chances', 'what could go wrong', 'what if something happens', 'what is the worst case', 'what is the best case', 'have you ever', 'have you tried', 'have you heard of', 'do you know about', 'are you familiar with', 'have you seen', 'did you notice', 'did you see that', 'did you hear that', 'did you know', 'do you realize', 'did you mean', 'what did you say', 'can you repeat that', 'can you speak louder', 'can you slow down', 'can you clarify', 'what do you mean by that', 'can you explain', 'can you elaborate', 'can you give an example', 'is that true', 'is that really true', 'are you serious', 'are you sure about that', 'how can you be so sure', 'what makes you say that', 'why do you think that', 'where did you hear that', 'who told you that', 'what is the source', 'how reliable is that', 'is that verified', 'can you prove it', 'do you have evidence', 'what evidence do you have', 'is there proof', 'can you show me', 'can i see', 'may i take a look', 'can i help', 'how can i help', 'what can i do', 'anything i can do', 'is there anything i can do', 'what do you need', 'what would help', 'what would be helpful'],
-        };
-
-        this.responses = {
-            greeting: [
-                "Hey! I'm running in local mode right now, but I'm still here. How's your day going?",
-                "Hi there! What's going on?",
-                "Hey! Good to see you. What's on your mind?",
-                "Hello! How's it going today?",
-                "Hey! What's up?",
-                "What's up? How are you doing?",
-                "Hey there! What can I do for you?",
-                "Morning! What's new?",
-            ],
-            greetingReply: [
-                "Hey! How's it going?",
-                "Hi! Good to see you. What's on your mind?",
-                "Hey there! What's new?",
-                "Hello! How's your day been?",
-                "Hey! What can I do for you?",
-                "Hi! What's going on?",
-                "What's happening?",
-                "Sup! How's it going?",
-            ],
-            howAreYou: [
-                "I'm doing well, thanks for asking! How about you — how's your day been?",
-                "I'm good! But enough about me, how are you doing?",
-                "Doing alright! What about you, how's everything going?",
-                "All good on my end! How are things with you?",
-                "Can't complain! How about you though, everything okay?",
-                "Pretty good! Thanks for asking. What about you?",
-                "I'm solid. You holding up okay?",
-                "Can't complain. You good?",
-            ],
-            referenceBack: [
-                "You're right, my bad. Let me focus — what were you asking about?",
-                "Sorry about that, I should've responded to that. What was it you wanted to know?",
-                "Fair point, I got sidetracked. Go ahead, I'm listening this time.",
-                "Oops, you're right. I missed that — what did you want to talk about?",
-                "My bad! I didn't mean to skip over that. What was your question?",
-                "You're totally right. What was I missing?",
-                "Got it, I hear you. Let's focus on that.",
-            ],
-            thanks: [
-                "Of course! Anything else?",
-                "No problem! What else is on your mind?",
-                "Happy to help! Anything else going on?",
-                "Sure thing! What's next?",
-                "Anytime!",
-                "You got it!",
-                "All good. What else?",
-                "No sweat. What do you need?",
-            ],
-            farewell: [
-                "Take care! Come back anytime.",
-                "See you later! I'll be here when you need me.",
-                "Bye for now! Hope the rest of your day goes well.",
-                "Talk soon! Take it easy.",
-                "Later! Don't be a stranger.",
-                "Catch you later!",
-                "Talk to you soon!",
-                "Take care, friend!",
-            ],
-            positive: [
-                "That's awesome! I'm genuinely happy for you.",
-                "Love that for you! That's a huge deal.",
-                "That sounds amazing. Really glad you're experiencing that.",
-                "You should be proud. That's incredible.",
-                "Honestly, that's beautiful to hear. Keep that momentum going.",
-                "That's the energy right there. I'm here for it.",
-                "That's really special. Thanks for sharing that with me.",
-                "Yesss! That's what I'm talking about!",
-                "That's so cool! How do you feel about it?",
-                "I'm stoked for you! That's dope.",
-            ],
-            distressed: [
-                "I'm sorry you're going through that. I'm here if you want to talk.",
-                "That sounds really tough. You don't have to go through it alone.",
-                "I hear you. Your feelings are valid. Want to talk about what's going on?",
-                "That's a lot to carry. I'm listening whenever you're ready.",
-                "I'm sorry. That's not easy. Take your time — I'm here.",
-                "That's rough. I'm sorry you're dealing with that.",
-                "I'm here for you. What do you need right now?",
-                "That sounds painful. Tell me more.",
-            ],
-            anxious: [
-                "That sounds stressful. What's weighing on you the most?",
-                "I get that. Sometimes just talking it through helps. What's going on?",
-                "Anxiety can be a lot. Take a breath — what's on your mind?",
-                "That's understandable. Want to walk me through what's been happening?",
-                "That sounds like a lot. What's making you most nervous?",
-                "I feel you. What's the main thing stressing you out?",
-            ],
-            question: [
-                "That's a good question. I'm in local mode so I can't look things up, but I can think through it with you. What are your thoughts?",
-                "Hmm, I wish I could look that up for you. In local mode I'm a bit limited, but tell me more — maybe we can work through it together.",
-                "I don't have the full answer for that, but I'm curious what you think. What's your take?",
-                "I can't really search for things right now, but I'm happy to talk it through. What do you think?",
-                "That's a solid question. What do you think about it?",
-                "Not sure I have the full answer, but let's talk it through.",
-            ],
-            outOfScope: [
-                "That's not really my area — I'm here to listen and help you navigate your thoughts, feelings, and daily tasks. What's on your mind?",
-                "I'm not the right tool for that kind of question, but I'm here if you want to talk about what's really going on with you.",
-                "I can't help with that, but if something's weighing on you, I'm all ears.",
-                "That's outside my wheelhouse, but I'm here to help with what matters to you — how are you really doing?",
-                "I'm built to listen and support you, not to answer factual questions like that. What's really on your mind?",
-                "Can't help much with that one, but I'm here for you.",
-            ],
-            identity: [
-                "I'm Linen — your personal AI assistant designed to listen, remember, and support you. I was built by Ramin Najafi for people who want a smart companion that actually respects their privacy. Here's what I do: I listen to you without judgment, remember important details about your life across conversations, help you process thoughts and feelings, create calendar events and reminders from natural conversation, and work completely offline if you want. I'm built for students, professionals, anyone managing mental health, and creatives — basically, anyone who wants to think out loud with someone who won't forget. The key difference? Everything stays on your device. No cloud servers, no data selling, no training AI on your words. I'm privacy-first. Want me to help with something specific?",
-                "I'm Linen, your personal memory assistant. Here's what I was made for: I listen, I remember details about your life that matter to you, I help you work through complex thoughts and feelings, and I support your mental health and wellness — all while keeping everything private on your device. I was created for people who want an AI companion that actually respects their privacy (unlike most AI services). I work great for: reflecting on your day, processing emotions, remembering people and events, planning and organizing, brainstorming, learning and studying, or just having thoughtful conversations. I remember your history so I can reference previous conversations and grow with you. What would help you right now?",
-                "Hey, I'm Linen — your personal AI companion that remembers. I was built to be the opposite of most AI services. Instead of sending your data to servers and training AI on your conversations, I keep everything on your device. Complete privacy. Here's what you can do with me: chat about your day, remember important moments (I tag them automatically), get reminders and calendar events, work through problems, track your mood, access everything offline, use with your favorite AI API (Gemini, ChatGPT, Hugging Face), or just have thoughtful conversations with someone who actually remembers you. I'm designed for people who care about privacy but want the power of AI. No premium features, no ads, completely free. What's on your mind?",
-            ],
-            creator: [
-                "I was built by Ramin Najafi. You can find more information about my creator at ramin-najafi.github.io",
-            ],
-            topicWork: [
-                "Work stuff, huh? What's going on?",
-                "Tell me about it. Is it stressing you out or just on your mind?",
-                "How are things at work? What's happening?",
-                "Ugh, work. What's the situation?",
-                "Work been keeping you busy?",
-                "What's going on with work?",
-                "Tell me about what's happening at your job.",
-            ],
-            topicRelationships: [
-                "Relationships can be a lot. What's going on?",
-                "Sounds like it's about someone important to you. Tell me more.",
-                "How are things between you two? What's happening?",
-                "That's a big topic. Want to walk me through it?",
-                "Relationships can be complicated. What's up?",
-                "Tell me about that person.",
-                "What's the situation?",
-            ],
-            topicHealth: [
-                "Your health matters. How are you feeling?",
-                "That doesn't sound fun. What's going on?",
-                "I hope you're taking it easy. Tell me more.",
-                "How are you doing physically? What's been going on?",
-                "That sounds rough. Take care of yourself.",
-                "What's bothering you healthwise?",
-            ],
-            topicHobbies: [
-                "Oh nice! Tell me more about that.",
-                "That sounds fun! How long have you been into it?",
-                "Cool, what do you enjoy most about it?",
-                "I like hearing about this stuff. What got you into it?",
-                "That's awesome! What is it about it you love?",
-                "Sounds cool! Tell me more.",
-            ],
-            topicGoals: [
-                "That's exciting! What are you working toward?",
-                "I love that. What's the plan?",
-                "Nice, how's progress going so far?",
-                "That's a solid goal. What's the next step?",
-                "That's awesome. How can I help you get there?",
-                "What's driving that goal?",
-            ],
-            engaged: [
-                "Tell me more about that.",
-                "Interesting — what happened next?",
-                "I hear you.",
-                "And then what happened?",
-                "How's that been going for you?",
-                "That makes sense. What else?",
-                "Go on, I'm listening.",
-                "Okay, I'm with you. What else?",
-                "Yeah? Tell me more.",
-                "I'm here for it. Keep going.",
-                "That's interesting. Keep talking.",
-                "Okay, so what happened after that?",
-                "I see. And how did that make you feel?",
-                "That's a lot. Tell me more?",
-                "What else is going on with that?",
-            ],
-            confused: [
-                "I'm not sure I follow — can you give me a bit more to go on?",
-                "Hmm, what do you mean by that?",
-                "Could you say a bit more? I want to make sure I understand.",
-                "I'm not quite getting it — can you explain?",
-                "Not sure what you mean. Can you explain that differently?",
-                "Say more? I want to make sure I get it.",
-            ],
-            frustrated: [
-                "You're right, that's on me. What would you like to talk about?",
-                "I hear you. I'm a bit limited in local mode, but I'm trying. What can I do?",
-                "Fair enough. Let me try again — what's on your mind?",
-                "Sorry about that. Tell me what you need and I'll do my best.",
-                "I get it. Let's start fresh. What's up?",
-            ],
-            timerSet: [
-                "I've set a timer for you. Let me know when you need another one.",
-                "Timer set! I'll help keep you on track.",
-                "Got it — timer is running. Just let me know if you need anything else.",
-                "Timer started. You've got this!",
-                "Alright, timer's going!",
-                "Done! Timer is running.",
-            ],
-            alarmSet: [
-                "Alarm set for you. I'll remind you when it's time.",
-                "Got it — alarm is ready to go.",
-                "Alarm set! I'll make sure you wake up on time.",
-                "Perfect, your alarm is all set.",
-                "Alarm's set! You're good.",
-            ],
-            noteAdded: [
-                "Got it — I've written that down for you.",
-                "Note saved! That's something important to remember.",
-                "Added to your notes. I've got you covered.",
-                "Noted! I'll keep that in mind for you.",
-                "That's saved in your memories now.",
-                "All set! Note's saved.",
-                "Done! I've got that written down.",
-            ],
-            casualChat: [
-                "Yeah, that's real.",
-                "For sure.",
-                "Totally get that.",
-                "Makes sense.",
-                "Right, I feel you.",
-                "Yeah, I feel you on that.",
-                "That's fair.",
-                "No doubt.",
-                "Not much with me either, just keeping it chill.",
-                "Same here, nothing too wild.",
-                "Nah, just the usual honestly.",
-                "Not gonna complain! Just vibing.",
-                "Same vibes, just taking it easy.",
-                "Just living the dream, you know?",
-                "Ah, keeping it real. That's what's up.",
-                "Yo, same energy!",
-                "Can't complain really.",
-                "Just keeping it simple, you feel me?",
-                "Yeah man, that's how it goes.",
-                "Word, I hear you.",
-                "Totally feel that.",
-                "100%, that's facts.",
-            ],
-        };
-
-        // Merge optional external expansion pack if present.
-        // Loaded via index.html as vocabularyExpansion.js.
-        try {
-            if (typeof vocabularyExpansion !== 'undefined' && vocabularyExpansion) {
-                this.mergeVocabularyPack(vocabularyExpansion);
-            }
-        } catch (e) {
-            console.warn('Linen: External vocabulary pack unavailable:', e);
-        }
-
-        // Merge community-managed vocabulary additions (auto-ingested from anonymized packs).
-        try {
-            if (typeof vocabularyCommunity !== 'undefined' && vocabularyCommunity) {
-                this.mergeVocabularyPack(vocabularyCommunity);
-            }
-        } catch (e) {
-            console.warn('Linen: Community vocabulary pack unavailable:', e);
-        }
-
-        // Ensure a large daily-communication vocabulary footprint.
-        this.ensureMinimumVocabularySize(20000);
-
-        // Build fast lookup indexes so all vocabulary categories can participate in context routing.
-        this.initializeVocabularyEngine();
-    }
-
-    mergeVocabularyPack(pack) {
-        if (!pack || typeof pack !== 'object') return;
-
-        const sanitize = (term) => {
-            const normalized = this.normalizeText(term);
-            if (!normalized) return null;
-            if (normalized.length < 2 || normalized.length > 60) return null;
-            if (!/[a-z]/.test(normalized)) return null;
-            return normalized;
-        };
-
-        Object.entries(pack).forEach(([category, terms]) => {
-            if (!Array.isArray(terms)) return;
-            if (!Array.isArray(this.vocabulary[category])) this.vocabulary[category] = [];
-
-            const merged = new Set(this.vocabulary[category].map(t => sanitize(t)).filter(Boolean));
-            terms.forEach((term) => {
-                const cleaned = sanitize(term);
-                if (cleaned) merged.add(cleaned);
-            });
-
-            this.vocabulary[category] = Array.from(merged);
-        });
-    }
-
-    ensureMinimumVocabularySize(targetSize = 20000) {
-        const currentSize = Object.values(this.vocabulary).reduce((sum, arr) => sum + (arr?.length || 0), 0);
-        if (currentSize >= targetSize) return;
-
-        const generated = this.generateDailyCommunicationPhrases(targetSize - currentSize);
-        this.mergeVocabularyPack({ commonPhrases: generated });
-    }
-
-    generateDailyCommunicationPhrases(targetCount) {
-        const starters = [
-            'can you', 'could you', 'would you', 'do you', 'did you', 'are you', 'is it',
-            'i am', 'im', 'i feel', 'i think', 'i guess', 'i hope', 'i need', 'i want',
-            'let us', 'lets', 'we should', 'we can', 'please', 'thanks for', 'by the way',
-            'to be honest', 'for real', 'just checking', 'quick update', 'heads up'
-        ];
-        const actions = [
-            'help', 'check', 'explain', 'share', 'remember', 'remind', 'schedule', 'plan',
-            'talk about', 'review', 'clarify', 'confirm', 'update', 'follow up on',
-            'look into', 'figure out', 'sort out', 'work on', 'deal with', 'handle',
-            'fix', 'find', 'show', 'tell', 'ask', 'answer', 'support', 'listen to',
-            'focus on', 'start', 'finish', 'continue', 'pause', 'save', 'note', 'track',
-            'compare', 'summarize', 'organize', 'prioritize'
-        ];
-        const objects = [
-            'this', 'that', 'it', 'the plan', 'the schedule', 'the reminder', 'my notes',
-            'my message', 'the details', 'my goals', 'the next steps', 'our conversation',
-            'the update', 'the issue', 'the task', 'the project', 'the meeting', 'my day',
-            'my week', 'my mood', 'the timeline', 'the checklist', 'the idea', 'the draft',
-            'the budget', 'the trip', 'the appointment', 'the deadline', 'my routine',
-            'my progress', 'the context', 'the summary'
-        ];
-        const endings = [
-            'right now', 'today', 'this week', 'for tomorrow', 'when you can',
-            'when you have time', 'before lunch', 'after work', 'as soon as possible',
-            'in a bit', 'later', 'for me', 'for us', 'step by step', 'in simple terms'
-        ];
-
-        const phrases = new Set();
-        const target = Math.max(targetCount, 0);
-        if (target === 0) return [];
-
-        const tryAdd = (phrase) => {
-            if (phrases.size >= target) return true;
-            phrases.add(this.normalizeText(phrase));
-            return phrases.size >= target;
-        };
-
-        for (const s of starters) {
-            for (const a of actions) {
-                for (const o of objects) {
-                    const base = `${s} ${a} ${o}`;
-                    if (tryAdd(base)) return Array.from(phrases);
-                    for (const e of endings) {
-                        if (tryAdd(`${base} ${e}`)) return Array.from(phrases);
-                    }
-                }
-            }
-        }
-
-        return Array.from(phrases);
-    }
-
-    initializeVocabularyEngine() {
-        this.vocabIndex = {};
-        this.allVocabularyTerms = new Set();
-
-        Object.entries(this.vocabulary).forEach(([category, terms]) => {
-            const words = new Set();
-            const phrases = [];
-
-            (terms || []).forEach((rawTerm) => {
-                const term = this.normalizeText(rawTerm);
-                if (!term) return;
-                this.allVocabularyTerms.add(term);
-                if (term.includes(' ')) phrases.push(term);
-                else words.add(term);
-            });
-
-            this.vocabIndex[category] = { words, phrases };
-        });
-
-        this.allVocabularyList = Array.from(this.allVocabularyTerms);
-    }
-
-    normalizeText(text) {
-        return (text || '')
-            .toLowerCase()
-            .replace(/[^a-z0-9\s]/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
-
-    tokenize(text) {
-        const normalized = this.normalizeText(text);
-        if (!normalized) return [];
-        return normalized.split(' ').filter(Boolean);
-    }
-
-    scoreVocabularyCategories(message, categories = null) {
-        const normalized = this.normalizeText(message);
-        const padded = ` ${normalized} `;
-        const tokens = new Set(this.tokenize(message));
-        const scores = {};
-        const entries = Object.entries(this.vocabIndex || {}).filter(([category]) => {
-            return !categories || categories.includes(category);
-        });
-
-        entries.forEach(([category, index]) => {
-            let score = 0;
-
-            tokens.forEach((token) => {
-                if (index.words.has(token)) score += 1;
-            });
-
-            // Multi-word term matches get slightly higher weight for context precision.
-            index.phrases.forEach((phrase) => {
-                if (padded.includes(` ${phrase} `)) score += 2;
-            });
-
-            if (score > 0) scores[category] = score;
-        });
-
-        return scores;
-    }
-
-    inferTopicIntentFromVocabulary(message) {
-        const topicalCategories = ['work', 'relationships', 'emotions', 'hobbiesActivities', 'activities', 'foodDrinks', 'timeWords'];
-        const scores = this.scoreVocabularyCategories(message, topicalCategories);
-        const normalized = this.normalizeText(message);
-
-        const goalHints = [
-            'goal', 'goals', 'plan', 'plans', 'planning', 'future', 'career',
-            'ambition', 'dream', 'dreams', 'objective', 'target', 'milestone'
-        ];
-        const healthHints = [
-            'health', 'sleep', 'sick', 'doctor', 'pain', 'therapy', 'anxiety',
-            'depression', 'medication', 'workout', 'exercise', 'diet'
-        ];
-
-        const topicScores = {
-            topicWork: (scores.work || 0),
-            topicRelationships: (scores.relationships || 0),
-            topicHealth: (scores.emotions || 0) + healthHints.filter(h => normalized.includes(h)).length,
-            topicHobbies: (scores.hobbiesActivities || 0) + (scores.activities || 0) + (scores.foodDrinks || 0),
-            topicGoals: (scores.timeWords || 0) + goalHints.filter(h => normalized.includes(h)).length
-        };
-
-        const ranked = Object.entries(topicScores).sort((a, b) => b[1] - a[1]);
-        if (ranked.length === 0 || ranked[0][1] < 2) return null;
-        return ranked[0][0];
-    }
-
-    // Pick a random response that hasn't been used recently
-    // Detect appropriate response length based on user message context
-    detectResponseLength(message) {
-        if (!message) return 'medium';
-
-        const words = message.trim().split(/\s+/).length;
-        const chars = message.length;
-
-        // Very short user messages (1-3 words) = short response
-        if (words <= 3) return 'short';
-
-        // Short user messages (4-8 words) = medium response
-        if (words <= 8) return 'medium';
-
-        // Medium-long messages (9-20 words) = medium-long response
-        if (words <= 20) return 'mediumLong';
-
-        // Long user messages (20+ words) = longer response is appropriate
-        return 'long';
-    }
-
-    // Filter responses by length to match user message length
-    filterResponsesByLength(responses, lengthCategory) {
-        if (!lengthCategory || lengthCategory === 'medium') return responses;
-
-        return responses.filter(r => {
-            const responseWords = (r || '').split(/\s+/).length;
-
-            switch (lengthCategory) {
-                case 'short':
-                    // Prefer responses under 10 words
-                    return responseWords <= 10;
-                case 'mediumLong':
-                    // Prefer responses 10-25 words
-                    return responseWords >= 8 && responseWords <= 25;
-                case 'long':
-                    // Allow longer responses for detailed user messages
-                    return responseWords >= 15;
-                default:
-                    return true;
-            }
-        });
-    }
-
-    pick(category, messageContext = null) {
-        const pool = this.responses[category];
-        if (!pool || pool.length === 0) return '';
-
-        // Smart length detection based on user message
-        let lengthCategory = 'medium';
-        if (messageContext) {
-            lengthCategory = this.detectResponseLength(messageContext);
-        }
-
-        // Filter out recently used
-        let available = pool.filter(r => !this.usedResponses.has(r));
-
-        // Apply length filtering to match user message
-        let lengthFiltered = this.filterResponsesByLength(available, lengthCategory);
-
-        // If length filtering narrows it too much, be more lenient
-        if (lengthFiltered.length < 3) {
-            lengthFiltered = this.filterResponsesByLength(available, 'medium');
-        }
-
-        // Final fallback to any available response
-        const choices = lengthFiltered.length > 0 ? lengthFiltered : available.length > 0 ? available : pool;
-
-        const response = choices[Math.floor(Math.random() * choices.length)];
-        this.usedResponses.add(response);
-
-        // Keep used set from growing forever — clear if > 30
-        if (this.usedResponses.size > 30) {
-            this.usedResponses.clear();
-        }
-        this.lastCategory = category;
-        return response;
-    }
-
-    detectIntent(message) {
-        const msg = message.toLowerCase().trim().replace(/[!?.,']+/g, '');
-        const words = msg.split(/\s+/);
-        const originalMessage = message.toLowerCase().trim();
-
-        // ========== PRIORITY 1: REFERENCE BACK (Context awareness) ==========
-        // This should be checked EARLY because when user says "i just told you",
-        // they're explicitly calling out a previous context that bot should acknowledge
-        const referenceBack = ['i asked', 'i said', 'i told', 'my question', 'answer that', 'answer me', 'respond to', 'didnt answer', 'you ignored', 'already told you', 'i just said', 'i just told', 'what i said', 'what i told', 'before i', 'you could', 'instead of', 'acknowledge', 'remember', 'you said', 'you told me', 'perfect memory', 'supposed to remember', 'forget', 'forgot', 'you dont remember', 'i just told you', 'dont forget'];
-        if (referenceBack.some(r => msg.includes(r))) return 'referenceBack';
-
-        // ========== PRIORITY 2: FRUSTRATION (Emotional state takes priority) ==========
-        // When user is frustrated, this overrides other intent classifications
-        // Includes profanity, anger indicators, and tone markers
-        if (['rude', 'deaf', 'stupid', 'dumb', 'useless', 'broken', 'not helpful', 'not listening', 'what the', 'wtf', 'are you even', 'cant even', 'so bad', 'terrible', 'worst', 'annoying', 'angry', 'making me angry', 'fuck', 'piss', 'asshole', 'bullshit', 'crap', '!!!', 'are you serious', 'you suck', 'this sucks', 'i hate', 'piece of shit', 'useless'].some(f => msg.includes(f))) return 'frustrated';
-
-        // Utility function detection — timers, alarms, notes
-        const timerKeywords = ['set timer', 'set a timer', 'timer for', 'remind me in', 'in the', 'in an', 'minutes', 'seconds', 'hours'];
-        if ((msg.includes('set timer') || msg.includes('set a timer') || msg.includes('timer for')) && this.extractTime(message)) return 'timerSet';
-
-        const alarmKeywords = ['set alarm', 'set a alarm', 'wake me up', 'alarm for', 'alarm at'];
-        if ((msg.includes('set alarm') || msg.includes('set a alarm') || msg.includes('wake me up') || msg.includes('alarm for') || msg.includes('alarm at')) && this.extractTime(message)) return 'alarmSet';
-
-        const noteKeywords = ['write this down', 'take note', 'note that', 'remember this', 'dont forget', 'note to self', 'save this', 'remember to', 'note:'];
-        if (noteKeywords.some(k => msg.includes(k))) return 'noteAdded';
-
-        // Identity question detection (who/what are you, purpose)
-        const identityKeywords = ['who are you', 'what are you', 'what is linen', "what's your purpose", 'whats your purpose', 'what do you do', 'what is your purpose', 'introduce yourself', 'tell me about you'];
-        if (identityKeywords.some(k => msg.includes(k))) return 'identity';
-
-        // Creator question detection
-        const creatorKeywords = ['who created you', 'who made you', 'who built you', 'who is your creator', 'who developed you', 'who is ramin', 'ramin najafi', 'your creator', 'what company', 'which company', 'who works for', 'whos your creator', 'made by', 'created by', 'built by', 'developer', 'creator'];
-        if (creatorKeywords.some(k => msg.includes(k))) return 'creator';
-
-        // CASUAL GREETINGS AND TURNTAKING (check early!)
-        // Short casual exchanges like "whats up", "hey whats up", "sup", "how you doing", "not much you?"
-        if (words.length <= 4) {
-            const casualTurntaking = ['whats up', 'hows it going', 'how you doing', 'how are you doing', 'not much', 'not much you', 'sup', 'sup you', 'nothing much', 'hey whats up', 'hey sup', 'sup whats up'];
-            if (casualTurntaking.some(phrase => msg.includes(phrase))) return 'casualChat';
-
-            // Single greetings
-            const greetWords = ['hi', 'hello', 'hey', 'yo', 'sup', 'hiya', 'wassup', 'howdy'];
-            if (greetWords.some(g => msg.includes(g) && msg.length < 20)) return 'greetingReply';
-        }
-
-        // "How are you" detection — only for longer, more formal versions
-        // Skip if already caught as casual turntaking
-        const howAreYouPhrases = ['how are you', 'hows it going', 'how you doing', 'how do you feel', 'whats up with you', 'how have you been', 'how ya doing', 'how you been', 'hows everything', 'hows life', 'how are things', 'how goes it', 'hru'];
-        // Only treat as "howAreYou" if longer (not short casual turntaking)
-        if (words.length > 4 && howAreYouPhrases.some(p => msg.includes(p))) return 'howAreYou';
-
-        // Thanks detection
-        if (['thank', 'thanks', 'thx', 'ty', 'appreciate'].some(t => msg.includes(t))) return 'thanks';
-
-        // Farewell detection
-        if (words.length <= 4 && ['bye', 'goodbye', 'see you', 'later', 'goodnight', 'good night', 'gotta go', 'gtg', 'cya', 'night'].some(f => msg.includes(f))) return 'farewell';
-
-        // Mood detection
-        const distressWords = ['sad', 'depressed', 'hopeless', 'suicidal', 'crisis', 'die', 'furious', 'devastated', 'hate', 'miserable', 'crying', 'hurting', 'suffering', 'lonely', 'alone', 'broken'];
-        if (distressWords.some(k => msg.includes(k))) return 'distressed';
-
-        const anxiousWords = ['anxious', 'nervous', 'worried', 'scared', 'afraid', 'panic', 'stress', 'overwhelmed', 'freaking out'];
-        if (anxiousWords.some(k => msg.includes(k))) return 'anxious';
-
-        const positiveWords = ['happy', 'excited', 'great', 'wonderful', 'amazing', 'proud', 'grateful', 'awesome', 'fantastic', 'love it', 'best', 'good news', 'pumped', 'thrilled', 'doing what i love', 'never been happier', 'sharper', 'physically', 'mentally'];
-        if (positiveWords.some(k => msg.includes(k))) return 'positive';
-
-        // Topic detection backed by the full vocabulary index
-        const vocabTopicIntent = this.inferTopicIntentFromVocabulary(message);
-        if (vocabTopicIntent) return vocabTopicIntent;
-
-        // Out-of-scope factual question detection — common factual queries
-        const factualKeywords = ['price', 'cost', 'weather', 'temperature', 'stock', 'score', 'result', 'who won', 'when is', 'what is the', 'how much', 'how many', 'capital of', 'population of', 'definition of'];
-        if (factualKeywords.some(k => msg.includes(k))) return 'outOfScope';
-
-        // Conversational question patterns — these are NOT information-seeking questions
-        // Examples: "whats new with you?", "what do you mean?", "what are you doing?"
-        const conversationalPatterns = [
-            /^not much/,                           // "not much, whats new"
-            /^whats up$/,                          // standalone "whats up"
-            /^whats up[?!]?$/,                     // "whats up?" or "whats up!"
-            /^sup$/,                               // standalone "sup"
-            /^sup[?!]?$/,                          // "sup?" or "sup!"
-            /^how you doing/,                      // "how you doing"
-            /^how.s it going/,                     // "how's it going" or "hows it going"
-            /^hows it$/,                           // "hows it"
-            /^whats going on$/,                    // standalone "whats going on"
-            /whats new (with )?you/,              // "whats new with you"
-            /whats up (with )?you/,               // "whats up with you"
-            /whats going on (with )?you/,         // "whats going on with you"
-            /how about you/,                       // "how about you"
-            /what about you/,                      // "what about you"
-            /you (been|been doing|doing)/,        // "you been doing anything fun?"
-            /you up to/,                          // "you up to anything?"
-            /whats your (day|week|deal)/,         // "whats your day like?"
-            /anything new (with )?you/,           // "anything new with you?"
-            /been up to/,                         // "been up to much?"
-            /nothing much/,                       // "nothing much, you?"
-            /^not much$/,                          // standalone "not much"
-            /^not much[?!]?$/,                    // "not much?" or "not much!"
-        ];
-
-        if (conversationalPatterns.some(pattern => pattern.test(msg))) {
-            return 'casualChat';
-        }
-
-        // Casual greeting check — short messages that are clearly casual greetings
-        // "hey!", "hey whats up", "sup whats up", etc.
-        if (words.length <= 3) {
-            const casualGreetings = ['hey whats up', 'hey whats going on', 'hey how you doing', 'sup whats up', 'sup how you doing', 'hey sup'];
-            if (casualGreetings.some(g => msg.includes(g))) return 'casualChat';
-        }
-
-        // Question detection — only for genuine standalone questions, not conversational phrases
-        const isQuestion = originalMessage.endsWith('?');
-        const startsWithQuestionWord = ['what ', 'why ', 'how ', 'when ', 'where ', 'who ', 'which '].some(q => msg.startsWith(q));
-        // Exclude common conversational question starters from question detection
-        const conversationalQuestions = ['what do you mean', 'what about', 'what ever', 'how are you', 'how you doing', 'how about', 'why not', 'why would', 'when can', 'where are'];
-        const isConversationalQuestion = conversationalQuestions.some(q => msg.includes(q));
-
-        // Only trigger question for actual informational questions, not conversational ones
-        if (isConversationalQuestion) return 'casualChat';
-        if (startsWithQuestionWord && words.length > 3) return 'question';
-        if (isQuestion && !referenceBack.some(r => msg.includes(r)) && words.length > 4) return 'question';
-
-        // Simple status responses (very short but valid) — treat as casual chat, not confused
-        const statusWords = ['good', 'alright', 'okay', 'ok', 'fine', 'well', 'great', 'awesome', 'tired', 'busy', 'yep', 'yep', 'yeah', 'nope', 'nah', 'not really', 'nothing', 'nothing much', 'meh'];
-        if (words.length <= 3 && statusWords.some(s => msg.includes(s))) return 'engaged';
-
-        // Very short messages that aren't greetings but ARE valid statements
-        if (words.length <= 2 && words.length > 0) {
-            // Check if it's a valid short response first
-            const shortValidResponses = ['yes', 'yeah', 'yep', 'no', 'nope', 'nah', 'ok', 'okay', 'sure', 'alright', 'cool', 'nice', 'lol', 'haha', 'true', 'same', 'exactly', 'agreed'];
-            const isValidShort = shortValidResponses.some(s => msg.includes(s));
-            if (isValidShort) return 'casualChat';
-            // Otherwise treat as confused
-            return 'confused';
-        }
-
-        // Default: engaged conversation
-        return 'engaged';
-    }
-
-    detectMood(message) {
-        const msg = message.toLowerCase();
-
-        // Enhanced mood detection using expanded vocabulary
-        const distressKeywords = ['sad', 'depressed', 'hopeless', 'angry', 'frustrated', 'devastated', 'miserable', 'crying', 'hurting', 'devastated', 'crushed', 'broken', 'shattered', 'destroyed', 'ruined', 'suffering', 'anguished', 'tormented', 'distressed', 'troubled', 'upset', 'distraught', 'grieving', 'mourning', 'lamenting', 'despairing'];
-        const anxiousKeywords = ['anxious', 'nervous', 'worried', 'scared', 'afraid', 'panic', 'overwhelmed', 'stressed', 'tense', 'uneasy', 'apprehensive', 'jittery', 'frazzled', 'keyed up', 'on edge', 'antsy', 'fidgety', 'uptight', 'edgy', 'jumpy', 'neurotic', 'paranoid', 'fearful', 'terrified', 'petrified'];
-        const positiveKeywords = ['happy', 'excited', 'great', 'wonderful', 'amazing', 'proud', 'grateful', 'awesome', 'fantastic', 'thrilled', 'elated', 'delighted', 'ecstatic', 'joyful', 'blissful', 'euphoric', 'overjoyed', 'stoked', 'pumped', 'psyched', 'exhilarated', 'energized', 'invigorated', 'inspired', 'uplifted', 'encouraged', 'motivated', 'hopeful', 'optimistic', 'confident', 'proud', 'satisfied', 'content', 'peaceful', 'serene', 'tranquil', 'calm', 'relaxed', 'at ease', 'composed', 'poised'];
-
-        if (distressKeywords.some(k => msg.includes(k))) return 'distressed';
-        if (anxiousKeywords.some(k => msg.includes(k))) return 'anxious';
-        if (positiveKeywords.some(k => msg.includes(k))) return 'positive';
-
-        // Fallback sentiment inference from the expanded emotion vocabulary.
-        const sentiment = this.calculateSentimentScore(message);
-        if (sentiment.negativeWords >= 2 && sentiment.score < -0.2) return 'distressed';
-        if (sentiment.positiveWords >= 2 && sentiment.score > 0.2) return 'positive';
-        return 'neutral';
-    }
-
-    extractName(message) {
-        const nameMatch = message.match(/(?:call me|i'm|i am|name is|i go by|my name's)\s+(\w+)/i);
-        if (nameMatch && nameMatch[1].length > 1 && !['not', 'so', 'very', 'really', 'just', 'feeling', 'doing', 'going', 'trying', 'here', 'fine', 'good', 'okay', 'ok'].includes(nameMatch[1].toLowerCase())) {
-            return nameMatch[1];
-        }
-        return null;
-    }
-
-    extractTime(message) {
-        // Extract time from messages like "set timer for 5 minutes" or "wake me up at 8am"
-        const msg = message.toLowerCase();
-
-        // Look for time patterns like "5 minutes", "30 seconds", "2 hours", "8am", "3:30pm"
-        const timePatterns = [
-            /(\d+)\s*(minutes?|mins?|min)/i,
-            /(\d+)\s*(seconds?|secs?|sec)/i,
-            /(\d+)\s*(hours?|hrs?|hr)/i,
-            /(\d{1,2}):(\d{2})\s*(am|pm)?/i,
-            /(\d{1,2})\s*(am|pm)/i
-        ];
-
-        for (const pattern of timePatterns) {
-            if (pattern.test(msg)) return true;
-        }
-        return false;
-    }
-
-    extractTimeDuration(message) {
-        // Extract time duration in SECONDS from messages (for native timer apps)
-        const msg = message.toLowerCase();
-
-        // Parse minutes
-        const minMatch = msg.match(/(\d+)\s*min/);
-        if (minMatch) return parseInt(minMatch[1]) * 60;
-
-        // Parse seconds
-        const secMatch = msg.match(/(\d+)\s*sec/);
-        if (secMatch) return parseInt(secMatch[1]);
-
-        // Parse hours
-        const hourMatch = msg.match(/(\d+)\s*hour/);
-        if (hourMatch) return parseInt(hourMatch[1]) * 60 * 60;
-
-        return null;
-    }
-
-    extractNoteContent(message) {
-        // Extract the note content from the message
-        const msg = message.toLowerCase();
-        const noteKeywords = ['write this down', 'take note of', 'note that', 'remember this', 'dont forget', 'note to self', 'save this', 'remember to'];
-
-        for (const keyword of noteKeywords) {
-            const idx = msg.indexOf(keyword);
-            if (idx !== -1) {
-                // Extract content after the keyword
-                let content = message.substring(idx + keyword.length).trim();
-                // Remove leading punctuation
-                content = content.replace(/^[:\s]+/, '').trim();
-                return content || null;
-            }
-        }
-
-        return null;
-    }
-
-    // Get last user message for context awareness
-    getLastUserMessage() {
-        const userMessages = this.sessionMemory.filter(m => m.role === 'user');
-        if (userMessages.length > 1) {
-            return userMessages[userMessages.length - 1]?.content;
-        }
-        return null;
-    }
-
-    // Find relevant previous messages for context acknowledgment
-    findRelevantPreviousMessage() {
-        const userMessages = this.sessionMemory.filter(m => m.role === 'user');
-        if (userMessages.length < 2) return null;
-
-        // Get the message before the current one (which is at the end)
-        // We want the one that the user might be referring back to
-        const lastMessage = userMessages[userMessages.length - 1]?.content;
-
-        // Look back 2-4 messages to find the most relevant context
-        for (let i = userMessages.length - 3; i >= Math.max(0, userMessages.length - 5); i--) {
-            if (i >= 0 && userMessages[i]) {
-                const prevMsg = userMessages[i].content;
-                // Return the previous message if it's not too short (not just "ok")
-                if (prevMsg && prevMsg.trim().split(/\s+/).length > 1) {
-                    return prevMsg;
-                }
-            }
-        }
-        return null;
-    }
-
-    // Get conversation topic for context using scored vocabulary categories.
-    getConversationTopic() {
-        const recentMessages = this.sessionMemory.slice(-6); // Last 6 messages
-        const allText = recentMessages.map(m => m.content).join(' ');
-        const inferredIntent = this.inferTopicIntentFromVocabulary(allText);
-        if (!inferredIntent) return null;
-
-        const intentToTopic = {
-            topicWork: 'work',
-            topicRelationships: 'relationship',
-            topicHealth: 'health',
-            topicHobbies: 'hobby',
-            topicGoals: 'goal'
-        };
-        return intentToTopic[inferredIntent] || null;
-    }
-
-    async chat(message) {
-        // Handle initial greeting marker — don't process as normal message
-        if (message === '[INITIAL_GREETING]') {
-            return this.pick('greeting');
-        }
-
-        const intent = this.detectIntent(message);
-        const mood = this.detectMood(message);
-        const name = this.extractName(message);
-
-        if (name) this.userProfile.name = name;
-        if (mood !== 'neutral') this.userProfile.mood = mood;
-
-        this.sessionMemory.push({ role: 'user', content: message, mood, intent, timestamp: Date.now() });
-
-        let response = '';
-        const userMessages = this.sessionMemory.filter(m => m.role === 'user');
-        const userMsgCount = userMessages.length;
-
-        // Check if user has been giving only single-word responses — they need better prompting
-        const recentUserMessages = userMessages.slice(-5);
-        const shortResponseWords = recentUserMessages.map(m => m.content.toLowerCase().trim());
-        const onlyShortResponses = recentUserMessages.length >= 3 && recentUserMessages.every(m => m.content.toLowerCase().trim().split(/\s+/).length <= 1);
-
-        // Special case: if user has said "ok" 3+ times, they're being prompted for longer responses but aren't engaged
-        const okCount = shortResponseWords.filter(w => w === 'ok' || w === 'okay').length;
-        if (okCount >= 3) {
-            // Ask something more specific to get real engagement
-            const specifics = [
-                "I notice you're saying okay a lot — is everything alright? What's really on your mind?",
-                "Seems like maybe I'm not asking the right questions. What would actually help you right now?",
-                "Tell me something real — what's going on with you?",
-                "What's something that's been on your mind lately?",
-                "I get the feeling you might need to talk about something specific. What is it?",
-            ];
-            return specifics[Math.floor(Math.random() * specifics.length)];
-        }
-
-        if (onlyShortResponses && intent === 'engaged') {
-            // Switch to asking more specific questions instead of generic "keep going"
-            return this.pick('question', message) || this.pick('engaged', message);
-        }
-
-        // First message — always greet (only once)
-        if (!this.hasGreeted && userMsgCount === 1) {
-            response = this.pick('greeting', message);
-            this.hasGreeted = true;
-        }
-        // Utility functions — timers, alarms, notes
-        else if (intent === 'timerSet') {
-            response = this.pick('timerSet', message);
-            // Call native timer via UtilityManager
-            if (this.utilityManager) {
-                const durationMs = this.extractTimeDuration(message);
-                if (durationMs) {
-                    this.utilityManager.setTimer(durationMs, 'Linen Timer');
-                }
-            }
-        }
-        else if (intent === 'alarmSet') {
-            response = this.pick('alarmSet', message);
-            // Call native alarm via UtilityManager
-            if (this.utilityManager) {
-                this.utilityManager.setAlarm(message, 'Linen Alarm');
-            }
-        }
-        else if (intent === 'noteAdded') {
-            response = this.pick('noteAdded', message);
-            // Extract note content and save to device
-            if (this.utilityManager) {
-                const noteContent = this.extractNoteContent(message);
-                if (noteContent) {
-                    this.utilityManager.saveNote(noteContent);
-                }
-            }
-        }
-        // Identity question — always answer with identity info
-        else if (intent === 'identity') {
-            response = this.pick('identity', message);
-        }
-        // Creator question — always answer with creator info
-        else if (intent === 'creator') {
-            response = this.pick('creator', message);
-        }
-        // Priority intents — out-of-scope, frustration, distress, and referencing back
-        else if (intent === 'outOfScope') {
-            response = this.pick('outOfScope', message);
-        }
-        else if (intent === 'frustrated') {
-            response = this.pick('frustrated', message);
-        }
-        else if (intent === 'distressed') {
-            response = this.pick('distressed', message);
-        }
-        else if (intent === 'referenceBack') {
-            // Find what the user might be referring to and acknowledge it
-            const relevantMsg = this.findRelevantPreviousMessage();
-            if (relevantMsg) {
-                // Enhance response with specific context acknowledgment
-                const baseResponse = this.pick('referenceBack', message);
-                // Add a brief reference to what they said
-                if (relevantMsg.length > 50) {
-                    response = baseResponse.replace(/\?$/, ` You said: "${relevantMsg.substring(0, 60)}..."`);
-                } else {
-                    response = baseResponse.replace(/\?$/, ` You were talking about: "${relevantMsg}"`);
-                }
-            } else {
-                response = this.pick('referenceBack', message);
-            }
-        }
-        // Positive mood takes priority — acknowledge and celebrate
-        else if (mood === 'positive') {
-            response = this.pick('positive', message);
-        }
-        // All other intents — use the matching category
-        else {
-            // If generic engagement was detected, route through vocabulary-based topic inference first.
-            const contextualIntent = intent === 'engaged' ? this.inferTopicIntentFromVocabulary(message) : null;
-            response = this.pick(contextualIntent || intent, message) || this.pick('engaged', message);
-        }
-
-        // Personalize with name occasionally
-        if (this.userProfile.name && Math.random() > 0.75) {
-            response = response.replace(/^(Hey|Hi|Hello|Glad|Nice)(!?\s)/, `$1 ${this.userProfile.name}$2`);
-        }
-
-        this.sessionMemory.push({ role: 'assistant', content: response, timestamp: Date.now() });
-
-        // Smart event detection — auto-detect and add events from conversation
-        if (this.eventDetector) {
-            try {
-                this.eventDetector.detectEventsFromMessage(message, response);
-            } catch (e) {
-                console.log("LocalAssistant: Event detection error:", e);
-            }
-        }
-
-        return response;
-    }
-
-    // ========== VOCABULARY-BASED TOPIC AND SENTIMENT ANALYSIS ==========
-    // Analyzes message for topic relevance using the expanded 5000+ word vocabulary
-    analyzeTopicsInMessage(message) {
-        const topicalCategories = ['work', 'relationships', 'emotions', 'hobbiesActivities', 'activities', 'foodDrinks', 'timeWords'];
-        const scores = this.scoreVocabularyCategories(message, topicalCategories);
-        return Object.entries(scores)
-            .map(([topic, confidence]) => ({ topic, confidence }))
-            .sort((a, b) => b.confidence - a.confidence);
-    }
-
-    // Calculate sentiment score using emotion vocabulary
-    calculateSentimentScore(message) {
-        const msg = message.toLowerCase();
-        let score = 0; // -1 (very negative) to +1 (very positive)
-
-        const positiveCount = this.vocabulary.emotions.filter(e =>
-            e.match(/happy|joy|excited|wonderful|amazing|proud|grateful|love|excellent|fantastic|great|awesome/) &&
-            msg.includes(e)
-        ).length;
-
-        const negativeCount = this.vocabulary.emotions.filter(e =>
-            e.match(/sad|angry|frustrat|worry|fear|anxious|depressed|hate|awful|terrible|horrible|worst/) &&
-            msg.includes(e)
-        ).length;
-
-        const totalEmotionWords = positiveCount + negativeCount;
-        if (totalEmotionWords > 0) {
-            score = (positiveCount - negativeCount) / totalEmotionWords;
-        }
-
-        return {
-            score: score, // -1 to +1
-            sentiment: score > 0.3 ? 'positive' : score < -0.3 ? 'negative' : 'neutral',
-            positiveWords: positiveCount,
-            negativeWords: negativeCount
-        };
-    }
-
-    // Check how well the message is understood using vocabulary coverage
-    getVocabularyCoverage(message) {
-        const msg = message.toLowerCase().split(/\s+/);
-        let coveredWords = 0;
-        const allVocabWords = this.allVocabularyList || [];
-
-        msg.forEach(word => {
-            // Clean word of punctuation
-            const cleanWord = this.normalizeText(word);
-            if (!cleanWord) return;
-            if (allVocabWords.some(vocabWord => vocabWord.includes(cleanWord) || cleanWord.includes(vocabWord))) {
-                coveredWords++;
-            }
-        });
-
-        const coverage = msg.length > 0 ? (coveredWords / msg.length) * 100 : 0;
-        return {
-            coverage: Math.round(coverage),
-            coveredWords: coveredWords,
-            totalWords: msg.length
-        };
-    }
-
-    getSessionSummary() {
-        return {
-            userProfile: this.userProfile,
-            messageCount: this.sessionMemory.length,
-            topics: this.userProfile.topics,
-            lastMood: this.userProfile.mood,
-            vocabularySize: Object.values(this.vocabulary).reduce((sum, arr) => sum + arr.length, 0),
-        };
-    }
-
-    clearSession() {
-        this.sessionMemory = [];
-        this.usedResponses.clear();
-    }
-
-    // ========== SMART RESPONSE LOGIC FOR PRODUCTION ==========
-    // Enhanced conversation intelligence without breaking existing functionality
-
-    // Detect multiple topics in a single message for smarter responses
-    detectMultipleTopics(message) {
-        const detectedTopics = {};
-        const topicScores = this.analyzeTopicsInMessage(message);
-        topicScores.slice(0, 4).forEach(({ topic, confidence }) => {
-            if (confidence > 0) detectedTopics[topic] = true;
-        });
-
-        const count = Object.keys(detectedTopics).length;
-        return { topics: detectedTopics, isMultiTopic: count > 1, count };
-    }
-
-    // Track sentiment momentum (is mood getting better or worse?)
-    calculateSentimentMomentum() {
-        const userMsgs = this.sessionMemory.filter(m => m.role === 'user').slice(-5);
-        if (userMsgs.length < 2) return 'neutral'; // Not enough data
-
-        const moods = userMsgs.map(m => m.mood || 'neutral');
-        const moodValues = {
-            'positive': 1,
-            'engaged': 0.5,
-            'neutral': 0,
-            'anxious': -0.5,
-            'distressed': -1,
-            'frustrated': -0.7
-        };
-
-        const scores = moods.map(m => moodValues[m] || 0);
-        const momentum = scores[scores.length - 1] - scores[0];
-
-        if (momentum > 0.3) return 'improving';
-        if (momentum < -0.3) return 'declining';
-        return 'stable';
-    }
-
-    // Get last topic discussed for context chaining
-    getLastTopicContext() {
-        const userMsgs = this.sessionMemory.filter(m => m.role === 'user').slice(-3);
-        if (userMsgs.length === 0) return null;
-
-        for (const msg of userMsgs.reverse()) {
-            const topics = this.detectMultipleTopics(msg.content);
-            if (Object.keys(topics.topics).length > 0) {
-                return topics.topics;
-            }
-        }
-        return null;
-    }
-
-    // Smart response selection to avoid repetition
-    pickSmartResponse(category) {
-        const pool = this.responses[category];
-        if (!pool || pool.length === 0) return '';
-
-        // Prefer responses we haven't used recently
-        const recent = Array.from(this.usedResponses).slice(-3);
-        const available = pool.filter(r => !recent.includes(r));
-
-        // If all recent responses are used, expand to last 10
-        if (available.length === 0) {
-            const recentTen = Array.from(this.usedResponses).slice(-10);
-            const availableTen = pool.filter(r => !recentTen.includes(r));
-            const choices = availableTen.length > 0 ? availableTen : pool;
-            const selected = choices[Math.floor(Math.random() * choices.length)];
-            this.usedResponses.add(selected);
-            return selected;
-        }
-
-        const selected = available[Math.floor(Math.random() * available.length)];
-        this.usedResponses.add(selected);
-        return selected;
-    }
-
-    // Enhanced mood inference using context
-    inferMoodWithContext(message) {
-        const baseMood = this.detectMood(message);
-        const momentum = this.calculateSentimentMomentum();
-
-        // If mood is stable but momentum is improving, suggest slight uplift
-        if (baseMood === 'neutral' && momentum === 'improving') {
-            return 'engaged'; // More positive inference
-        }
-
-        // If mood is positive but momentum is declining, temper expectations
-        if (baseMood === 'positive' && momentum === 'declining') {
-            return 'engaged'; // Not as optimistic
-        }
-
-        return baseMood;
-    }
-
-    // Check if user seems disengaged or needs intervention
-    checkEngagementLevel() {
-        const userMsgs = this.sessionMemory.filter(m => m.role === 'user').slice(-5);
-        if (userMsgs.length < 3) return 'normal';
-
-        const avgLength = userMsgs.reduce((sum, m) => sum + m.content.split(/\s+/).length, 0) / userMsgs.length;
-        const moodMomentum = this.calculateSentimentMomentum();
-
-        // Disengaged if: short responses AND declining mood
-        if (avgLength < 3 && moodMomentum === 'declining') {
-            return 'low';
-        }
-
-        // Normal engagement
-        if (avgLength >= 5 && moodMomentum !== 'declining') {
-            return 'high';
-        }
-
-        return 'normal';
-    }
-}
-
+// LocalAssistant removed — all AI communications go through Gemini
 class ProfileManager {
     constructor(db) {
         this.db = db;
@@ -3658,19 +2464,13 @@ class Linen {
         this.modelVersionManager = new ModelVersionManager();
         this.utilities = null; // Will be initialized after db.init()
         this.profileManager = null; // Initialized after db.init()
-        this.assistant = null; // Will be GeminiAssistant or LocalAssistant
-        this.localAssistant = null; // Always-on local assistant for local-first routing
+        this.assistant = null; // Will be GeminiAssistant
         this.currentAgent = null; // Track current agent
-        this.isLocalMode = false;
-        this.localFirstMode = true; // Linen should prioritize local responses first
         this.savedApiKey = null; // Store API key for lazy validation
         this._onboardingBound = false;
         this._eventsBound = false;
-        this.trialMode = false;
-        this.trialCount = 0;
         this.currentSessionTitle = null;
         this.isNewSession = true;
-        this._localModeToastShown = false;
         this._voiceInputActive = false;
         this._eventPermissionAsked = false;
         this._showAgentSwitchMessage = false;
@@ -3700,21 +2500,6 @@ class Linen {
         const p = String(provider || '').toLowerCase().trim();
         if (p === 'chatgpt') return 'openai';
         return p;
-    }
-
-    ensureLocalAssistant() {
-        if (!this.utilities) {
-            this.utilities = new UtilitiesApp(this.db);
-        }
-        if (!this.localAssistant && this.assistant instanceof LocalAssistant) {
-            this.localAssistant = this.assistant;
-        }
-        if (!this.localAssistant) {
-            this.localAssistant = new LocalAssistant(this.db, this.utilities);
-        } else if (!this.localAssistant.eventDetector && this.utilities) {
-            this.localAssistant.eventDetector = new EventDetector(this.db, this.utilities);
-        }
-        return this.localAssistant;
     }
 
     getDefaultLearningProfile() {
@@ -3753,7 +2538,6 @@ class Linen {
             this.communityLearning = this.getDefaultCommunityLearning();
         }
 
-        this.applyLearnedVocabularyToLocalAssistant();
     }
 
     normalizeLearningText(text) {
@@ -3817,15 +2601,6 @@ class Linen {
             .map(([term]) => term);
     }
 
-    applyLearnedVocabularyToLocalAssistant() {
-        if (!this.communityLearning) return;
-        const local = this.ensureLocalAssistant();
-        const pack = this.generateLearningVocabularyPack({ minCount: 2, perCategoryLimit: 200, commonPhraseLimit: 500 });
-        if (!pack || Object.keys(pack).length === 0) return;
-        local.mergeVocabularyPack(pack);
-        local.initializeVocabularyEngine();
-    }
-
     generateLearningVocabularyPack(options = {}) {
         const minCount = options.minCount ?? 2;
         const perCategoryLimit = options.perCategoryLimit ?? 250;
@@ -3855,23 +2630,13 @@ class Linen {
         if (!userMessage || typeof userMessage !== 'string') return;
         if (!this.learningProfile || !this.communityLearning) return;
 
-        const local = this.ensureLocalAssistant();
         const tokens = this.tokenizeLearningText(userMessage);
         if (tokens.length === 0) return;
 
-        const intent = local.detectIntent(userMessage) || 'engaged';
-        const mood = local.detectMood(userMessage) || 'neutral';
-        const topicScores = local.scoreVocabularyCategories(userMessage);
-        const topCategories = Object.entries(topicScores)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 2)
-            .map(([category]) => category);
-        const categories = topCategories.length > 0 ? topCategories : ['general'];
+        const categories = ['general'];
 
         this.learningProfile.turnsAnalyzed += 1;
         this.communityLearning.turnsAnalyzed += 1;
-        this.incrementCounter(this.learningProfile.intentCounts, intent, 1);
-        categories.forEach((cat) => this.incrementCounter(this.learningProfile.topicCounts, cat, 1));
 
         const words = tokens.length;
         const priorTurns = Math.max(this.learningProfile.turnsAnalyzed - 1, 0);
@@ -3879,7 +2644,6 @@ class Linen {
 
         if (words <= 6) this.learningProfile.styleSignals.concise += 1;
         if (words >= 18) this.learningProfile.styleSignals.detailed += 1;
-        if (mood !== 'neutral') this.learningProfile.styleSignals.emotional += 1;
         if (/\b(can you|please|help|need|want|should|plan|schedule|remind)\b/i.test(userMessage)) {
             this.learningProfile.styleSignals.pragmatic += 1;
         }
@@ -3895,12 +2659,6 @@ class Linen {
             phrases.forEach((phrase) => this.incrementCounter(this.communityLearning.categoryPhrases[cat], phrase, 1));
         });
 
-        if (meta.usedRemote) {
-            this.incrementCounter(this.learningProfile.intentCounts, 'remoteIntervention', 1);
-        } else {
-            this.incrementCounter(this.learningProfile.intentCounts, 'localHandled', 1);
-        }
-
         if (this.learningProfile.turnsAnalyzed % 20 === 0) {
             this.learningProfile.learnedTerms = this.pruneCounterMap(this.learningProfile.learnedTerms, 3000, 2);
             Object.keys(this.communityLearning.categoryTerms).forEach((cat) => {
@@ -3914,66 +2672,6 @@ class Linen {
 
         await this.db.setSetting('learning-profile-v1', JSON.stringify(this.learningProfile));
         await this.db.setSetting('learning-community-v1', JSON.stringify(this.communityLearning));
-
-        if (this.learningProfile.turnsAnalyzed % 5 === 0) {
-            this.applyLearnedVocabularyToLocalAssistant();
-        }
-    }
-
-    hasRemoteAssistant() {
-        return !!(this.assistant && !(this.assistant instanceof LocalAssistant));
-    }
-
-    shouldEscalateToRemote(message) {
-        if (!this.localFirstMode) return this.hasRemoteAssistant() && navigator.onLine;
-        if (!this.hasRemoteAssistant() || !navigator.onLine) return false;
-
-        const local = this.ensureLocalAssistant();
-        const normalized = local.normalizeText(message);
-        const tokens = local.tokenize(message);
-        const intent = local.detectIntent(message);
-        const mood = local.detectMood(message);
-        const scores = local.scoreVocabularyCategories(message);
-        const vocabHits = Object.values(scores).reduce((sum, n) => sum + n, 0);
-
-        // Only truly simple conversational exchanges stay local
-        const localSafeIntents = new Set([
-            'greetingReply', 'howAreYou', 'thanks', 'farewell',
-            'positive', 'negative', 'referenceBack',
-            'timerSet', 'alarmSet', 'noteAdded', 'identity', 'creator'
-        ]);
-
-        if (localSafeIntents.has(intent) && tokens.length <= 20) {
-            return false;
-        }
-
-        const hasQuestionSignal = /\?|\b(what|why|how|when|where|which|who|can you|could you|would you|should i|do you know|tell me|help me|teach me|show me|give me|is there|are there|does|did|will|have you)\b/i.test(message);
-        const needsDeepReasoning = /\b(explain|analyze|compare|evaluate|reason|strategy|tradeoff|pros and cons|step by step|think|plan|decide|suggest|recommend|advice|opinion|idea)\b/i.test(normalized);
-        const contentGeneration = /\b(write|draft|rewrite|summarize|brainstorm|outline|email|essay|post|caption|script|list|recipe|create|make|build|generate)\b/i.test(normalized);
-        const technicalTask = /\b(code|debug|bug|error|stack|api|database|sql|regex|javascript|python|typescript|html|css|react|node)\b/i.test(normalized);
-        const needsKnowledge = /\b(learn|teach|how to|how do|what is|what are|who is|who are|where is|where can|when did|when is|why do|why is|best way|difference between|meaning of|definition|example|tip|guide|tutorial|practice|improve|cook|recipe|exercise|workout|study|travel|visit|book|movie|song|history|science|health|medical|finance|invest|budget|career|interview|resume)\b/i.test(normalized);
-
-        if (intent === 'outOfScope') return true;
-        if (needsDeepReasoning || contentGeneration || technicalTask || needsKnowledge) return true;
-        // Any question with substance goes to remote
-        if (hasQuestionSignal && tokens.length >= 6) return true;
-        if (intent === 'question') return true;
-        if (mood === 'neutral' && intent === 'engaged' && tokens.length >= 20) return true;
-        // Distressed or frustrated users get better support from remote
-        if ((intent === 'frustrated' || intent === 'distressed') && tokens.length >= 8) return true;
-
-        return false;
-    }
-
-    showLocalModeToast(reason) {
-        if (this._localModeToastShown) return;
-        this._localModeToastShown = true;
-        const isQuota = reason && (reason.toLowerCase().includes('quota') || reason.toLowerCase().includes('rate') || reason.toLowerCase().includes('429'));
-        if (isQuota) {
-            this.showToast("You've hit your API usage limit. Switching to local mode.", 'warning');
-        } else {
-            this.showToast("API unavailable right now. Switching to local mode.", 'warning');
-        }
     }
 
     detectUserSentiment(userMessage) {
@@ -4095,7 +2793,6 @@ class Linen {
                 console.log("Linen: Found primary agent:", primaryAgent.name);
                 this.currentAgent = primaryAgent;
                 this.assistant = this.createAssistantFromAgent(primaryAgent);
-                this.isLocalMode = false;
             }
 
             // If no primary agent, check for standalone API key or use built-in service
@@ -4107,42 +2804,17 @@ class Linen {
                     if (result.valid) {
                         console.log("Linen: Service configured successfully.");
                         this.assistant = geminiAssistant;
-                        this.isLocalMode = false;
                     } else {
-                        const isRecoverableError = (result.error && (
-                            result.error.toLowerCase().includes('quota') ||
-                            result.error.toLowerCase().includes('network error') ||
-                            result.error.toLowerCase().includes('too many requests')
-                        ));
-
-                        if (isRecoverableError) {
-                            console.warn(`Linen: Service validation recoverable error: ${result.error}. Starting in local-only mode.`);
-                            if (!this.utilities) {
-                                this.utilities = new UtilitiesApp(this.db);
-                            }
-                            this.assistant = new LocalAssistant(this.db, this.utilities);
-                            this.isLocalMode = true;
-                            this.showLocalModeToast(result.error);
-                        } else {
-                            console.warn(`Linen: Service configuration error: ${result.error}. Falling back to local mode.`);
-                            if (!this.utilities) {
-                                this.utilities = new UtilitiesApp(this.db);
-                            }
-                            this.assistant = new LocalAssistant(this.db, this.utilities);
-                            this.isLocalMode = true;
-                        }
+                        // Still set the assistant — validation errors are often temporary (quota, rate limit)
+                        console.warn(`Linen: Service validation issue: ${result.error}. Will retry on first message.`);
+                        this.assistant = geminiAssistant;
                     }
                 }
             }
 
-            // If still no assistant, use local mode (always available)
+            // If still no assistant, warn — all AI goes through Gemini
             if (!this.assistant) {
-                console.log("Linen: Starting with LocalAssistant.");
-                if (!this.utilities) {
-                    this.utilities = new UtilitiesApp(this.db);
-                }
-                this.assistant = new LocalAssistant(this.db, this.utilities);
-                this.isLocalMode = true;
+                console.warn("Linen: No AI service configured. Users will see errors until an API key is set up.");
             }
 
             // Wait for Firebase to resolve auth state before checking
@@ -4170,12 +2842,6 @@ class Linen {
             }
         } catch (e) {
             console.error('Linen: Init error:', e);
-            // Initialize utilities if not done yet
-            if (!this.utilities) {
-                this.utilities = new UtilitiesApp(this.db);
-            }
-            this.assistant = new LocalAssistant(this.db, this.utilities);
-            this.isLocalMode = true;
             this.startApp(null);
             // Still require auth even on error — show signup/login
             document.getElementById('onboarding-overlay').style.display = 'flex';
@@ -4236,14 +2902,8 @@ class Linen {
             console.log("Linen: UtilitiesApp initialized");
         }
 
-        // If no assistant is set, use LocalAssistant
         if (!this.assistant) {
-            console.warn("Linen: No assistant set in startApp, using LocalAssistant.");
-            this.assistant = new LocalAssistant(this.db, this.utilities);
-            this.isLocalMode = true;
-        } else if (this.assistant instanceof LocalAssistant && !this.assistant.eventDetector) {
-            // Update existing LocalAssistant with utilities if needed
-            this.assistant.eventDetector = new EventDetector(this.db, this.utilities);
+            console.warn("Linen: No AI assistant configured. Chat will show errors until service is set up.");
         }
         console.log("Linen: About to hide modals and bind events");
         document.getElementById('onboarding-overlay').style.display = 'none';
@@ -4286,7 +2946,7 @@ class Linen {
         // Set up auto-refresh based on device power and connection status
         this.setupAutoRefresh();
 
-        console.log("Linen: App started in", this.isLocalMode ? 'local mode' : 'Gemini mode');
+        console.log("Linen: App started in Gemini mode");
     }
 
     setupAutoRefresh() {
@@ -4632,19 +3292,6 @@ class Linen {
             }
             this.showToast('Error checking for updates', 'error');
         }
-    }
-
-    startTrialMode() {
-        this.trialMode = true;
-        this.trialCount = 0;
-        localStorage.setItem('linen-trial', 'true');
-        localStorage.setItem('linen-trial-exchanges', '0');
-        
-        // Use LocalAssistant for trial mode (no API key needed)
-        this.assistant = new LocalAssistant(this.db);
-        this.isLocalMode = true;
-        this.startApp(null);
-        // Note: startApp() already sends the initial greeting, so don't send it again here
     }
 
     showNamePrompt() {
@@ -6455,7 +5102,7 @@ class Linen {
 
             this.assistant = tempAssistant;
             this.currentAgent = agent;
-            this.isLocalMode = false;
+
             errorEl.textContent = '';
 
             // Close all modals and return to chat
@@ -6484,7 +5131,7 @@ class Linen {
             errorEl.textContent = `${provider.toUpperCase()}: ${errorMsg}`;
 
             // Show error message and suggest fallback
-            this.showToast(`${result.error}. You can still use local mode or try another API.`, 'error');
+            this.showToast(`${result.error}. Please check the API key and try again.`, 'error');
         }
     }
 
@@ -6681,7 +5328,7 @@ class Linen {
                 await this.db.setSetting('primary-agent-id', agent.id);
                 this.currentAgent = agent;
                 this.assistant = this.createAssistantFromAgent(agent);
-                this.isLocalMode = false;
+    
             }
 
             console.log("Linen: Agent added successfully:", agent);
@@ -6843,7 +5490,7 @@ class Linen {
             await this.db.setSetting(`agent-${newPrimary.id}`, JSON.stringify(newPrimary));
             this.currentAgent = newPrimary;
             this.assistant = this.createAssistantFromAgent(newPrimary);
-            this.isLocalMode = false;
+
         }
 
         this.loadAgentsList();
@@ -6871,16 +5518,17 @@ class Linen {
                 await this.db.setSetting(`agent-${newPrimary.id}`, JSON.stringify(newPrimary));
                 this.currentAgent = newPrimary;
                 this.assistant = this.createAssistantFromAgent(newPrimary);
-                this.isLocalMode = false;
+    
             } else {
                 await this.db.setSetting('primary-agent-id', null);
                 this.currentAgent = null;
-                // Initialize utilities if not done yet
-                if (!this.utilities) {
-                    this.utilities = new UtilitiesApp(this.db);
+                // Try built-in service as fallback
+                const resolvedKey = _resolveServiceConfig();
+                if (resolvedKey) {
+                    this.assistant = new GeminiAssistant(resolvedKey);
+                } else {
+                    this.assistant = null;
                 }
-                this.assistant = new LocalAssistant(this.db, this.utilities);
-                this.isLocalMode = true;
             }
         }
 
@@ -7054,74 +5702,58 @@ class Linen {
         div.id = id;
         div.className = 'assistant-message';
 
-        const localAssistant = this.ensureLocalAssistant();
-        let shouldUseRemote = this.shouldEscalateToRemote(msg);
-
-        // Token check — only remote AI costs tokens
-        if (shouldUseRemote) {
-            const balance = await this.tokenManager.getBalance();
-            if (balance <= 0) {
-                div.remove();
-                this.showTokenStoreModal();
-                return;
-            }
+        // Check if assistant is available
+        if (!this.assistant) {
+            div.className = 'assistant-message error-message';
+            div.textContent = "AI service is not configured. Please check your settings.";
+            container.appendChild(div);
+            this.scrollToBottom();
+            return;
         }
 
-        // Show typing indicator bubble for local-first responses, "Thinking..." only for escalated remote calls
-        if (!shouldUseRemote) {
-            div.classList.add('typing-indicator');
-            div.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
-        } else {
-            div.textContent = 'Thinking...';
+        // Token check — all AI messages cost tokens
+        const balance = await this.tokenManager.getBalance();
+        if (balance <= 0) {
+            this.showTokenStoreModal();
+            return;
         }
+
+        // Show thinking indicator
+        div.textContent = 'Thinking...';
         container.appendChild(div);
         this.scrollToBottom();
 
         let reply = '';
-        let attemptedRemote = false;
         try {
             const mems = await this.db.getAllMemories();
             const convs = await this.db.getConversations();
 
-            if (!shouldUseRemote) {
-                // Local-first path
-                console.log("Linen: Local-first response path.");
-                const delay = 800 + Math.random() * 700; // 800ms–1500ms
-                await new Promise(resolve => setTimeout(resolve, delay));
-                reply = await localAssistant.chat(msg);
-            } else {
-                attemptedRemote = true;
-                // Escalate to remote assistant only when local routing says it is needed
-                console.log("Linen: Attempting to use primary agent:", this.currentAgent?.name || 'Unknown');
-                if (!initialMessage && this.assistant?.detectCrisis && this.assistant.detectCrisis(msg)) {
-                    this.showCrisisModal();
-                }
-                reply = await this.assistant.chat(msg, convs, mems, id);
-                // Deduct token after successful remote response
-                await this.tokenManager.deductToken();
+            console.log("Linen: Sending to Gemini via:", this.currentAgent?.name || 'Built-in service');
+            if (!initialMessage && this.assistant?.detectCrisis && this.assistant.detectCrisis(msg)) {
+                this.showCrisisModal();
             }
+            reply = await this.assistant.chat(msg, convs, mems, id);
+            // Deduct token after successful response
+            await this.tokenManager.deductToken();
 
             document.getElementById(id)?.remove();
 
-            // Parse and strip memory markers (only for remote assistant responses)
-            if (attemptedRemote) {
-                // Extract ALL memory markers (can be multiple)
-                const memoryMarkerRegex = /\[SAVE_MEMORY:\s*(\{[^}]*(?:\{[^}]*\}[^}]*)*\})\s*\]/g;
-                let memoryMatch;
-                while ((memoryMatch = memoryMarkerRegex.exec(reply)) !== null) {
-                    try {
-                        const memData = JSON.parse(memoryMatch[1]);
-                        await this.db.addMemory({ ...memData, date: Date.now() });
-                    } catch (e) {
-                        console.error('Failed to parse memory:', e, memoryMatch[1]);
-                    }
+            // Extract and save memory markers
+            const memoryMarkerRegex = /\[SAVE_MEMORY:\s*(\{[^}]*(?:\{[^}]*\}[^}]*)*\})\s*\]/g;
+            let memoryMatch;
+            while ((memoryMatch = memoryMarkerRegex.exec(reply)) !== null) {
+                try {
+                    const memData = JSON.parse(memoryMatch[1]);
+                    await this.db.addMemory({ ...memData, date: Date.now() });
+                } catch (e) {
+                    console.error('Failed to parse memory:', e, memoryMatch[1]);
                 }
-                // Remove ALL memory markers from the display
-                reply = reply.replace(/\[SAVE_MEMORY:\s*\{[^}]*(?:\{[^}]*\}[^}]*)*\}\s*\]/g, '').trim();
             }
+            // Remove ALL memory markers from the display
+            reply = reply.replace(/\[SAVE_MEMORY:\s*\{[^}]*(?:\{[^}]*\}[^}]*)*\}\s*\]/g, '').trim();
 
             // Filter happy emojis from replies to distressed users
-            if (attemptedRemote && !initialMessage) {
+            if (!initialMessage) {
                 reply = this.filterEmojis(reply, msg);
             }
 
@@ -7134,26 +5766,22 @@ class Linen {
             container.appendChild(rdiv);
             this.scrollToBottom();
 
-            // Only save conversation if it's a real user message (not initial greeting or bot-only messages)
-            // Don't save if it's the initial greeting message
+            // Save conversation if it's a real user message
             if (!initialMessage && !isInitialGreeting) {
                 await this.db.addConversation({ text: msg, sender: 'user', date: Date.now() });
                 await this.db.addConversation({ text: reply, sender: 'assistant', date: Date.now() });
 
                 // Analyze user message for potential calendar events/reminders
                 await this.analyzeForEvents(msg);
-                await this.recordLearningFromTurn(msg, reply, { usedRemote: attemptedRemote });
+                await this.recordLearningFromTurn(msg, reply);
             }
-
-            // Trial mode is deprecated - users can always use LocalAssistant
-            // No message limit anymore
 
         } catch (e) {
             document.getElementById(id)?.remove();
             const msgText = e.message || '';
             const status = e.status || 0;
 
-            console.error(`Linen: sendChat failed (Status: ${status}, Message: ${msgText}). Checking for fallback options.`, e);
+            console.error(`Linen: sendChat failed (Status: ${status}, Message: ${msgText}).`, e);
 
             // Update agent status based on error
             if (this.currentAgent) {
@@ -7164,44 +5792,17 @@ class Linen {
                 this.updateAgentStatus(this.currentAgent.id, newStatus, msgText);
             }
 
-            if (attemptedRemote) {
-                console.log("Linen: Remote path failed, falling back to LocalAssistant.", e);
-
-                const typingDiv = document.createElement('div');
-                typingDiv.className = 'assistant-message typing-indicator';
-                typingDiv.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
-                container.appendChild(typingDiv);
-                container.scrollTop = container.scrollHeight;
-                await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 700));
-                typingDiv.remove();
-
-                const localReply = await localAssistant.chat(msg);
-                const rdiv = document.createElement('div');
-                rdiv.className = 'assistant-message';
-                rdiv.textContent = localReply;
-                container.appendChild(rdiv);
-                container.scrollTop = container.scrollHeight;
-
-                this.showLocalModeToast(msgText || 'remote-failed');
-
-                if (!initialMessage && !isInitialGreeting) {
-                    await this.db.addConversation({ text: msg, sender: 'user', date: Date.now() });
-                    await this.db.addConversation({ text: localReply, sender: 'assistant', date: Date.now() });
-                    await this.recordLearningFromTurn(msg, localReply, { usedRemote: attemptedRemote });
-                }
-            } else if (!navigator.onLine) {
-                const ediv = document.createElement('div');
-                ediv.className = 'assistant-message error-message';
-                ediv.textContent = "You're offline, but local chat is still available. Try sending again.";
-                container.appendChild(ediv);
+            // Show user-friendly error message
+            const ediv = document.createElement('div');
+            ediv.className = 'assistant-message error-message';
+            if (!navigator.onLine) {
+                ediv.textContent = "You're offline right now. Please reconnect and try again.";
+            } else if (status === 429 || msgText.toLowerCase().includes('quota')) {
+                ediv.textContent = "API rate limit reached. Please wait a moment and try again.";
+            } else {
+                ediv.textContent = `Something went wrong. Please try again.`;
             }
-            // All other non-recoverable errors
-            else {
-                const ediv = document.createElement('div');
-                ediv.className = 'assistant-message error-message';
-                ediv.textContent = `Something went wrong: ${msgText || 'Unknown error'}. Please try again.`;
-                container.appendChild(ediv);
-            }
+            container.appendChild(ediv);
             container.scrollTop = container.scrollHeight;
         }
     }
