@@ -4389,10 +4389,11 @@ class Linen {
 
         // Hamburger menu button in input area
         const hamburgerBtn = document.getElementById('hamburger-menu-btn');
-        if (hamburgerBtn && logoMenu) {
+        const logoMenuRef = document.getElementById('logo-menu');
+        if (hamburgerBtn && logoMenuRef) {
             hamburgerBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                logoMenu.classList.toggle('hidden');
+                logoMenuRef.classList.toggle('hidden');
             });
         }
 
