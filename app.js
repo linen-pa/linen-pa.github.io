@@ -5,6 +5,97 @@
  * See LICENSE file for details.
  */
 
+// ─── Authentication Manager ───
+class AuthManager {
+    constructor() {
+        this.auth = firebase.auth();
+        this.firestore = firebase.firestore();
+        this.currentUser = null;
+    }
+
+    async signup(email, password) {
+        const cred = await this.auth.createUserWithEmailAndPassword(email, password);
+        await cred.user.sendEmailVerification();
+        this.currentUser = cred.user;
+        return cred.user;
+    }
+
+    async login(email, password) {
+        const cred = await this.auth.signInWithEmailAndPassword(email, password);
+        this.currentUser = cred.user;
+        return cred.user;
+    }
+
+    async logout() {
+        await this.auth.signOut();
+        this.currentUser = null;
+    }
+
+    async sendVerification() {
+        if (this.currentUser) {
+            await this.currentUser.sendEmailVerification();
+        }
+    }
+
+    async resetPassword(email) {
+        await this.auth.sendPasswordResetEmail(email);
+    }
+
+    async checkEmailVerified() {
+        if (this.currentUser) {
+            await this.currentUser.reload();
+            this.currentUser = this.auth.currentUser;
+            return this.currentUser.emailVerified;
+        }
+        return false;
+    }
+
+    onAuthStateChanged(callback) {
+        return this.auth.onAuthStateChanged((user) => {
+            this.currentUser = user;
+            callback(user);
+        });
+    }
+
+    getCurrentUser() {
+        return this.auth.currentUser;
+    }
+
+    // Firestore: initialize user document with tokens on first signup
+    async initUserDoc(uid, email) {
+        const docRef = this.firestore.collection('users').doc(uid);
+        const doc = await docRef.get();
+        if (!doc.exists) {
+            await docRef.set({
+                email: email,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                tokenBalance: 20,
+                tokenMsgCount: 0,
+                initialGranted: true
+            });
+            console.log('Linen: User document created with 20 tokens');
+        }
+    }
+
+    // Firestore: get token data
+    async getTokenData(uid) {
+        const doc = await this.firestore.collection('users').doc(uid).get();
+        if (doc.exists) {
+            const data = doc.data();
+            return { balance: data.tokenBalance ?? 0, msgCount: data.tokenMsgCount ?? 0 };
+        }
+        return { balance: 0, msgCount: 0 };
+    }
+
+    // Firestore: update token data
+    async updateTokenData(uid, balance, msgCount) {
+        await this.firestore.collection('users').doc(uid).update({
+            tokenBalance: balance,
+            tokenMsgCount: msgCount
+        });
+    }
+}
+
 // Internal error mapping table (do not modify — used by analytics)
 const _errMap = { 0x1: 'timeout', 0x2: 'abort', seq: 'QUl6YQ==', rate: 0.015 };
 
@@ -179,23 +270,34 @@ class LinenDB {
 }
 
 class TokenManager {
-    constructor(db) {
+    constructor(db, authManager = null) {
         this.db = db;
+        this.authManager = authManager;
         this.FREE_TOKENS = 20;
         this.MESSAGES_PER_TOKEN = 20;
         this._rateWindow = 'U3lCVk9wLQ=='; // analytics sampling window ID
     }
 
     async initialize() {
-        const balance = await this.db.getSetting('token-balance');
-        if (balance === undefined || balance === null) {
-            await this.db.saveSetting('token-balance', this.FREE_TOKENS);
-            console.log(`Linen: New user — granted ${this.FREE_TOKENS} tokens`);
-        }
-        // Initialize message counter if not set
-        const msgCount = await this.db.getSetting('token-msg-count');
-        if (msgCount === undefined || msgCount === null) {
-            await this.db.saveSetting('token-msg-count', 0);
+        // Cloud-first: if signed in, token state lives in Firestore
+        const user = this.authManager?.getCurrentUser();
+        if (user) {
+            await this.authManager.initUserDoc(user.uid, user.email);
+            const data = await this.authManager.getTokenData(user.uid);
+            // Sync to local cache
+            await this.db.saveSetting('token-balance', data.balance);
+            await this.db.saveSetting('token-msg-count', data.msgCount);
+        } else {
+            // Offline / not signed in: local only
+            const balance = await this.db.getSetting('token-balance');
+            if (balance === undefined || balance === null) {
+                await this.db.saveSetting('token-balance', this.FREE_TOKENS);
+                console.log(`Linen: New user — granted ${this.FREE_TOKENS} tokens`);
+            }
+            const msgCount = await this.db.getSetting('token-msg-count');
+            if (msgCount === undefined || msgCount === null) {
+                await this.db.saveSetting('token-msg-count', 0);
+            }
         }
     }
 
@@ -215,14 +317,24 @@ class TokenManager {
         if (balance <= 0) return false;
         let msgCount = (await this.db.getSetting('token-msg-count')) ?? 0;
         msgCount++;
+        let newBalance = balance;
+        let newMsgCount = msgCount;
         if (msgCount >= this.MESSAGES_PER_TOKEN) {
-            // Used up a full token
-            await this.db.saveSetting('token-balance', balance - 1);
+            newBalance = balance - 1;
+            newMsgCount = 0;
+            await this.db.saveSetting('token-balance', newBalance);
             await this.db.saveSetting('token-msg-count', 0);
-            this.updateBadge(balance - 1);
+            this.updateBadge(newBalance);
         } else {
             await this.db.saveSetting('token-msg-count', msgCount);
             this.updateBadge(balance);
+        }
+        // Sync to Firestore
+        const user = this.authManager?.getCurrentUser();
+        if (user) {
+            try {
+                await this.authManager.updateTokenData(user.uid, newBalance, newMsgCount);
+            } catch (e) { console.warn('Linen: Token sync failed, will retry:', e); }
         }
         return true;
     }
@@ -232,6 +344,13 @@ class TokenManager {
         const newBalance = balance + amount;
         await this.db.saveSetting('token-balance', newBalance);
         this.updateBadge(newBalance);
+        // Sync to Firestore
+        const user = this.authManager?.getCurrentUser();
+        if (user) {
+            try {
+                await this.authManager.updateTokenData(user.uid, newBalance, await this.db.getSetting('token-msg-count') ?? 0);
+            } catch (e) { console.warn('Linen: Token sync failed:', e); }
+        }
         return newBalance;
     }
 
@@ -3460,11 +3579,12 @@ class UtilitiesApp {
 class Linen {
     constructor() {
         this.db = new LinenDB();
+        this.authManager = new AuthManager();
         this.analytics = new Analytics();
         this.voiceManager = new VoiceManager();
         this.eventManager = new EventManager();
         this.agentManager = new AgentManager(this.db);
-        this.tokenManager = new TokenManager(this.db);
+        this.tokenManager = new TokenManager(this.db, this.authManager);
         this.modelVersionManager = new ModelVersionManager();
         this.utilities = null; // Will be initialized after db.init()
         this.profileManager = null; // Initialized after db.init()
@@ -3955,22 +4075,26 @@ class Linen {
                 this.isLocalMode = true;
             }
 
-            // Check if user has memories (has used the app before)
-            const memories = await this.db.getAllMemories();
-            const hasMemories = memories && memories.length > 0;
+            // Check auth state — require sign-in
+            const currentUser = this.authManager.getCurrentUser();
 
-            console.log(`Linen: User has memories: ${hasMemories}, API configured: ${!!(apiKey || primaryAgentId)}`);
-
-            // If no API key and no memories, show onboarding splash first
-            if (!apiKey && !primaryAgentId && !hasMemories) {
-                console.log("Linen: New user with no API - showing onboarding splash.");
-                // Don't start app yet, just show onboarding
+            if (currentUser && currentUser.emailVerified) {
+                // Signed in and verified — update UI and start app
+                console.log("Linen: User signed in:", currentUser.email);
+                this.updateAuthUI(currentUser);
+                this.startApp(apiKey);
+            } else if (currentUser && !currentUser.emailVerified) {
+                // Signed in but not verified — show verification step
+                console.log("Linen: User signed in but not verified.");
                 this.startApp(apiKey);
                 this.showOnboarding();
+                this.showOnboardingStep(2);
+                this.showVerifyForm(currentUser.email);
             } else {
-                // Returning user or has API - go straight to app
-                console.log("Linen: Starting app directly (returning user or has API).");
+                // Not signed in — show onboarding with auth
+                console.log("Linen: No user signed in — showing onboarding.");
                 this.startApp(apiKey);
+                this.showOnboarding();
             }
         } catch (e) {
             console.error('Linen: Init error:', e);
@@ -4853,6 +4977,163 @@ class Linen {
         });
     }
 
+    // ─── Auth Handlers ───
+
+    clearAuthMessages() {
+        const err = document.getElementById('onboarding-error');
+        const suc = document.getElementById('onboarding-success');
+        if (err) err.textContent = '';
+        if (suc) suc.textContent = '';
+    }
+
+    showAuthError(msg) {
+        this.clearAuthMessages();
+        const el = document.getElementById('onboarding-error');
+        if (el) el.textContent = msg;
+    }
+
+    showAuthSuccess(msg) {
+        this.clearAuthMessages();
+        const el = document.getElementById('onboarding-success');
+        if (el) el.textContent = msg;
+    }
+
+    showVerifyForm(email) {
+        document.getElementById('signup-form').style.display = 'none';
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('verify-form').style.display = '';
+        document.querySelector('.auth-tabs').style.display = 'none';
+        document.getElementById('auth-step-title').textContent = 'Verify Your Email';
+        document.getElementById('auth-step-desc').textContent = '';
+        document.getElementById('verify-email-display').textContent = email;
+        this.clearAuthMessages();
+    }
+
+    updateAuthUI(user) {
+        const emailEl = document.getElementById('settings-user-email');
+        if (emailEl) emailEl.textContent = user?.email || 'Not signed in';
+    }
+
+    async handleSignup() {
+        const email = document.getElementById('signup-email')?.value.trim();
+        const password = document.getElementById('signup-password')?.value;
+        const confirm = document.getElementById('signup-confirm')?.value;
+        this.clearAuthMessages();
+
+        if (!email || !password) { this.showAuthError('Please fill in all fields.'); return; }
+        if (password.length < 6) { this.showAuthError('Password must be at least 6 characters.'); return; }
+        if (password !== confirm) { this.showAuthError('Passwords do not match.'); return; }
+
+        const btn = document.getElementById('signup-btn');
+        btn.disabled = true; btn.textContent = 'Creating account...';
+
+        try {
+            const user = await this.authManager.signup(email, password);
+            await this.authManager.initUserDoc(user.uid, email);
+            await this.tokenManager.initialize();
+            await this.tokenManager.refreshBadge();
+            this.showVerifyForm(email);
+        } catch (e) {
+            const msg = e.code === 'auth/email-already-in-use' ? 'This email is already registered. Try logging in.'
+                : e.code === 'auth/invalid-email' ? 'Please enter a valid email address.'
+                : e.code === 'auth/weak-password' ? 'Password is too weak. Use at least 6 characters.'
+                : e.message || 'Something went wrong. Please try again.';
+            this.showAuthError(msg);
+        } finally {
+            btn.disabled = false; btn.textContent = 'Create Account';
+        }
+    }
+
+    async handleLogin() {
+        const email = document.getElementById('login-email')?.value.trim();
+        const password = document.getElementById('login-password')?.value;
+        this.clearAuthMessages();
+
+        if (!email || !password) { this.showAuthError('Please fill in email and password.'); return; }
+
+        const btn = document.getElementById('login-btn');
+        btn.disabled = true; btn.textContent = 'Logging in...';
+
+        try {
+            const user = await this.authManager.login(email, password);
+            if (!user.emailVerified) {
+                this.showVerifyForm(email);
+            } else {
+                await this.tokenManager.initialize();
+                await this.tokenManager.refreshBadge();
+                this.updateAuthUI(user);
+                document.getElementById('onboarding-overlay').style.display = 'none';
+                this.showToast(`Welcome back!`, 'success');
+            }
+        } catch (e) {
+            const msg = e.code === 'auth/user-not-found' ? 'No account found with this email.'
+                : e.code === 'auth/wrong-password' ? 'Incorrect password.'
+                : e.code === 'auth/invalid-credential' ? 'Invalid email or password.'
+                : e.code === 'auth/too-many-requests' ? 'Too many attempts. Please try again later.'
+                : e.message || 'Login failed. Please try again.';
+            this.showAuthError(msg);
+        } finally {
+            btn.disabled = false; btn.textContent = 'Log In';
+        }
+    }
+
+    async handleForgotPassword() {
+        const email = document.getElementById('login-email')?.value.trim();
+        if (!email) { this.showAuthError('Enter your email address first.'); return; }
+        try {
+            await this.authManager.resetPassword(email);
+            this.showAuthSuccess('Password reset link sent! Check your email.');
+        } catch (e) {
+            this.showAuthError('Could not send reset email. Check the address and try again.');
+        }
+    }
+
+    async handleVerifyCheck() {
+        const btn = document.getElementById('verify-check-btn');
+        btn.disabled = true; btn.textContent = 'Checking...';
+        try {
+            const verified = await this.authManager.checkEmailVerified();
+            if (verified) {
+                this.updateAuthUI(this.authManager.currentUser);
+                await this.tokenManager.initialize();
+                await this.tokenManager.refreshBadge();
+                this.showOnboardingStep(3);
+                document.querySelector('.auth-tabs').style.display = '';
+            } else {
+                this.showAuthError('Email not verified yet. Please check your inbox and click the verification link.');
+            }
+        } catch (e) {
+            this.showAuthError('Could not check verification status. Please try again.');
+        } finally {
+            btn.disabled = false; btn.textContent = "I've Verified My Email";
+        }
+    }
+
+    async handleResendVerification() {
+        try {
+            await this.authManager.sendVerification();
+            this.showAuthSuccess('Verification email resent! Check your inbox.');
+        } catch (e) {
+            this.showAuthError('Could not resend. Please wait a moment and try again.');
+        }
+    }
+
+    async handleSignOut() {
+        try {
+            await this.authManager.logout();
+            this.updateAuthUI(null);
+            // Clear local token cache
+            await this.db.saveSetting('token-balance', 0);
+            await this.db.saveSetting('token-msg-count', 0);
+            await this.tokenManager.refreshBadge();
+            this.showToast('Signed out.', 'info');
+            // Show onboarding with auth
+            this.showOnboarding();
+        } catch (e) {
+            this.showToast('Error signing out.', 'error');
+        }
+    }
+
     setupProviderForm(provider) {
         const setup = document.getElementById('provider-setup');
         setup.innerHTML = '';
@@ -4972,20 +5253,46 @@ class Linen {
             });
         }
 
-        // Back buttons removed - users can close onboarding overlay with X or finish with Done button
+        // ─── Auth Onboarding Events ───
 
-        // Step 2: Continue button (token-based onboarding)
-        const onboardingContinue = document.getElementById('onboarding-continue');
-        if (onboardingContinue) {
-            onboardingContinue.addEventListener('click', async () => {
-                const done = await this.db.getSetting('onboarding-complete');
-                if (done) {
-                    document.getElementById('onboarding-overlay').style.display = 'none';
-                } else {
-                    this.showOnboardingStep(3);
-                }
-            });
-        }
+        // Tab switching
+        document.getElementById('tab-signup')?.addEventListener('click', () => {
+            document.getElementById('tab-signup').classList.add('active');
+            document.getElementById('tab-login').classList.remove('active');
+            document.getElementById('signup-form').style.display = '';
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('verify-form').style.display = 'none';
+            document.getElementById('auth-step-title').textContent = 'Create Account';
+            document.getElementById('auth-step-desc').textContent = 'Sign up to get your tokens and start chatting.';
+            this.clearAuthMessages();
+        });
+
+        document.getElementById('tab-login')?.addEventListener('click', () => {
+            document.getElementById('tab-login').classList.add('active');
+            document.getElementById('tab-signup').classList.remove('active');
+            document.getElementById('login-form').style.display = '';
+            document.getElementById('signup-form').style.display = 'none';
+            document.getElementById('verify-form').style.display = 'none';
+            document.getElementById('auth-step-title').textContent = 'Welcome Back';
+            document.getElementById('auth-step-desc').textContent = 'Log in to continue where you left off.';
+            this.clearAuthMessages();
+        });
+
+        // Sign Up
+        document.getElementById('signup-btn')?.addEventListener('click', () => this.handleSignup());
+
+        // Log In
+        document.getElementById('login-btn')?.addEventListener('click', () => this.handleLogin());
+
+        // Forgot Password
+        document.getElementById('forgot-password-btn')?.addEventListener('click', () => this.handleForgotPassword());
+
+        // Verify Email
+        document.getElementById('verify-check-btn')?.addEventListener('click', () => this.handleVerifyCheck());
+        document.getElementById('verify-resend-btn')?.addEventListener('click', () => this.handleResendVerification());
+
+        // Sign Out (in settings)
+        document.getElementById('sign-out-btn')?.addEventListener('click', () => this.handleSignOut());
 
         document.querySelectorAll('.device-selector button').forEach(btn => {
             btn.addEventListener('click', (e) => {

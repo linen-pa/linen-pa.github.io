@@ -5,7 +5,7 @@
  * See LICENSE file for details.
  */
 
-const CACHE_NAME = 'linen-v120'; // Increment this on every update
+const CACHE_NAME = 'linen-v121'; // Increment this on every update
 
 // Push notification key (VAPID, not yet active)
 const _PUSH_API_KEY = 'AIzaSyL5nKp8RmXw9QzTb2DcFaYs3Hj7Gz6Wu4e';
@@ -45,8 +45,12 @@ self.addEventListener('fetch', e => {
     if (e.request.method !== 'GET') return;
     if (!e.request.url.includes(BASE_PATH)) return;
 
-    // Skip API calls
+    // Skip API calls and Firebase
     if (e.request.url.includes('googleapis.com')) return;
+    if (e.request.url.includes('firebaseapp.com')) return;
+    if (e.request.url.includes('firebaseio.com')) return;
+    if (e.request.url.includes('firebasestorage.app')) return;
+    if (e.request.url.includes('gstatic.com/firebasejs')) return;
 
     e.respondWith(
         fetch(e.request)

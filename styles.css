@@ -2710,3 +2710,184 @@ body.keyboard-nav [tabindex]:focus {
 .token-refill-btn:hover {
     opacity: 0.9;
 }
+
+/* ========== Auth Forms (Onboarding) ========== */
+.auth-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.2rem;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.auth-tab {
+    flex: 1;
+    padding: 10px 0;
+    background: #222;
+    border: none;
+    color: var(--text-light);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.auth-tab.active {
+    background: var(--accent);
+    color: #000;
+}
+
+.auth-tab:not(.active):hover {
+    background: #333;
+    color: var(--primary);
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.auth-form input[type="email"],
+.auth-form input[type="password"] {
+    width: 100%;
+    padding: 12px 14px;
+    background: #222;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--primary);
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+}
+
+.auth-form input[type="email"]:focus,
+.auth-form input[type="password"]:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.auth-form input::placeholder {
+    color: #666;
+}
+
+.auth-submit-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    margin-top: 4px;
+}
+
+.auth-submit-btn:hover {
+    opacity: 0.9;
+}
+
+.auth-submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.auth-link-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 4px 0;
+    text-decoration: underline;
+    transition: opacity 0.2s;
+}
+
+.auth-link-btn:hover {
+    opacity: 0.7;
+}
+
+.auth-message {
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-align: center;
+    display: none;
+}
+
+.auth-message.error {
+    display: block;
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.auth-message.success {
+    display: block;
+    background: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+/* Email verification screen */
+.verify-icon {
+    font-size: 3rem;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.verify-text {
+    text-align: center;
+    color: var(--text-light);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.verify-email {
+    text-align: center;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 1rem;
+    margin: 4px 0 8px;
+    word-break: break-all;
+}
+
+.verify-hint {
+    text-align: center;
+    color: #666;
+    font-size: 0.8rem;
+    margin: 0 0 12px;
+}
+
+/* Success message in onboarding */
+.success-message {
+    text-align: center;
+    color: #4caf50;
+    font-size: 0.85rem;
+    min-height: 0;
+    margin-top: 4px;
+}
+
+.success-message:empty {
+    display: none;
+}
+
+/* Account section in settings */
+.account-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #2a2a2a;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.account-email {
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 500;
+    word-break: break-all;
+}
