@@ -9,7 +9,7 @@
 class AuthManager {
     constructor() {
         this.auth = firebase.auth();
-        this.firestore = firebase.firestore();
+        this.database = firebase.database();
         this.currentUser = null;
         this.encryptionKey = null; // Cached encryption key derived from email + password
     }
@@ -207,33 +207,33 @@ class AuthManager {
         });
     }
 
-    // Firestore: initialize user document with tokens on first signup
+    // Realtime Database: initialize user document with tokens on first signup
     async initUserDoc(uid, email) {
         try {
-            const docRef = this.firestore.collection('users').doc(uid);
-            const doc = await docRef.get();
-            if (!doc.exists) {
-                await docRef.set({
+            const userRef = this.database.ref('users/' + uid);
+            const snapshot = await userRef.get();
+            if (!snapshot.exists()) {
+                await userRef.set({
                     email: email,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdAt: Date.now(),
                     tokenBalance: 20,
                     tokenMsgCount: 0,
-                    lastDailyRefill: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastDailyRefill: Date.now(),
                     initialGranted: true
                 });
                 console.log('Linen: User document created with 20 tokens');
             }
         } catch (e) {
-            console.error('Linen: Firestore initUserDoc failed (check security rules):', e);
+            console.error('Linen: Realtime Database initUserDoc failed (check security rules):', e);
         }
     }
 
-    // Firestore: get token data
+    // Realtime Database: get token data
     async getTokenData(uid) {
         try {
-            const doc = await this.firestore.collection('users').doc(uid).get();
-            if (doc.exists) {
-                const data = doc.data();
+            const snapshot = await this.database.ref('users/' + uid).get();
+            if (snapshot.exists()) {
+                const data = snapshot.val();
                 return {
                     balance: data.tokenBalance ?? 0,
                     msgCount: data.tokenMsgCount ?? 0,
@@ -241,51 +241,51 @@ class AuthManager {
                 };
             }
         } catch (e) {
-            console.error('Linen: Firestore getTokenData failed (check security rules):', e);
+            console.error('Linen: Realtime Database getTokenData failed (check security rules):', e);
         }
         return { balance: 0, msgCount: 0, lastDailyRefill: null };
     }
 
-    // Firestore: update token data
+    // Realtime Database: update token data
     async updateTokenData(uid, balance, msgCount) {
         try {
-            await this.firestore.collection('users').doc(uid).update({
+            await this.database.ref('users/' + uid).update({
                 tokenBalance: balance,
                 tokenMsgCount: msgCount
             });
         } catch (e) {
-            console.error('Linen: Firestore updateTokenData failed (check security rules):', e);
+            console.error('Linen: Realtime Database updateTokenData failed (check security rules):', e);
         }
     }
 
-    // Firestore: update daily refill timestamp
+    // Realtime Database: update daily refill timestamp
     async updateDailyRefill(uid, balance) {
         try {
-            await this.firestore.collection('users').doc(uid).update({
+            await this.database.ref('users/' + uid).update({
                 tokenBalance: balance,
                 tokenMsgCount: 0,
-                lastDailyRefill: firebase.firestore.FieldValue.serverTimestamp()
+                lastDailyRefill: Date.now()
             });
         } catch (e) {
-            console.error('Linen: Firestore updateDailyRefill failed:', e);
+            console.error('Linen: Realtime Database updateDailyRefill failed:', e);
         }
     }
 
-    // Firestore: save conversation message to cloud
+    // Realtime Database: save conversation message to cloud
     async saveConversationMessage(uid, message) {
         try {
-            const conversationsRef = this.firestore.collection('users').doc(uid).collection('conversations');
+            const timestamp = Date.now();
+            const conversationsRef = this.database.ref('users/' + uid + '/conversations');
 
-            // Encrypt the message before storing in Firestore
+            // Encrypt the message before storing in Realtime Database
             const encryptedText = this.encryptionKey
                 ? await this.encryptData(message)
                 : null;
 
-            await conversationsRef.add({
+            await conversationsRef.push({
                 // If encryption is available, store encrypted; otherwise store plaintext as fallback
                 ...(encryptedText ? { encryptedData: encryptedText } : { text: message.text, sender: message.sender }),
-                timestamp: Date.now(),
-                date: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: timestamp
             });
             console.log('Linen: Conversation message saved to cloud' + (encryptedText ? ' (encrypted)' : ''));
         } catch (e) {
@@ -294,42 +294,47 @@ class AuthManager {
         }
     }
 
-    // Firestore: load all conversation messages from cloud
+    // Realtime Database: load all conversation messages from cloud
     async loadConversations(uid) {
         try {
-            const conversationsRef = this.firestore.collection('users').doc(uid).collection('conversations');
-            const snapshot = await conversationsRef.orderBy('timestamp', 'asc').get();
+            const conversationsRef = this.database.ref('users/' + uid + '/conversations');
+            const snapshot = await conversationsRef.get();
             const conversations = [];
 
-            // Process documents with async decryption
-            for (const doc of snapshot.docs) {
-                const data = doc.data();
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                // Convert object of objects to array, sorted by timestamp
+                const entries = Object.entries(data).map(([key, val]) => ({
+                    id: key,
+                    ...val
+                })).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
-                // Check if data is encrypted or plaintext
-                if (data.encryptedData && this.encryptionKey) {
-                    try {
-                        // Decrypt the data (await async operation)
-                        const decrypted = await this.decryptData(data.encryptedData);
+                // Process documents with async decryption
+                for (const doc of entries) {
+                    // Check if data is encrypted or plaintext
+                    if (doc.encryptedData && this.encryptionKey) {
+                        try {
+                            // Decrypt the data (await async operation)
+                            const decrypted = await this.decryptData(doc.encryptedData);
+                            conversations.push({
+                                id: doc.id,
+                                text: decrypted.text,
+                                sender: decrypted.sender,
+                                timestamp: doc.timestamp
+                            });
+                        } catch (e) {
+                            console.error('Linen: Failed to decrypt conversation message:', e);
+                            // Skip this message if decryption fails
+                        }
+                    } else {
+                        // Fallback to plaintext (for older unencrypted messages or no encryption key)
                         conversations.push({
                             id: doc.id,
-                            text: decrypted.text,
-                            sender: decrypted.sender,
-                            timestamp: data.timestamp,
-                            date: data.date
+                            text: doc.text,
+                            sender: doc.sender,
+                            timestamp: doc.timestamp
                         });
-                    } catch (e) {
-                        console.error('Linen: Failed to decrypt conversation message:', e);
-                        // Skip this message if decryption fails
                     }
-                } else {
-                    // Fallback to plaintext (for older unencrypted messages or no encryption key)
-                    conversations.push({
-                        id: doc.id,
-                        text: data.text,
-                        sender: data.sender,
-                        timestamp: data.timestamp,
-                        date: data.date
-                    });
                 }
             }
             console.log(`Linen: Loaded ${conversations.length} conversations from cloud`);
@@ -340,16 +345,11 @@ class AuthManager {
         }
     }
 
-    // Firestore: clear all conversations for a user
+    // Realtime Database: clear all conversations for a user
     async clearConversations(uid) {
         try {
-            const conversationsRef = this.firestore.collection('users').doc(uid).collection('conversations');
-            const snapshot = await conversationsRef.get();
-            const batch = this.firestore.batch();
-            snapshot.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-            await batch.commit();
+            const conversationsRef = this.database.ref('users/' + uid + '/conversations');
+            await conversationsRef.remove();
             console.log('Linen: Conversations cleared from cloud');
         } catch (e) {
             console.error('Linen: Failed to clear conversations from cloud:', e);
@@ -6741,18 +6741,23 @@ class Linen {
         });
     }
 
-    showTokenStoreModal() {
+    async showTokenStoreModal() {
         // Open settings modal scrolled to tokens section
         const settingsModal = document.getElementById('settings-modal');
         const backdrop = document.getElementById('modal-backdrop');
         if (settingsModal && backdrop) {
+            // Load balance FIRST before showing modal
+            const balance = await this.tokenManager.getBalance();
+            const balanceEl = document.getElementById('settings-token-balance');
+            if (balanceEl) {
+                balanceEl.textContent = balance;
+            }
+
+            // Now show the modal with correct balance
             settingsModal.style.pointerEvents = '';
             settingsModal.classList.add('active');
             backdrop.classList.add('active');
-            this.tokenManager.getBalance().then(b => {
-                const el = document.getElementById('settings-token-balance');
-                if (el) el.textContent = b;
-            });
+
             setTimeout(() => {
                 const sections = settingsModal.querySelectorAll('.settings-heading');
                 for (const s of sections) {
