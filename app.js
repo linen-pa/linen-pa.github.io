@@ -3474,61 +3474,35 @@ class Linen {
             }
         }, true); // Use capture phase
 
-        // Scroll to bottom when keyboard appears (on focus)
+        // Scroll to bottom once when keyboard appears (on focus)
+        // Only scroll once - don't interfere with user scrolling
         chatInput.addEventListener('focus', () => {
-            // Multiple scroll attempts to handle keyboard animation
-            chatMessages.scrollTop = chatMessages.scrollHeight;
             setTimeout(() => {
                 chatMessages.scrollTop = chatMessages.scrollHeight;
-            }, 50);
-            setTimeout(() => {
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }, 150);
-            setTimeout(() => {
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }, 300);
+            }, 300); // Wait for keyboard animation to complete
         });
 
-        // Keep scrolled to bottom while typing
-        chatInput.addEventListener('input', () => {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        });
+        // Flag to prevent auto-scroll while user is actively scrolling
+        let isUserScrolling = false;
+        let scrollTimeout;
 
-        // Use visualViewport API if available (more accurate for keyboard detection)
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', () => {
-                // Scroll to bottom when visual viewport shrinks (keyboard opening)
+        chatMessages.addEventListener('scroll', () => {
+            isUserScrolling = true;
+            clearTimeout(scrollTimeout);
+
+            // Reset flag after user stops scrolling
+            scrollTimeout = setTimeout(() => {
+                isUserScrolling = false;
+            }, 1000);
+        }, { passive: true });
+
+        // Only auto-scroll when new messages arrive (not while user is scrolling)
+        // This will be called by scrollToBottom() when messages are added
+        this.autoScrollToBottomIfAtBottom = () => {
+            if (!isUserScrolling) {
                 chatMessages.scrollTop = chatMessages.scrollHeight;
-            });
-        }
-
-        // Fallback: Handle regular window resize for keyboard changes
-        let lastViewportHeight = window.innerHeight;
-        const handleViewportChange = () => {
-            const currentHeight = window.innerHeight;
-
-            // Keyboard opening - viewport height decreased
-            if (currentHeight < lastViewportHeight) {
-                // Aggressive scrolling during keyboard animation
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-                setTimeout(() => {
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }, 50);
-                setTimeout(() => {
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }, 150);
             }
-
-            lastViewportHeight = currentHeight;
         };
-
-        window.addEventListener('resize', handleViewportChange);
-        window.addEventListener('orientationchange', () => {
-            lastViewportHeight = window.innerHeight;
-            setTimeout(() => {
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }, 100);
-        });
 
         console.log('Linen: Mobile keyboard handler set up - clicks outside input will close keyboard');
     }
@@ -6412,22 +6386,14 @@ class Linen {
     scrollToBottom() {
         const container = document.getElementById('chat-messages');
         if (container) {
-            // Scroll immediately
-            container.scrollTop = container.scrollHeight;
-
-            // Scroll again after layout updates (for mobile keyboard cases)
-            requestAnimationFrame(() => {
+            // Only auto-scroll when a new message arrives
+            // Use the smart scrolling that respects user scroll position
+            if (this.autoScrollToBottomIfAtBottom) {
+                this.autoScrollToBottomIfAtBottom();
+            } else {
+                // Fallback: always scroll (for initial messages)
                 container.scrollTop = container.scrollHeight;
-            });
-
-            // Multiple delayed attempts to handle async rendering
-            setTimeout(() => {
-                container.scrollTop = container.scrollHeight;
-            }, 10);
-
-            setTimeout(() => {
-                container.scrollTop = container.scrollHeight;
-            }, 50);
+            }
         }
     }
 
