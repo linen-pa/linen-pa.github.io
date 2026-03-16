@@ -51,12 +51,49 @@ class AuthManager {
             );
 
             this.encryptionKey = key;
+
+            // Store the derivedBits in sessionStorage so we can re-import the key on page reload
+            // This keeps the key available during the session without storing the password
+            try {
+                const derivedBitsArray = Array.from(new Uint8Array(derivedBits));
+                sessionStorage.setItem('linen-encryption-key', JSON.stringify(derivedBitsArray));
+                console.log('Linen: Encryption key stored for session');
+            } catch (e) {
+                console.warn('Linen: Could not store encryption key in sessionStorage:', e);
+            }
+
             console.log('Linen: Encryption key derived from credentials');
             return key;
         } catch (e) {
             console.error('Linen: Failed to derive encryption key:', e);
             throw new Error('Failed to set up encryption');
         }
+    }
+
+    // Restore encryption key from sessionStorage (for page reloads during same session)
+    async restoreEncryptionKey() {
+        try {
+            const stored = sessionStorage.getItem('linen-encryption-key');
+            if (stored) {
+                const derivedBitsArray = JSON.parse(stored);
+                const derivedBits = new Uint8Array(derivedBitsArray);
+
+                const key = await crypto.subtle.importKey(
+                    'raw',
+                    derivedBits,
+                    { name: 'AES-GCM' },
+                    false,
+                    ['encrypt', 'decrypt']
+                );
+
+                this.encryptionKey = key;
+                console.log('Linen: Encryption key restored from session');
+                return key;
+            }
+        } catch (e) {
+            console.error('Linen: Failed to restore encryption key:', e);
+        }
+        return null;
     }
 
     // Encrypt data using the derived key (AES-256-GCM)
@@ -3282,6 +3319,9 @@ class Linen {
             if (currentUser && currentUser.emailVerified) {
                 // Signed in and verified — load conversations from cloud
                 console.log("Linen: User signed in:", currentUser.email);
+
+                // Try to restore encryption key from session (for loading encrypted conversations)
+                await this.authManager.restoreEncryptionKey();
 
                 // Try to load conversations from Firestore (cloud-first approach)
                 const cloudConversations = await this.authManager.loadConversations(currentUser.uid);
