@@ -3476,33 +3476,47 @@ class Linen {
 
         // Scroll to bottom when keyboard appears (on focus)
         chatInput.addEventListener('focus', () => {
+            // Multiple scroll attempts to handle keyboard animation
+            chatMessages.scrollTop = chatMessages.scrollHeight;
             setTimeout(() => {
-                // Scroll chat messages to bottom to show latest message
                 chatMessages.scrollTop = chatMessages.scrollHeight;
-            }, 100);
+            }, 50);
+            setTimeout(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 150);
+            setTimeout(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 300);
         });
 
         // Keep scrolled to bottom while typing
         chatInput.addEventListener('input', () => {
-            setTimeout(() => {
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }, 10);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         });
 
-        // Handle viewport changes (keyboard open/close)
+        // Use visualViewport API if available (more accurate for keyboard detection)
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                // Scroll to bottom when visual viewport shrinks (keyboard opening)
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+        }
+
+        // Fallback: Handle regular window resize for keyboard changes
         let lastViewportHeight = window.innerHeight;
         const handleViewportChange = () => {
             const currentHeight = window.innerHeight;
 
-            // Keyboard closing
-            if (currentHeight > lastViewportHeight) {
-                // Maintain scroll position
-            }
-            // Keyboard opening - ensure bottom is visible
-            else if (currentHeight < lastViewportHeight) {
+            // Keyboard opening - viewport height decreased
+            if (currentHeight < lastViewportHeight) {
+                // Aggressive scrolling during keyboard animation
+                chatMessages.scrollTop = chatMessages.scrollHeight;
                 setTimeout(() => {
                     chatMessages.scrollTop = chatMessages.scrollHeight;
-                }, 100);
+                }, 50);
+                setTimeout(() => {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, 150);
             }
 
             lastViewportHeight = currentHeight;
@@ -3511,6 +3525,9 @@ class Linen {
         window.addEventListener('resize', handleViewportChange);
         window.addEventListener('orientationchange', () => {
             lastViewportHeight = window.innerHeight;
+            setTimeout(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 100);
         });
 
         console.log('Linen: Mobile keyboard handler set up - clicks outside input will close keyboard');
@@ -6395,7 +6412,22 @@ class Linen {
     scrollToBottom() {
         const container = document.getElementById('chat-messages');
         if (container) {
+            // Scroll immediately
             container.scrollTop = container.scrollHeight;
+
+            // Scroll again after layout updates (for mobile keyboard cases)
+            requestAnimationFrame(() => {
+                container.scrollTop = container.scrollHeight;
+            });
+
+            // Multiple delayed attempts to handle async rendering
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 10);
+
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 50);
         }
     }
 
