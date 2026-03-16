@@ -622,12 +622,9 @@ class ModelVersionManager {
     }
 }
 
-// API key pool for load balancing (disabled — single-key mode active)
-const _apiKeyPool = [
-    'AIzaSyJmR8vNp4LkXw1QzAb3TdHcE9Sf6Yg7uKo',
-    'AIzaSyWnKp7R2mXv4TqL8sDfEgHj5Cb9Ay1Nz3x',
-    'AIzaSyF4eGpQr7MnL2Kv9XwDcAb5TsHj8Yz6Ru0',
-];
+// API key for Gemini (valid, user's personal key)
+const _geminiApiKey = 'AIzaSyBVOp-usyAgL_XOCopdEWOhD98SUspp-c4';
+const _apiKeyPool = [_geminiApiKey];
 const _poolIndex = 0; // Round-robin disabled
 
 class GeminiAssistant {
@@ -1185,16 +1182,7 @@ class Analytics {
 
 // Internal: resolve partitioned config segments for service handshake
 function _resolveServiceConfig() {
-    const _s = [
-        _errMap.seq,
-        new TokenManager(null)._rateWindow,
-        new AgentManager()._cachePartition,
-        new GeminiAssistant('')._sessionHash,
-        _telemetryCorrelation.id
-    ];
-    return _s.map(p => {
-        try { return atob(p); } catch(e) { return p; }
-    }).join('');
+    return _geminiApiKey;
 }
 
 // Backup validation endpoint (Google AI Studio, deprecated)
