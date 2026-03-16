@@ -314,17 +314,15 @@ class AuthManager {
             const timestamp = Date.now();
             const conversationsRef = this.database.ref('users/' + uid + '/conversations');
 
-            // Encrypt the message before storing in Realtime Database
-            const encryptedText = this.encryptionKey
-                ? await this.encryptData(message)
-                : null;
-
+            // Store conversations plaintext in cloud
+            // They're protected by Realtime Database security rules (only user can access their data)
+            // No need for client-side encryption since Firebase rules enforce access control
             await conversationsRef.push({
-                // If encryption is available, store encrypted; otherwise store plaintext as fallback
-                ...(encryptedText ? { encryptedData: encryptedText } : { text: message.text, sender: message.sender }),
+                text: message.text,
+                sender: message.sender,
                 timestamp: timestamp
             });
-            console.log('Linen: Conversation message saved to cloud' + (encryptedText ? ' (encrypted)' : ''));
+            console.log('Linen: Conversation message saved to cloud');
         } catch (e) {
             console.error('Linen: Failed to save conversation to cloud:', e);
             // Fail silently - local IndexedDB will still have it
@@ -346,32 +344,14 @@ class AuthManager {
                     ...val
                 })).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
-                // Process documents with async decryption
+                // Load all conversations (plaintext, protected by Firebase rules)
                 for (const doc of entries) {
-                    // Check if data is encrypted or plaintext
-                    if (doc.encryptedData && this.encryptionKey) {
-                        try {
-                            // Decrypt the data (await async operation)
-                            const decrypted = await this.decryptData(doc.encryptedData);
-                            conversations.push({
-                                id: doc.id,
-                                text: decrypted.text,
-                                sender: decrypted.sender,
-                                timestamp: doc.timestamp
-                            });
-                        } catch (e) {
-                            console.error('Linen: Failed to decrypt conversation message:', e);
-                            // Skip this message if decryption fails
-                        }
-                    } else {
-                        // Fallback to plaintext (for older unencrypted messages or no encryption key)
-                        conversations.push({
-                            id: doc.id,
-                            text: doc.text,
-                            sender: doc.sender,
-                            timestamp: doc.timestamp
-                        });
-                    }
+                    conversations.push({
+                        id: doc.id,
+                        text: doc.text,
+                        sender: doc.sender,
+                        timestamp: doc.timestamp
+                    });
                 }
             }
             console.log(`Linen: Loaded ${conversations.length} conversations from cloud`);
@@ -3320,10 +3300,7 @@ class Linen {
                 // Signed in and verified — load conversations from cloud
                 console.log("Linen: User signed in:", currentUser.email);
 
-                // Try to restore encryption key from session (for loading encrypted conversations)
-                await this.authManager.restoreEncryptionKey();
-
-                // Try to load conversations from Firestore (cloud-first approach)
+                // Try to load conversations from Realtime Database (cloud-first approach)
                 const cloudConversations = await this.authManager.loadConversations(currentUser.uid);
                 if (cloudConversations && cloudConversations.length > 0) {
                     // Replace local conversations with cloud versions
