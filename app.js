@@ -4390,11 +4390,16 @@ class Linen {
         // Hamburger menu button in input area
         const hamburgerBtn = document.getElementById('hamburger-menu-btn');
         const logoMenuRef = document.getElementById('logo-menu');
+        console.log("Linen: Hamburger setup - btn:", !!hamburgerBtn, "menu:", !!logoMenuRef);
         if (hamburgerBtn && logoMenuRef) {
             hamburgerBtn.addEventListener('click', (e) => {
+                console.log("Linen: Hamburger clicked");
                 e.stopPropagation();
                 logoMenuRef.classList.toggle('hidden');
+                console.log("Linen: Menu hidden state after toggle:", logoMenuRef.classList.contains('hidden'));
             });
+        } else {
+            console.warn("Linen: Hamburger or menu not found - btn:", hamburgerBtn, "menu:", logoMenuRef);
         }
 
         // Chat - Messenger-style input
@@ -4477,8 +4482,10 @@ class Linen {
         if (sendMessageBtn) {
             sendMessageBtn.addEventListener('click', () => {
                 this.sendChat();
-                chatInput.value = '';
-                chatInput.focus();
+                if (chatInput) {
+                    chatInput.value = '';
+                    chatInput.focus();
+                }
             });
         }
 
