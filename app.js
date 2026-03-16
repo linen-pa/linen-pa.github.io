@@ -4254,13 +4254,6 @@ class Linen {
         this._eventsBound = true;
         console.log("Linen: Binding events");
 
-        // Re-enter key modal
-        const reEnterSave = () => this.validateAndSaveKey('re-enter-api-key', 're-enter-error', () => this.startApp(this.assistant.apiKey));
-        document.getElementById('save-re-enter-api-key').addEventListener('click', reEnterSave);
-        document.getElementById('re-enter-api-key').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); reEnterSave(); }
-        });
-
         // Logo menu interactions
         const logo = document.getElementById('logo');
         const logoMenu = document.getElementById('logo-menu');
