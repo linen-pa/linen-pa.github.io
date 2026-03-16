@@ -101,6 +101,13 @@ header {
     header {
         padding: 8px 10px;
     }
+
+    /* Prevent iOS auto-zoom on input focus - 16px is the threshold */
+    input,
+    textarea,
+    select {
+        font-size: 16px;
+    }
 }
 
 #logo:hover {
@@ -1469,7 +1476,7 @@ hr {
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 10px;
-    font-size: 0.95rem;
+    font-size: 16px; /* Minimum 16px prevents iOS auto-zoom on focus */
     font-family: inherit;
     min-height: 40px;
     max-height: 80px;
@@ -1481,7 +1488,7 @@ hr {
         padding: 8px;
         min-height: 36px;
         max-height: 60px;
-        font-size: 0.9rem;
+        font-size: 16px; /* Keep at 16px minimum to prevent iOS auto-zoom */
     }
 }
 

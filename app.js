@@ -3439,6 +3439,46 @@ class Linen {
         this.setupAutoRefresh();
 
         console.log("Linen: App started in Gemini mode");
+
+        // Setup mobile keyboard handling to prevent layout shift
+        this.setupMobileKeyboardHandler();
+    }
+
+    setupMobileKeyboardHandler() {
+        // Prevent layout shift when keyboard appears on mobile
+        const chatInput = document.getElementById('chat-input');
+        if (!chatInput) return;
+
+        // Track viewport height changes when keyboard opens/closes
+        let lastViewportHeight = window.innerHeight;
+
+        const handleViewportChange = () => {
+            const currentHeight = window.innerHeight;
+
+            // If viewport height decreased significantly, keyboard likely opened
+            if (currentHeight < lastViewportHeight) {
+                // Scroll input into view smoothly
+                setTimeout(() => {
+                    chatInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            }
+
+            lastViewportHeight = currentHeight;
+        };
+
+        // Listen for viewport changes (keyboard open/close)
+        window.addEventListener('resize', handleViewportChange);
+        window.addEventListener('orientationchange', handleViewportChange);
+
+        // Prevent default zoom on input focus - handled via CSS now
+        chatInput.addEventListener('focus', (e) => {
+            // Just ensure the input is visible
+            setTimeout(() => {
+                e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 300); // Delay to account for keyboard animation
+        });
+
+        console.log('Linen: Mobile keyboard handler set up');
     }
 
     setupAutoRefresh() {
