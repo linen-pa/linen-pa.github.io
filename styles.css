@@ -2833,6 +2833,33 @@ body.keyboard-nav [tabindex]:focus {
     color: #666;
 }
 
+.remember-me-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 0 4px;
+    font-size: 0.9rem;
+}
+
+.remember-me-container input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
+.remember-me-container label {
+    cursor: pointer;
+    color: var(--text-light);
+    user-select: none;
+    flex: 1;
+}
+
+.remember-me-container label:hover {
+    color: var(--primary);
+}
+
 .auth-submit-btn {
     width: 100%;
     padding: 12px;
