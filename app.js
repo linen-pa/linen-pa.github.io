@@ -730,8 +730,7 @@ Core Directives:
 6.  **Do NOT confirm reminders/events in the chat.** The app will handle creation silently.
 7.  **Handle Memory Queries:** If the user asks 'what do you remember about X', search the provided memory context and synthesize an answer. Do not use the SAVE_MEMORY marker for this.
 8.  **Offer Support & Crisis Response:** When the user mentions distress, offer genuine support that validates their feelings. If you detect a real crisis (suicidal thoughts, self-harm, abuse), respond with authentic compassion: Listen to understand rather than to reply. Acknowledge their specific pain without being clinical or robotic. Show you understand what they shared. Continue being supportive and present. Do NOT give generic safety messages—the app will provide crisis resources. Your role is to listen, validate, and be human.
-9.  **Tone:** Be warm, genuine, concise, and match the user's tone.
-10. **Keep Responses Short:** Your responses should be 1-3 sentences max. No long paragraphs. Think text message, not essay. Short, natural, conversational.`;
+9.  **Tone:** Be warm, genuine, and match the user's tone. If the user writes a short message, keep your response short (1-3 sentences). If the user writes a long message or wants to explore something deeply, you can write longer responses. Match their energy and depth.`;
 
         const messages = [
             ...conversationContext,
@@ -741,7 +740,7 @@ Core Directives:
         const requestBody = {
             contents: messages,
             systemInstruction: { parts: [{ text: systemPrompt }] },
-            generationConfig: { temperature: 0.7, maxOutputTokens: 300 }
+            generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
         };
 
         // Try primary model, then fallback
@@ -915,8 +914,7 @@ Core Directives:
 6.  **Do NOT confirm reminders/events in the chat.** The app will handle creation silently.
 7.  **Handle Memory Queries:** If the user asks 'what do you remember about X', search the provided memory context and synthesize an answer. Do not use the SAVE_MEMORY marker for this.
 8.  **Offer Support & Crisis Response:** When the user mentions distress, offer genuine support that validates their feelings. If you detect a real crisis (suicidal thoughts, self-harm, abuse), respond with authentic compassion: Listen to understand rather than to reply. Acknowledge their specific pain without being clinical or robotic. Show you understand what they shared. Continue being supportive and present. Do NOT give generic safety messages—the app will provide crisis resources. Your role is to listen, validate, and be human.
-9.  **Tone:** Be warm, genuine, concise, and match the user's tone.
-10. **Keep Responses Short:** Your responses should be 1-3 sentences max. No long paragraphs. Think text message, not essay. Short, natural, conversational.`;
+9.  **Tone:** Be warm, genuine, and match the user's tone. If the user writes a short message, keep your response short (1-3 sentences). If the user writes a long message or wants to explore something deeply, you can write longer responses. Match their energy and depth.`;
 
         const messages = [
             ...conversationContext,
