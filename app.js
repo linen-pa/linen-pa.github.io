@@ -3447,38 +3447,65 @@ class Linen {
     setupMobileKeyboardHandler() {
         // Prevent layout shift when keyboard appears on mobile
         const chatInput = document.getElementById('chat-input');
-        if (!chatInput) return;
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInputArea = document.getElementById('chat-input-area');
 
-        // Track viewport height changes when keyboard opens/closes
+        if (!chatInput || !chatMessages || !chatInputArea) return;
+
+        // Disable the keyboard accessory bar
+        chatInput.setAttribute('autocorrect', 'off');
+        chatInput.setAttribute('autocapitalize', 'off');
+
+        // Close keyboard when clicking outside the input area
+        document.addEventListener('click', (e) => {
+            // If click is outside chat-input and chat-input-area, blur input (close keyboard)
+            if (e.target !== chatInput && !chatInputArea.contains(e.target)) {
+                if (document.activeElement === chatInput) {
+                    chatInput.blur();
+                }
+            }
+        }, true); // Use capture phase
+
+        // Scroll to bottom when keyboard appears (on focus)
+        chatInput.addEventListener('focus', () => {
+            setTimeout(() => {
+                // Scroll chat messages to bottom to show latest message
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 100);
+        });
+
+        // Keep scrolled to bottom while typing
+        chatInput.addEventListener('input', () => {
+            setTimeout(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 10);
+        });
+
+        // Handle viewport changes (keyboard open/close)
         let lastViewportHeight = window.innerHeight;
-
         const handleViewportChange = () => {
             const currentHeight = window.innerHeight;
 
-            // If viewport height decreased significantly, keyboard likely opened
-            if (currentHeight < lastViewportHeight) {
-                // Scroll input into view smoothly
+            // Keyboard closing
+            if (currentHeight > lastViewportHeight) {
+                // Maintain scroll position
+            }
+            // Keyboard opening - ensure bottom is visible
+            else if (currentHeight < lastViewportHeight) {
                 setTimeout(() => {
-                    chatInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
                 }, 100);
             }
 
             lastViewportHeight = currentHeight;
         };
 
-        // Listen for viewport changes (keyboard open/close)
         window.addEventListener('resize', handleViewportChange);
-        window.addEventListener('orientationchange', handleViewportChange);
-
-        // Prevent default zoom on input focus - handled via CSS now
-        chatInput.addEventListener('focus', (e) => {
-            // Just ensure the input is visible
-            setTimeout(() => {
-                e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }, 300); // Delay to account for keyboard animation
+        window.addEventListener('orientationchange', () => {
+            lastViewportHeight = window.innerHeight;
         });
 
-        console.log('Linen: Mobile keyboard handler set up');
+        console.log('Linen: Mobile keyboard handler set up - clicks outside input will close keyboard');
     }
 
     setupAutoRefresh() {

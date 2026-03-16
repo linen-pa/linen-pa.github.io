@@ -201,11 +201,16 @@ header {
 #chat-messages {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 8px;
     padding: 15px 12px;
     min-height: 0; /* Allows it to shrink if necessary without pushing input area */
+    /* Prevent scrolling lag on iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Optimize scrolling performance */
+    will-change: auto;
 }
 
 @media (max-width: 768px) {
@@ -1481,6 +1486,19 @@ hr {
     min-height: 40px;
     max-height: 80px;
     overflow-y: auto;
+    /* Hide iOS keyboard accessory bar (arrows and checkmark) */
+    -webkit-user-select: text;
+    -webkit-user-callout: none;
+    /* Disable the input accessory view on iOS */
+    &::-webkit-input-speech-button {
+        display: none;
+    }
+}
+
+/* Hide keyboard accessory bar globally */
+input::-webkit-input-speech-button,
+textarea::-webkit-input-speech-button {
+    display: none;
 }
 
 @media (max-width: 768px) {
