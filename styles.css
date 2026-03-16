@@ -99,7 +99,7 @@ header {
     }
 
     header {
-        padding: 8px 10px;
+        padding: 12px 10px 8px 10px; /* More top padding to move logo/tokens up */
     }
 
     /* Prevent iOS auto-zoom on input focus - 16px is the threshold */
