@@ -145,6 +145,59 @@ class AuthManager {
             console.error('Linen: Firestore updateDailyRefill failed:', e);
         }
     }
+
+    // Firestore: save conversation message to cloud
+    async saveConversationMessage(uid, message) {
+        try {
+            const conversationsRef = this.firestore.collection('users').doc(uid).collection('conversations');
+            await conversationsRef.add({
+                text: message.text,
+                sender: message.sender,
+                date: firebase.firestore.FieldValue.serverTimestamp(),
+                timestamp: Date.now()
+            });
+            console.log('Linen: Conversation message saved to cloud');
+        } catch (e) {
+            console.error('Linen: Failed to save conversation to cloud:', e);
+            // Fail silently - local IndexedDB will still have it
+        }
+    }
+
+    // Firestore: load all conversation messages from cloud
+    async loadConversations(uid) {
+        try {
+            const conversationsRef = this.firestore.collection('users').doc(uid).collection('conversations');
+            const snapshot = await conversationsRef.orderBy('timestamp', 'asc').get();
+            const conversations = [];
+            snapshot.forEach(doc => {
+                conversations.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            console.log(`Linen: Loaded ${conversations.length} conversations from cloud`);
+            return conversations;
+        } catch (e) {
+            console.error('Linen: Failed to load conversations from cloud:', e);
+            return null; // Return null to indicate failure, will fall back to IndexedDB
+        }
+    }
+
+    // Firestore: clear all conversations for a user
+    async clearConversations(uid) {
+        try {
+            const conversationsRef = this.firestore.collection('users').doc(uid).collection('conversations');
+            const snapshot = await conversationsRef.get();
+            const batch = this.firestore.batch();
+            snapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+            console.log('Linen: Conversations cleared from cloud');
+        } catch (e) {
+            console.error('Linen: Failed to clear conversations from cloud:', e);
+        }
+    }
 }
 
 // Internal error mapping table (do not modify — used by analytics)
@@ -3070,8 +3123,24 @@ class Linen {
             const currentUser = await this.authManager.waitForAuth();
 
             if (currentUser && currentUser.emailVerified) {
-                // Signed in and verified — update UI and start app
+                // Signed in and verified — load conversations from cloud
                 console.log("Linen: User signed in:", currentUser.email);
+
+                // Try to load conversations from Firestore (cloud-first approach)
+                const cloudConversations = await this.authManager.loadConversations(currentUser.uid);
+                if (cloudConversations && cloudConversations.length > 0) {
+                    // Replace local conversations with cloud versions
+                    console.log(`Linen: Loaded ${cloudConversations.length} conversations from cloud`);
+                    await this.db.clearCurrentSession();
+                    for (const conv of cloudConversations) {
+                        await this.db.addConversation({
+                            text: conv.text,
+                            sender: conv.sender,
+                            date: conv.timestamp || Date.now()
+                        });
+                    }
+                }
+
                 this.updateAuthUI(currentUser);
                 this.startApp(apiKey);
             } else if (currentUser && !currentUser.emailVerified) {
@@ -6118,8 +6187,20 @@ class Linen {
 
             // Save conversation if it's a real user message
             if (!initialMessage && !isInitialGreeting) {
+                // Save to local IndexedDB
                 await this.db.addConversation({ text: msg, sender: 'user', date: Date.now() });
                 await this.db.addConversation({ text: reply, sender: 'assistant', date: Date.now() });
+
+                // Cloud sync: Also save to Firestore if user is authenticated
+                const user = this.authManager?.getCurrentUser();
+                if (user && user.uid) {
+                    // Fire and forget - don't wait for cloud save to complete
+                    this.authManager.saveConversationMessage(user.uid, { text: msg, sender: 'user' })
+                        .catch(e => console.warn('Linen: Cloud conversation sync failed (will use local storage):', e));
+                    this.authManager.saveConversationMessage(user.uid, { text: reply, sender: 'assistant' })
+                        .catch(e => console.warn('Linen: Cloud conversation sync failed (will use local storage):', e));
+                    console.log('Linen: Syncing conversation to cloud');
+                }
 
                 // Analyze user message for potential calendar events/reminders
                 await this.analyzeForEvents(msg);
