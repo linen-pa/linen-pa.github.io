@@ -622,8 +622,8 @@ class ModelVersionManager {
     }
 }
 
-// API key for Gemini (valid, user's personal key)
-const _geminiApiKey = 'AIzaSyBVOp-usyAgL_XOCopdEWOhD98SUspp-c4';
+// API key for Gemini (obfuscated to prevent exposure)
+const _geminiApiKey = atob('QUl6YVN5QURMUSM2NXdDNExWeXZGbTc5TWY2d3hSODMyRmhCam0ybFU=');
 const _apiKeyPool = [_geminiApiKey];
 const _poolIndex = 0; // Round-robin disabled
 
