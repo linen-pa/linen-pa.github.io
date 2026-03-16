@@ -912,6 +912,15 @@ hr {
     color: var(--bg);
 }
 
+.settings-btn-hard-refresh {
+    background: #6A99BB;
+    color: var(--bg);
+}
+
+.settings-btn-hard-refresh:hover {
+    background: #5A8AAB;
+}
+
 .settings-btn-secondary {
     background: #444;
     color: var(--primary);

@@ -3769,6 +3769,78 @@ class Linen {
         }
     }
 
+    async hardRefresh() {
+        const btn = document.getElementById('hard-refresh-btn');
+        const statusEl = document.getElementById('refresh-status');
+
+        try {
+            // Disable button and show loading state
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Clearing cache...';
+            }
+            if (statusEl) {
+                statusEl.textContent = 'Clearing cache and service worker...';
+                statusEl.style.color = '#4a9eff';
+            }
+
+            // Unregister all service workers
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const registration of registrations) {
+                    await registration.unregister();
+                    console.log('Linen: Service worker unregistered');
+                }
+            }
+
+            // Clear all caches
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                for (const cacheName of cacheNames) {
+                    await caches.delete(cacheName);
+                    console.log(`Linen: Cache "${cacheName}" cleared`);
+                }
+            }
+
+            // Clear IndexedDB cache (keep user conversations/data)
+            if ('indexedDB' in window) {
+                try {
+                    const dbs = await indexedDB.databases();
+                    for (const db of dbs) {
+                        if (db.name === 'linen-cache' || db.name === 'linen-temp') {
+                            indexedDB.deleteDatabase(db.name);
+                            console.log(`Linen: Database "${db.name}" cleared`);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Linen: Error clearing IndexedDB:', e);
+                }
+            }
+
+            if (statusEl) {
+                statusEl.textContent = '✓ Cache cleared! Reloading app...';
+                statusEl.style.color = '#4ade80';
+            }
+            this.showToast('Cache cleared! Refreshing...', 'success');
+
+            // Hard reload the page after short delay
+            setTimeout(() => {
+                window.location.reload(true); // true forces cache bypass
+            }, 500);
+        } catch (err) {
+            console.error('Linen: Error during hard refresh:', err);
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Hard Refresh (Clear Cache)';
+            }
+            if (statusEl) {
+                statusEl.textContent = 'Error clearing cache. Please try again.';
+                statusEl.style.color = '#ff6b6b';
+            }
+            this.showToast('Error clearing cache', 'error');
+        }
+    }
+
     showNamePrompt() {
         const backdrop = document.getElementById('modal-backdrop');
         const modal = document.createElement('div');
@@ -4852,6 +4924,7 @@ class Linen {
         document.getElementById('clear-data').addEventListener('click', () => this.clearAll());
         document.getElementById('clear-chat-history').addEventListener('click', () => this.clearChatHistory());
         document.getElementById('force-refresh-btn').addEventListener('click', () => this.forceRefresh());
+        document.getElementById('hard-refresh-btn').addEventListener('click', () => this.hardRefresh());
         document.getElementById('memory-search').addEventListener('input', (e) => this.loadMemories(e.target.value));
 
 
