@@ -6311,6 +6311,7 @@ class Linen {
             }
             // Deduct token after successful response
             await this.tokenManager.deductToken();
+            await this.tokenManager.refreshBadge(); // Update the token display in header
 
             document.getElementById(id)?.remove();
 
