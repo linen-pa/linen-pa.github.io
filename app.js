@@ -11,18 +11,143 @@ class AuthManager {
         this.auth = firebase.auth();
         this.firestore = firebase.firestore();
         this.currentUser = null;
+        this.encryptionKey = null; // Cached encryption key derived from email + password
+    }
+
+    // Derive encryption key from email + password using PBKDF2
+    async deriveEncryptionKey(email, password) {
+        try {
+            // Combine email and password as the base for key derivation
+            const baseKey = `${email}:${password}`;
+            const encoder = new TextEncoder();
+            const data = encoder.encode(baseKey);
+
+            // Use Web Crypto API to derive a key using PBKDF2
+            const importedKey = await crypto.subtle.importKey(
+                'raw',
+                data,
+                { name: 'PBKDF2' },
+                false,
+                ['deriveBits']
+            );
+
+            const derivedBits = await crypto.subtle.deriveBits(
+                {
+                    name: 'PBKDF2',
+                    salt: encoder.encode('linen-encryption-salt-v1'),
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                importedKey,
+                256
+            );
+
+            const key = await crypto.subtle.importKey(
+                'raw',
+                derivedBits,
+                { name: 'AES-GCM' },
+                false,
+                ['encrypt', 'decrypt']
+            );
+
+            this.encryptionKey = key;
+            console.log('Linen: Encryption key derived from credentials');
+            return key;
+        } catch (e) {
+            console.error('Linen: Failed to derive encryption key:', e);
+            throw new Error('Failed to set up encryption');
+        }
+    }
+
+    // Encrypt data using the derived key (AES-256-GCM)
+    async encryptData(data) {
+        try {
+            if (!this.encryptionKey) {
+                throw new Error('Encryption key not initialized');
+            }
+
+            const encoder = new TextEncoder();
+            const plaintext = encoder.encode(JSON.stringify(data));
+
+            // Generate random IV for each encryption
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+
+            const ciphertext = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv },
+                this.encryptionKey,
+                plaintext
+            );
+
+            // Return IV + ciphertext concatenated (IV must be stored with ciphertext)
+            const combined = new Uint8Array(iv.length + ciphertext.byteLength);
+            combined.set(iv);
+            combined.set(new Uint8Array(ciphertext), iv.length);
+
+            // Convert to base64 for storage in Firestore
+            return btoa(String.fromCharCode.apply(null, combined));
+        } catch (e) {
+            console.error('Linen: Encryption failed:', e);
+            throw e;
+        }
+    }
+
+    // Decrypt data using the derived key
+    async decryptData(encryptedBase64) {
+        try {
+            if (!this.encryptionKey) {
+                throw new Error('Encryption key not initialized');
+            }
+
+            // Decode from base64
+            const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
+
+            // Extract IV and ciphertext
+            const iv = combined.slice(0, 12);
+            const ciphertext = combined.slice(12);
+
+            const plaintext = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: iv },
+                this.encryptionKey,
+                ciphertext
+            );
+
+            const decoder = new TextDecoder();
+            return JSON.parse(decoder.decode(plaintext));
+        } catch (e) {
+            console.error('Linen: Decryption failed (may indicate wrong password or corrupted data):', e);
+            throw new Error('Decryption failed - incorrect credentials or corrupted data');
+        }
     }
 
     async signup(email, password) {
         const cred = await this.auth.createUserWithEmailAndPassword(email, password);
         await cred.user.sendEmailVerification();
         this.currentUser = cred.user;
+
+        // Derive encryption key from email + password
+        try {
+            await this.deriveEncryptionKey(email, password);
+        } catch (e) {
+            console.warn('Linen: Failed to set up encryption on signup:', e);
+            // Don't block signup if encryption fails, but warn user
+        }
+
         return cred.user;
     }
 
     async login(email, password) {
         const cred = await this.auth.signInWithEmailAndPassword(email, password);
         this.currentUser = cred.user;
+
+        // Derive encryption key from email + password
+        try {
+            await this.deriveEncryptionKey(email, password);
+            console.log('Linen: User encryption key loaded');
+        } catch (e) {
+            console.warn('Linen: Failed to set up encryption on login:', e);
+            // Don't block login if encryption fails
+        }
+
         return cred.user;
     }
 
@@ -150,13 +275,19 @@ class AuthManager {
     async saveConversationMessage(uid, message) {
         try {
             const conversationsRef = this.firestore.collection('users').doc(uid).collection('conversations');
+
+            // Encrypt the message before storing in Firestore
+            const encryptedText = this.encryptionKey
+                ? await this.encryptData(message)
+                : null;
+
             await conversationsRef.add({
-                text: message.text,
-                sender: message.sender,
-                date: firebase.firestore.FieldValue.serverTimestamp(),
-                timestamp: Date.now()
+                // If encryption is available, store encrypted; otherwise store plaintext as fallback
+                ...(encryptedText ? { encryptedData: encryptedText } : { text: message.text, sender: message.sender }),
+                timestamp: Date.now(),
+                date: firebase.firestore.FieldValue.serverTimestamp()
             });
-            console.log('Linen: Conversation message saved to cloud');
+            console.log('Linen: Conversation message saved to cloud' + (encryptedText ? ' (encrypted)' : ''));
         } catch (e) {
             console.error('Linen: Failed to save conversation to cloud:', e);
             // Fail silently - local IndexedDB will still have it
@@ -169,12 +300,38 @@ class AuthManager {
             const conversationsRef = this.firestore.collection('users').doc(uid).collection('conversations');
             const snapshot = await conversationsRef.orderBy('timestamp', 'asc').get();
             const conversations = [];
-            snapshot.forEach(doc => {
-                conversations.push({
-                    id: doc.id,
-                    ...doc.data()
-                });
-            });
+
+            // Process documents with async decryption
+            for (const doc of snapshot.docs) {
+                const data = doc.data();
+
+                // Check if data is encrypted or plaintext
+                if (data.encryptedData && this.encryptionKey) {
+                    try {
+                        // Decrypt the data (await async operation)
+                        const decrypted = await this.decryptData(data.encryptedData);
+                        conversations.push({
+                            id: doc.id,
+                            text: decrypted.text,
+                            sender: decrypted.sender,
+                            timestamp: data.timestamp,
+                            date: data.date
+                        });
+                    } catch (e) {
+                        console.error('Linen: Failed to decrypt conversation message:', e);
+                        // Skip this message if decryption fails
+                    }
+                } else {
+                    // Fallback to plaintext (for older unencrypted messages or no encryption key)
+                    conversations.push({
+                        id: doc.id,
+                        text: data.text,
+                        sender: data.sender,
+                        timestamp: data.timestamp,
+                        date: data.date
+                    });
+                }
+            }
             console.log(`Linen: Loaded ${conversations.length} conversations from cloud`);
             return conversations;
         } catch (e) {
