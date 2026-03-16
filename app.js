@@ -3452,9 +3452,17 @@ class Linen {
 
         if (!chatInput || !chatMessages || !chatInputArea) return;
 
-        // Disable the keyboard accessory bar
+        // Aggressively disable the iOS keyboard accessory bar
         chatInput.setAttribute('autocorrect', 'off');
         chatInput.setAttribute('autocapitalize', 'off');
+        chatInput.setAttribute('autocomplete', 'off');
+        chatInput.setAttribute('spellcheck', 'false');
+        chatInput.setAttribute('data-lpignore', 'true');
+        chatInput.setAttribute('data-form-type', 'other');
+
+        // Remove webkit styling that triggers accessory bar
+        chatInput.style.WebkitAppearance = 'none';
+        chatInput.style.WebkitUserSelect = 'text';
 
         // Close keyboard when clicking outside the input area
         document.addEventListener('click', (e) => {

@@ -1417,6 +1417,8 @@ hr {
     padding-bottom: max(10px, env(safe-area-inset-bottom));
     flex-shrink: 0; /* Prevent it from shrinking */
     flex-basis: auto; /* Take only the space it needs */
+    margin: 0;
+    margin-bottom: 0;
 }
 
 @media (max-width: 768px) {
@@ -1486,19 +1488,15 @@ hr {
     min-height: 40px;
     max-height: 80px;
     overflow-y: auto;
-    /* Hide iOS keyboard accessory bar (arrows and checkmark) */
+    /* Remove all webkit styling to disable accessory bar */
+    -webkit-appearance: none;
     -webkit-user-select: text;
     -webkit-user-callout: none;
-    /* Disable the input accessory view on iOS */
-    &::-webkit-input-speech-button {
-        display: none;
-    }
-}
-
-/* Hide keyboard accessory bar globally */
-input::-webkit-input-speech-button,
-textarea::-webkit-input-speech-button {
-    display: none;
+    -webkit-touch-callout: none;
+    appearance: none;
+    /* Attach to keyboard - no gaps */
+    margin: 0;
+    margin-bottom: 0;
 }
 
 @media (max-width: 768px) {
