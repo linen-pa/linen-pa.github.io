@@ -76,16 +76,17 @@ header {
     align-items: center;
     padding: 16px 10px 12px 10px;
     height: auto;
+    /* Tight spotlight: dark behind logo, gone within ~40px of logo edge */
     background: radial-gradient(
-        ellipse 400px 200px at center,
-        rgba(0, 0, 0, 0.5) 0%,
-        rgba(0, 0, 0, 0.3) 40%,
+        ellipse 120px 100% at center,
+        rgba(0, 0, 0, 0.75) 0%,
+        rgba(0, 0, 0, 0.6) 35%,
         rgba(0, 0, 0, 0) 100%
     );
-    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    box-shadow: none;
     z-index: 10;
-    flex-shrink: 0; /* Prevent header from shrinking */
-    flex-basis: auto; /* Take only the space it needs */
+    flex-shrink: 0;
+    flex-basis: auto;
 }
 
 .header-logo-container {
@@ -106,9 +107,9 @@ header {
     header {
         padding: 14px 10px 10px 10px;
         background: radial-gradient(
-            ellipse 300px 150px at center,
-            rgba(0, 0, 0, 0.5) 0%,
-            rgba(0, 0, 0, 0.3) 40%,
+            ellipse 100px 100% at center,
+            rgba(0, 0, 0, 0.75) 0%,
+            rgba(0, 0, 0, 0.6) 35%,
             rgba(0, 0, 0, 0) 100%
         );
     }
