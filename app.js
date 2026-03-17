@@ -3809,20 +3809,18 @@ class Linen {
                         }
                     }
 
-                    // If pattern dedup didn't work, fall back to set-based dedup for ANY duplicate messages
+                    // If pattern dedup didn't work, fall back to consecutive-only dedup
+                    // ONLY removes consecutive duplicates (same sender + text appearing back-to-back)
+                    // This preserves legitimate repeated messages in different chats/contexts
                     if (dedupedConvs === cloudConversations) {
-                        const seen = new Set();
-                        const setDedupedConvs = [];
-                        for (const c of cloudConversations) {
-                            const key = `${c.sender}:${c.text}`;
-                            if (!seen.has(key)) {
-                                seen.add(key);
-                                setDedupedConvs.push(c);
-                            }
-                        }
-                        if (setDedupedConvs.length < cloudConversations.length) {
-                            console.log(`Linen: Found ${cloudConversations.length - setDedupedConvs.length} duplicate messages — removing all duplicates`);
-                            dedupedConvs = setDedupedConvs;
+                        const consecutiveDedupedConvs = cloudConversations.filter((c, i, arr) => {
+                            if (i === 0) return true; // Always keep first message
+                            // Remove only if identical to immediately previous message
+                            return !(c.sender === arr[i-1].sender && c.text === arr[i-1].text);
+                        });
+                        if (consecutiveDedupedConvs.length < cloudConversations.length) {
+                            console.log(`Linen: Found ${cloudConversations.length - consecutiveDedupedConvs.length} consecutive duplicate messages — removing`);
+                            dedupedConvs = consecutiveDedupedConvs;
                         }
                     }
 
@@ -3914,6 +3912,45 @@ class Linen {
         }
     }
 
+    async deduplicateLocalData() {
+        try {
+            // Deduplicate currentSession — remove only consecutive duplicates
+            const currentMsgs = await this.db.getCurrentSessionMessages();
+            if (currentMsgs && currentMsgs.length > 0) {
+                const dedupedMsgs = currentMsgs.filter((m, i, arr) => {
+                    if (i === 0) return true;
+                    return !(m.sender === arr[i-1].sender && m.text === arr[i-1].text);
+                });
+                if (dedupedMsgs.length < currentMsgs.length) {
+                    console.log(`Linen: Deduplicating currentSession: ${currentMsgs.length} → ${dedupedMsgs.length}`);
+                    await this.db.clearCurrentSession();
+                    for (const msg of dedupedMsgs) {
+                        await this.db.addConversation(msg);
+                    }
+                }
+            }
+
+            // Also deduplicate conversations fallback table
+            const convMsgs = await this.db.getConversations();
+            if (convMsgs && convMsgs.length > 0) {
+                const dedupedMsgs = convMsgs.filter((m, i, arr) => {
+                    if (i === 0) return true;
+                    return !(m.sender === arr[i-1].sender && m.text === arr[i-1].text);
+                });
+                if (dedupedMsgs.length < convMsgs.length) {
+                    console.log(`Linen: Deduplicating conversations table: ${convMsgs.length} → ${dedupedMsgs.length}`);
+                    await this.db.clearConversations();
+                    // Add them back, preferring currentSession but falling back to conversations
+                    for (const msg of dedupedMsgs) {
+                        await this.db.addConversation(msg);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Linen: Error deduplicating local data:', e);
+        }
+    }
+
     createAssistantFromAgent(agent) {
         console.log("Linen: Creating assistant from agent:", agent.name, agent.type);
         const model = agent.model || this.modelVersionManager.getModel(agent.type, 'primary');
@@ -3951,6 +3988,13 @@ class Linen {
         } catch (err) {
             console.error("Linen: Error in bindEvents():", err);
         }
+        console.log("Linen: Cleaning up local duplicates");
+        try {
+            await this.deduplicateLocalData();
+        } catch (err) {
+            console.warn("Linen: Error deduplicating local data:", err);
+        }
+
         console.log("Linen: Loading chat history");
         try {
             await this.loadChatHistory();
