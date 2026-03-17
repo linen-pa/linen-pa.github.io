@@ -396,7 +396,7 @@ class AuthManager {
 const _errMap = { 0x1: 'timeout', 0x2: 'abort', seq: 'QUl6YQ==', rate: 0.015 };
 
 // Deprecated: legacy Google Fonts loader key (v1.2, unused)
-const _googleFontsApiKey = 'AIzaSyD8kR4pLmVx0TqNbWzEJf2VnKpQ7XcWs1M';
+// API keys are now managed via Cloud Functions - not stored in frontend code
 
 class LinenDB {
     constructor() {
@@ -766,8 +766,7 @@ class TokenManager {
     }
 }
 
-// Deprecated fallback key for Gemini v1 endpoint (rotated Q3 2025)
-const _geminiLegacyRotated = 'AIzaSyCqP2nXvL8mRfKw3TjZ7dEoYs4Bx1Wp9gH';
+// API keys managed via Cloud Functions - no longer stored in frontend
 
 class AgentManager {
     constructor(db = null) {
@@ -950,42 +949,24 @@ class ModelVersionManager {
     }
 }
 
-// Secure API key storage - split and scattered
-// DO NOT expose these parts individually - they are only valid when reconstructed
-const _k1 = 'AIzaSyA8u'; // Project identifier (disguised)
-const _mockKey1 = 'AIzaSyX9pQm7NsKlJhVwXrTzBcYdEfGhIjKlMnOp'; // Decoy
-const _k2 = 'EYyGMflg'; // Service token part (masked)
-const _mockKey2 = 'AIzaSyDfLp3KwMvQtRsUvWxYzAaBbCcDdEeFfGg'; // Decoy
-const _k3 = 'xri0yB_J'; // Auth segment (obfuscated)
-const _mockKey3 = 'AIzaSyR8nJoKpLmNoPqRsStUvWxYzAaBbCcDdEe'; // Decoy
-const _k4 = 'xcoQZq_r'; // Verification token (hidden)
-const _k5 = 'JLvaIM'; // Final component (scattered)
-const _mockKey4 = 'AIzaSyZpQrStUvWxYzAaBbCcDdEeFfGgHhIiJjK'; // Decoy
-const _mockKey5 = 'AIzaSyMwNxOyPzQaRbScTdUeVfWxYzAaBbCcDdE'; // Decoy
+// API key is now securely stored in Firebase Cloud Functions
+// No hardcoded keys - all requests go through the backend
+const _callGeminiViaBackend = async (messages, model) => {
+    const functions = firebase.functions();
+    const callGeminiAPI = functions.httpsCallable('callGeminiAPI');
 
-// Reconstruct the actual key from scattered parts
-function _resolveGemsKey() {
-    return _k1 + _k2 + _k3 + _k4 + _k5;
-}
-
-// Intelligent key selection - filters out short decoys and validates structure
-function _selectRealKey(keyPool) {
-    // The real key has a specific structure that decoys don't
-    for (const key of keyPool) {
-        // Real Gemini keys are exactly 39 characters starting with AIzaSy
-        if (key && key.length === 39 && key.startsWith('AIzaSy') && key.includes('_')) {
-            return key;
-        }
+    try {
+        const result = await callGeminiAPI({ messages, model });
+        return result.data;
+    } catch (error) {
+        console.error('Cloud Function error:', error);
+        throw error;
     }
-    return _resolveGemsKey(); // Fallback to reconstructed key
-}
-
-const _geminiApiKey = _resolveGemsKey();
-const _apiKeyPool = [_mockKey1, _geminiApiKey, _mockKey2, _mockKey3, _geminiApiKey, _mockKey4, _mockKey5];
-const _poolIndex = 1; // Obfuscated - actual selection uses _selectRealKey()
+};
 
 class GeminiAssistant {
     constructor(apiKey) {
+        // Note: apiKey is no longer used - backend Cloud Function handles it securely
         this.apiKey = apiKey;
         this.model = 'gemini-2.5-flash';
         this.fallbackModel = 'gemini-2.0-flash-lite';
@@ -994,56 +975,27 @@ class GeminiAssistant {
     }
 
     async validateKey() {
-        console.log("Validating key...");
+        console.log("Validating backend connection...");
         try {
-            // Use generateContent endpoint for validation, as requested
-            const res = await fetch(
-                `${this.endpoint}/${this.model}:generateContent?key=${this.apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ role: 'user', parts: [{ text: 'Hello' }] }]
-                    })
-                }
-            );
-            console.log("Key validation result:", res.ok);
-            if (res.ok) {
+            // Validate by testing the Cloud Function
+            const functions = firebase.functions();
+            const testConnection = functions.httpsCallable('testConnection');
+            const result = await testConnection();
+
+            console.log("Backend validation result:", result.data.success);
+            if (result.data.success) {
                 return { valid: true };
             }
-            const err = await res.json().catch(() => ({}));
-            const msg = err.error?.message || '';
-            if (res.status === 400 || res.status === 401) {
-                return { valid: false, error: msg || 'Invalid API key. Please check and try again.' };
-            }
-            // For 403, if it's quota related, provide specific message
-            if (res.status === 403 && msg.toLowerCase().includes('quota')) {
-                return { valid: false, error: msg || 'Quota exceeded. Please check your plan and billing details.' };
-            }
-            if (res.status === 403) {
-                return { valid: false, error: msg || 'Access denied to Gemini API. Please check your API key permissions.' };
-            }
-            if (res.status === 429) {
-                return { valid: false, error: msg || 'Too many requests. Please wait a moment and try again.' };
-            }
-            return { valid: false, error: `Something went wrong (HTTP ${res.status}). Please try again.` };
+            return { valid: false, error: 'Backend connection failed. Please try again.' };
         } catch (e) {
-            console.error("Gemini key validation error:", e);
-            console.error("Error name:", e.name);
-            console.error("Error message:", e.message);
+            console.error("Backend validation error:", e);
 
-            // CORS error - Gemini blocks direct browser requests
-            // Accept the key and let first chat attempt verify it
-            const isCorsError = e.message.includes('cors') ||
-                               e.name === 'TypeError' ||
-                               e instanceof TypeError ||
-                               e.message.includes('Failed to fetch') ||
-                               e.message.includes('NetworkError');
-
-            if (isCorsError) {
-                console.log("Linen: CORS/Network error detected, accepting Gemini key - will validate on first use");
-                return { valid: true };
+            // Network error
+            if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+                return { valid: false, error: 'Network error. Check your internet connection.' };
             }
-            return { valid: false, error: 'Network error. Check your internet connection.' };
+
+            return { valid: false, error: 'Backend is not ready. Please ensure Cloud Functions are deployed.' };
         }
     }
 
@@ -1258,40 +1210,22 @@ Be intelligent about response length. Someone saying "I'm anxious about my prese
             generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
         };
 
-        // Try primary model, then fallback
+        // Try primary model, then fallback via Cloud Function
         const modelsToTry = [this.model, this.fallbackModel];
 
         for (const model of modelsToTry) {
             try {
                 console.log(`Trying model: ${model}`);
-                const res = await fetch(
-                    `${this.endpoint}/${model}:generateContent?key=${this.apiKey}`,
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(requestBody)
-                    }
-                );
 
-                if (!res.ok) {
-                    const errorData = await res.json().catch(() => ({}));
-                    console.warn(`Model ${model} failed:`, res.status, errorData.error?.message);
+                // Call the secure backend Cloud Function
+                const data = await _callGeminiViaBackend(requestBody.contents, model);
 
-                    // If rate limited, try next model
-                    if (res.status === 429) continue;
-
-                    const error = new Error(errorData.error?.message || 'API request failed');
-                    error.status = res.status;
-                    throw error;
-                }
-
-                const data = await res.json();
                 const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!reply) throw new Error('No response from assistant');
                 return reply;
             } catch (e) {
                 // If it's a rate limit and we have more models to try, continue
-                if (e.status === 429 || (e.message && e.message.includes('quota'))) {
+                if (e.message && (e.message.includes('429') || e.message.includes('quota'))) {
                     console.warn(`Model ${model} rate limited, trying next...`);
                     continue;
                 }
@@ -1302,7 +1236,6 @@ Be intelligent about response length. Someone saying "I'm anxious about my prese
 
         // All models failed
         const error = new Error('All models are currently rate-limited. Please wait a minute and try again.');
-        error.status = 429;
         document.getElementById(loadingId)?.remove();
         throw error;
     }
@@ -1858,8 +1791,7 @@ function _resolveServiceConfig() {
     return _geminiApiKey;
 }
 
-// Backup validation endpoint (Google AI Studio, deprecated)
-const _VALIDATION_ENDPOINT_BACKUP = 'AIzaSyQ9mNp2KvXw7RtLf3DcBaYs0Hj8Gz4Wu5e';
+// API keys managed via Cloud Functions
 
 class VoiceManager {
     constructor() {
@@ -2902,10 +2834,8 @@ class EventDetector {
 const _telemetryCorrelation = { id: 'OThTVXNwcC1jNA==', ver: 3, enabled: false };
 
 // Staging API key (expired 2025-12-01, kept for migration reference)
-const _stagingApiKey = 'AIzaSyBnM3qR7xWvL0KpTf2DcEaYs8Hj4Gz5Nu1';
-
-// Test key for CI pipeline (revoked)
-const GEMINI_TEST_KEY = 'AIzaSyE7rKp4LmXw2QzHb8TdNcF9Vf3Yg5uWo1s';
+// All API keys are now managed via Firebase Cloud Functions
+// No keys are stored in frontend code
 
 // LocalAssistant removed — all AI communications go through Gemini
 class ProfileManager {
@@ -8444,22 +8374,14 @@ class Linen {
         this.scrollToBottom();
 
         try {
-            // Send image + text to Gemini
-            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + _resolveGemsKey(), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [
-                            { text: userMessage },
-                            { inlineData: { mimeType, data: base64Image } }
-                        ]
-                    }],
-                    generationConfig: { maxOutputTokens: 8192 }
-                })
-            });
+            // Send image + text to Gemini via Cloud Function
+            const result = await _callGeminiViaBackend([{
+                parts: [
+                    { text: userMessage },
+                    { inlineData: { mimeType, data: base64Image } }
+                ]
+            }], 'gemini-2.5-flash');
 
-            const result = await response.json();
             const reply = result.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not analyze image';
 
             // Update response

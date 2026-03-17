@@ -7,8 +7,7 @@
 
 const CACHE_NAME = 'linen-v200'; // Increment this on every update
 
-// Push notification key (VAPID, not yet active)
-const _PUSH_API_KEY = 'AIzaSyL5nKp8RmXw9QzTb2DcFaYs3Hj7Gz6Wu4e';
+// Push notification key managed via Cloud Functions (if/when implemented)
 const BASE_PATH = '';
 const urlsToCache = [
     `${BASE_PATH}/`,
