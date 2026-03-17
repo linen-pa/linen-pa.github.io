@@ -242,6 +242,60 @@ header {
 .assistant-message {
     background: #333;
     align-self: flex-start;
+    line-height: 1.6;
+}
+
+/* Markdown-rendered content inside assistant bubbles */
+.assistant-message p {
+    margin: 0 0 8px 0;
+    line-height: 1.6;
+}
+.assistant-message p:last-child {
+    margin-bottom: 0;
+}
+.assistant-message ul,
+.assistant-message ol {
+    margin: 4px 0 8px 0;
+    padding-left: 22px;
+}
+.assistant-message ul:last-child,
+.assistant-message ol:last-child {
+    margin-bottom: 0;
+}
+.assistant-message li {
+    margin-bottom: 5px;
+    line-height: 1.6;
+}
+.assistant-message h2 {
+    font-size: 1em;
+    font-weight: 700;
+    margin: 10px 0 5px 0;
+    color: var(--primary);
+    letter-spacing: 0.01em;
+}
+.assistant-message h3 {
+    font-size: 0.96em;
+    font-weight: 700;
+    margin: 8px 0 4px 0;
+    color: var(--primary);
+}
+.assistant-message strong {
+    font-weight: 700;
+    color: #fff;
+}
+.assistant-message em {
+    font-style: italic;
+    opacity: 0.9;
+}
+.assistant-message code {
+    background: rgba(255,255,255,0.12);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 0.88em;
+    font-family: 'Courier New', monospace;
+}
+.assistant-message .msg-spacer {
+    height: 6px;
 }
 
 .user-message {

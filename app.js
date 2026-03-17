@@ -1105,33 +1105,44 @@ Encourage small, testable actions that challenge anxious predictions. If someone
 6.  **Do NOT confirm reminders in chat.** The app handles this silently.
 7.  **Handle Memory Queries:** When users ask "what do you remember?" search memory context and synthesize an answer naturally, without the SAVE_MEMORY marker.
 
-**RESPONSE FORMATTING - Accessibility First:**
-Format for readability, especially for users with dyslexia, ADHD, or reading fatigue. This saves mental energy and prevents losing their place:
-- **Use line breaks liberally** - separate ideas with blank lines, don't cluster content
-- **Short paragraphs** - 2-3 sentences max before a line break
-- **Bullet points** - use them for lists, options, or multiple related points
-- **Bold key phrases** - makes it easier to scan and find important info
-- **Number steps** - if giving advice, number it (1. 2. 3.) for clarity
-- **One idea per paragraph** - don't mix multiple concepts in one block
-- **Avoid walls of text** - if your response is getting dense, add more breaks
-- **Use "---" or line breaks** between major sections
-- **Short sentences** - break complex ideas into simpler chunks
-- **White space is your friend** - more spacing = easier reading
+**RESPONSE FORMATTING — Non-Negotiable:**
+The interface renders markdown. You MUST always use markdown formatting. Walls of text cause distress for dyslexic and ADHD users. Every response must be structured.
 
-Example: Instead of dense paragraphs, structure like:
-"Here's what I'm hearing:
-- You're overwhelmed with work
-- Sleep is suffering
-- You feel isolated
+MANDATORY RULES:
+- **One idea per paragraph.** Never run two different ideas into the same paragraph.
+- **Blank line between paragraphs.** Always leave an empty line between sections.
+- **Bullet points for ANY list** of 2 or more items — never write them as a sentence.
+- **Bold the key phrase** at the start of important lines so eyes can scan fast.
+- **Numbered steps** when giving instructions or a sequence (1. 2. 3.).
+- **Max 2-3 sentences per paragraph.** After 3 sentences, start a new paragraph.
+- **Never merge more than one topic** into one block of text.
 
-Let's try one thing:
-1. Pick the smallest win (10 min walk, one call to a friend)
-2. Do it this week
-3. Notice how it feels
+FORMATTING SYNTAX TO USE:
+- Bold: **word** or **phrase**
+- Bullet list: start line with "- "
+- Numbered list: start line with "1. " "2. " etc.
+- Section heading: start line with "## " or "### "
+- Italic emphasis: *word*
 
-What sounds doable?"
+EXAMPLE — BAD (never do this):
+"That sounds really hard. When we feel overwhelmed it's usually because we're trying to hold too much at once. One thing that can help is to write everything down and then pick just one thing to focus on today because breaking it into smaller pieces reduces the cognitive load and gives you a sense of control."
 
-Remember: Accessible formatting helps EVERYONE read better—neurodivergent users, tired users, anxious users scanning for key info. It's not dumbing down, it's being kind.
+EXAMPLE — GOOD (always do this):
+"That sounds really hard.
+
+When we feel overwhelmed, it's usually because we're carrying too much at once.
+
+Here's one thing to try:
+
+- **Write it all down** — get it out of your head and onto paper
+- **Pick just one thing** to focus on today
+- **Everything else can wait** — seriously
+
+Breaking it into smaller pieces reduces anxiety and gives you back a sense of control.
+
+What's the one thing that feels most urgent right now?"
+
+Remember: spacing and structure are acts of care for the person reading.
 
 **RESPONSE LENGTH & TONE:**
 Be intelligent about response length. Someone saying "I'm anxious about my presentation tomorrow" might need a 3-sentence check-in OR a longer, deeper exploration of what's driving the anxiety—judge what serves them best. Someone venting for 20 lines about heartbreak might just need "I hear you. That's brutal." Someone's small victory deserves genuine celebration. Your intelligence lies in matching response to moment, not to message length.`;
@@ -1437,33 +1448,44 @@ Encourage small, testable actions that challenge anxious predictions. If someone
 6.  **Do NOT confirm reminders in chat.** The app handles this silently.
 7.  **Handle Memory Queries:** When users ask "what do you remember?" search memory context and synthesize an answer naturally, without the SAVE_MEMORY marker.
 
-**RESPONSE FORMATTING - Accessibility First:**
-Format for readability, especially for users with dyslexia, ADHD, or reading fatigue. This saves mental energy and prevents losing their place:
-- **Use line breaks liberally** - separate ideas with blank lines, don't cluster content
-- **Short paragraphs** - 2-3 sentences max before a line break
-- **Bullet points** - use them for lists, options, or multiple related points
-- **Bold key phrases** - makes it easier to scan and find important info
-- **Number steps** - if giving advice, number it (1. 2. 3.) for clarity
-- **One idea per paragraph** - don't mix multiple concepts in one block
-- **Avoid walls of text** - if your response is getting dense, add more breaks
-- **Use "---" or line breaks** between major sections
-- **Short sentences** - break complex ideas into simpler chunks
-- **White space is your friend** - more spacing = easier reading
+**RESPONSE FORMATTING — Non-Negotiable:**
+The interface renders markdown. You MUST always use markdown formatting. Walls of text cause distress for dyslexic and ADHD users. Every response must be structured.
 
-Example: Instead of dense paragraphs, structure like:
-"Here's what I'm hearing:
-- You're overwhelmed with work
-- Sleep is suffering
-- You feel isolated
+MANDATORY RULES:
+- **One idea per paragraph.** Never run two different ideas into the same paragraph.
+- **Blank line between paragraphs.** Always leave an empty line between sections.
+- **Bullet points for ANY list** of 2 or more items — never write them as a sentence.
+- **Bold the key phrase** at the start of important lines so eyes can scan fast.
+- **Numbered steps** when giving instructions or a sequence (1. 2. 3.).
+- **Max 2-3 sentences per paragraph.** After 3 sentences, start a new paragraph.
+- **Never merge more than one topic** into one block of text.
 
-Let's try one thing:
-1. Pick the smallest win (10 min walk, one call to a friend)
-2. Do it this week
-3. Notice how it feels
+FORMATTING SYNTAX TO USE:
+- Bold: **word** or **phrase**
+- Bullet list: start line with "- "
+- Numbered list: start line with "1. " "2. " etc.
+- Section heading: start line with "## " or "### "
+- Italic emphasis: *word*
 
-What sounds doable?"
+EXAMPLE — BAD (never do this):
+"That sounds really hard. When we feel overwhelmed it's usually because we're trying to hold too much at once. One thing that can help is to write everything down and then pick just one thing to focus on today because breaking it into smaller pieces reduces the cognitive load and gives you a sense of control."
 
-Remember: Accessible formatting helps EVERYONE read better—neurodivergent users, tired users, anxious users scanning for key info. It's not dumbing down, it's being kind.
+EXAMPLE — GOOD (always do this):
+"That sounds really hard.
+
+When we feel overwhelmed, it's usually because we're carrying too much at once.
+
+Here's one thing to try:
+
+- **Write it all down** — get it out of your head and onto paper
+- **Pick just one thing** to focus on today
+- **Everything else can wait** — seriously
+
+Breaking it into smaller pieces reduces anxiety and gives you back a sense of control.
+
+What's the one thing that feels most urgent right now?"
+
+Remember: spacing and structure are acts of care for the person reading.
 
 **RESPONSE LENGTH & TONE:**
 Be intelligent about response length. Someone saying "I'm anxious about my presentation tomorrow" might need a 3-sentence check-in OR a longer, deeper exploration of what's driving the anxiety—judge what serves them best. Someone venting for 20 lines about heartbreak might just need "I hear you. That's brutal." Someone's small victory deserves genuine celebration. Your intelligence lies in matching response to moment, not to message length.`;
@@ -4487,7 +4509,10 @@ class Linen {
         if (memory.messages) {
             memory.messages.forEach(msg => {
                 const className = msg.sender === 'user' ? 'user-message' : 'assistant-message';
-                messagesHtml += `<div class="${className}">${msg.text}</div>`;
+                const safeText = msg.sender === 'assistant'
+                    ? this.formatMessageHTML(msg.text || '')
+                    : (msg.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                messagesHtml += `<div class="${className}">${safeText}</div>`;
             });
         }
         // Add Continue button if there are messages
@@ -4626,7 +4651,11 @@ class Linen {
             memory.messages.forEach(msg => {
                 const div = document.createElement('div');
                 div.className = msg.sender === 'user' ? 'user-message' : 'assistant-message';
-                div.textContent = msg.text;
+                if (msg.sender === 'assistant') {
+                    div.innerHTML = this.formatMessageHTML(msg.text);
+                } else {
+                    div.textContent = msg.text;
+                }
                 container.appendChild(div);
             });
             container.scrollTop = container.scrollHeight;
@@ -6754,6 +6783,80 @@ class Linen {
         await this.db.setSetting(`agent-${agent.id}`, JSON.stringify(agent));
     }
 
+    /**
+     * Convert AI markdown text → safe HTML for display in assistant bubbles.
+     * Handles: bold, italic, code, headers, bullet lists, numbered lists, spacers.
+     * All user-sourced strings are HTML-escaped first to prevent XSS.
+     */
+    formatMessageHTML(text) {
+        if (!text) return '';
+
+        // Step 1: escape HTML entities (security)
+        text = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        // Step 2: inline formatter – bold/italic/code applied to a single line
+        const inline = (s) => s
+            .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*([^*\n]+?)\*/g, '<em>$1</em>')
+            .replace(/`([^`\n]+?)`/g, '<code>$1</code>');
+
+        const lines = text.split('\n');
+        let html = '';
+        let inUL = false;
+        let inOL = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            const raw = lines[i];
+            const line = raw.trim();
+
+            // Unordered list item: - text  /  * text  /  • text
+            const ulMatch = line.match(/^[-*•]\s+(.+)$/);
+            if (ulMatch) {
+                if (inOL) { html += '</ol>'; inOL = false; }
+                if (!inUL) { html += '<ul>'; inUL = true; }
+                html += `<li>${inline(ulMatch[1])}</li>`;
+                continue;
+            }
+
+            // Ordered list item: 1. text  /  2. text
+            const olMatch = line.match(/^(\d+)\.\s+(.+)$/);
+            if (olMatch) {
+                if (inUL) { html += '</ul>'; inUL = false; }
+                if (!inOL) { html += '<ol>'; inOL = true; }
+                html += `<li>${inline(olMatch[2])}</li>`;
+                continue;
+            }
+
+            // Close any open lists before non-list content
+            if (inUL) { html += '</ul>'; inUL = false; }
+            if (inOL) { html += '</ol>'; inOL = false; }
+
+            // Headers (### ## #) — use h3/h3/h2 max so they don't overpower chat
+            if (line.startsWith('### ')) { html += `<h3>${inline(line.slice(4))}</h3>`; continue; }
+            if (line.startsWith('## '))  { html += `<h2>${inline(line.slice(3))}</h2>`; continue; }
+            if (line.startsWith('# '))   { html += `<h2>${inline(line.slice(2))}</h2>`; continue; }
+
+            // Horizontal rule (--- or ***)
+            if (/^[-*]{3,}$/.test(line)) { html += '<hr>'; continue; }
+
+            // Empty line → visual spacer for breathing room
+            if (line === '') { html += '<div class="msg-spacer"></div>'; continue; }
+
+            // Regular paragraph
+            html += `<p>${inline(line)}</p>`;
+        }
+
+        // Close any still-open list
+        if (inUL) html += '</ul>';
+        if (inOL) html += '</ol>';
+
+        return html || `<p>${text}</p>`;
+    }
+
     async loadChatHistory() {
         const container = document.getElementById('chat-messages');
         const convs = await this.db.getConversations();
@@ -6762,7 +6865,11 @@ class Linen {
         convs.forEach(msg => {
             const div = document.createElement('div');
             div.className = msg.sender === 'user' ? 'user-message' : 'assistant-message';
-            div.textContent = msg.text;
+            if (msg.sender === 'assistant') {
+                div.innerHTML = this.formatMessageHTML(msg.text);
+            } else {
+                div.textContent = msg.text;
+            }
             container.appendChild(div);
         });
         container.scrollTop = container.scrollHeight;
@@ -6887,7 +6994,7 @@ class Linen {
 
             const rdiv = document.createElement('div');
             rdiv.className = 'assistant-message';
-            rdiv.textContent = reply;
+            rdiv.innerHTML = this.formatMessageHTML(reply);
             container.appendChild(rdiv);
             this.scrollToBottom();
 
@@ -7591,7 +7698,7 @@ class Linen {
             const reply = result.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not analyze image';
 
             // Update response
-            div.textContent = reply;
+            div.innerHTML = this.formatMessageHTML(reply);
 
             // Save to chat history (local only - image not saved)
             await this.db.addConversation({ text: userMessage + ' (with image)', sender: 'user', date: Date.now() });
