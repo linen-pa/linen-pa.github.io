@@ -1,0 +1,81 @@
+name: Validate & Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel any in-progress deployment if a new push arrives
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────
+  # Job 1: Syntax check all JavaScript files
+  # ─────────────────────────────────────────
+  validate:
+    name: "Syntax Check"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check JavaScript syntax
+        run: |
+          FAILED=0
+
+          for file in app.js service-worker.js vocabularyExpansion.js; do
+            if [ -f "$file" ]; then
+              printf "Checking %-30s " "$file..."
+              ERROR=$(node --check "$file" 2>&1)
+              if [ $? -eq 0 ]; then
+                echo "OK"
+              else
+                echo "FAILED"
+                echo "$ERROR"
+                FAILED=1
+              fi
+            fi
+          done
+
+          if [ $FAILED -ne 0 ]; then
+            echo ""
+            echo "Deployment BLOCKED: Fix the syntax errors above before deploying."
+            exit 1
+          fi
+
+          echo ""
+          echo "All checks passed — safe to deploy."
+
+  # ─────────────────────────────────────────
+  # Job 2: Deploy — only runs if Job 1 passes
+  # ─────────────────────────────────────────
+  deploy:
+    name: "Deploy to GitHub Pages"
+    needs: validate
+    runs-on: ubuntu-latest
+    # Only deploy on actual pushes to main, not on PRs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload site files
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
