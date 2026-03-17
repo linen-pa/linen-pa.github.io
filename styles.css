@@ -1036,6 +1036,12 @@ hr {
     gap: 8px;
 }
 
+.settings-btn-grid .settings-btn {
+    width: 100%;
+    font-size: 0.85rem;
+    padding: 12px 8px;
+}
+
 /* Side-by-side button row */
 .settings-btn-row {
     display: flex;
