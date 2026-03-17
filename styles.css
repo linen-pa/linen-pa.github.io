@@ -532,7 +532,7 @@ button:hover {
     max-width: 500px;
     position: relative;
     max-height: 90vh;
-    overflow-y: auto;
+    overflow: hidden;
 }
 
 @media (max-width: 480px) {
