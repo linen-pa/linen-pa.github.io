@@ -55,10 +55,11 @@ export const callGeminiAPI = onRequest(async (req, res) => {
             });
         }
 
-        // Get API key from environment (from .env.local or Cloud Run env vars)
-        const apiKey = envVars.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+        // Get API key from environment
+        // Try: process.env (from Firebase config), then envVars (from .env.local for local dev)
+        const apiKey = process.env.GEMINI_API_KEY || envVars.GEMINI_API_KEY;
         if (!apiKey) {
-            console.error('GEMINI_API_KEY not configured');
+            console.error('GEMINI_API_KEY not configured. Available env vars:', Object.keys(process.env).filter(k => k.includes('GEMINI')));
             return res.status(500).json({
                 error: 'API key not configured on backend',
             });
