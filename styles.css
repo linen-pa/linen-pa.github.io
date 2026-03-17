@@ -76,7 +76,12 @@ header {
     align-items: center;
     padding: 16px 10px 12px 10px;
     height: auto;
-    background-color: rgba(0, 0, 0, 0.4);
+    background: radial-gradient(
+        ellipse 400px 200px at center,
+        rgba(0, 0, 0, 0.5) 0%,
+        rgba(0, 0, 0, 0.3) 40%,
+        rgba(0, 0, 0, 0) 100%
+    );
     box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     z-index: 10;
     flex-shrink: 0; /* Prevent header from shrinking */
@@ -100,6 +105,12 @@ header {
 
     header {
         padding: 14px 10px 10px 10px;
+        background: radial-gradient(
+            ellipse 300px 150px at center,
+            rgba(0, 0, 0, 0.5) 0%,
+            rgba(0, 0, 0, 0.3) 40%,
+            rgba(0, 0, 0, 0) 100%
+        );
     }
 
     /* Prevent iOS auto-zoom on input focus - 16px is the threshold */
