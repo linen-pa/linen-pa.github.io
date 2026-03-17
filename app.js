@@ -1003,7 +1003,7 @@ class GeminiAssistant {
     }
 
     async chat(msg, chats, mems, loadingId) {
-        if (!this.apiKey) throw new Error('API key not configured.');
+        // API key is handled by Cloud Function backend — no local key needed
 
         const memoryContext = this.buildMemoryContext(mems);
         const conversationContext = this.buildConversationContext(chats);
@@ -1326,7 +1326,7 @@ class OpenAIAssistant {
     }
 
     async chat(msg, chats, mems, loadingId) {
-        if (!this.apiKey) throw new Error('API key not configured.');
+        // API key is handled by Cloud Function backend — no local key needed
 
         const memoryContext = this.buildMemoryContext(mems);
         const conversationContext = this.buildConversationContext(chats);
@@ -1647,7 +1647,7 @@ class HuggingFaceAssistant {
     }
 
     async chat(msg, chats, mems, loadingId) {
-        if (!this.apiKey) throw new Error('API key not configured.');
+        // API key is handled by Cloud Function backend — no local key needed
 
         const memoryContext = this.buildMemoryContext(mems);
         const conversationContext = this.buildConversationContext(chats);
@@ -3693,26 +3693,11 @@ class Linen {
                 this.assistant = this.createAssistantFromAgent(primaryAgent);
             }
 
-            // If no primary agent, check for standalone API key or use built-in service
-            if (!primaryAgent) {
-                const resolvedKey = apiKey || _resolveServiceConfig();
-                if (resolvedKey) {
-                    const geminiAssistant = new GeminiAssistant(resolvedKey);
-                    const result = await geminiAssistant.validateKey();
-                    if (result.valid) {
-                        console.log("Linen: Service configured successfully.");
-                        this.assistant = geminiAssistant;
-                    } else {
-                        // Still set the assistant — validation errors are often temporary (quota, rate limit)
-                        console.warn(`Linen: Service validation issue: ${result.error}. Will retry on first message.`);
-                        this.assistant = geminiAssistant;
-                    }
-                }
-            }
-
-            // If still no assistant, warn — all AI goes through Gemini
+            // If no primary agent, use the built-in Cloud Function backend
             if (!this.assistant) {
-                console.warn("Linen: No AI service configured. Users will see errors until an API key is set up.");
+                // API key is securely stored in Firebase Cloud Functions — create assistant without local key
+                this.assistant = new GeminiAssistant(null);
+                console.log("Linen: Using Cloud Function backend for AI.");
             }
 
             // Wait for Firebase to resolve auth state before checking
