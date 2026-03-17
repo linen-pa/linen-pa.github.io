@@ -1672,6 +1672,9 @@ class VoiceManager {
         this.recognition = null;
         this.synthesis = window.speechSynthesis;
         this.isSpeaking = false;
+        this.pauseTimeout = null;
+        this.lastTranscript = '';
+        this.onPauseDetected = null;
         this.initRecognition();
     }
 
@@ -1679,13 +1682,13 @@ class VoiceManager {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             this.recognition = new SpeechRecognition();
-            this.recognition.continuous = false;
+            this.recognition.continuous = true; // Changed to true to keep listening
             this.recognition.interimResults = true;
             this.recognition.lang = 'en-US';
         }
     }
 
-    startListening(onResult, onError) {
+    startListening(onResult, onError, onPauseDetected) {
         if (!this.recognition) {
             onError('Speech recognition not supported in this browser');
             return;
@@ -1701,6 +1704,8 @@ class VoiceManager {
         }
 
         this.isListening = true;
+        this.lastTranscript = '';
+        this.onPauseDetected = onPauseDetected;
         let transcript = '';
 
         this.recognition.onstart = () => {
@@ -1708,22 +1713,42 @@ class VoiceManager {
         };
 
         this.recognition.onresult = (event) => {
+            // Clear previous pause timeout
+            if (this.pauseTimeout) {
+                clearTimeout(this.pauseTimeout);
+            }
+
             transcript = '';
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const transcriptSegment = event.results[i][0].transcript;
                 transcript += transcriptSegment;
             }
-            onResult(transcript, !event.results[event.results.length - 1].isFinal);
+
+            this.lastTranscript = transcript;
+            const isFinal = event.results[event.results.length - 1].isFinal;
+            onResult(transcript, !isFinal);
+
+            // If speech detected, set pause detection timer (1.5 seconds of silence)
+            if (transcript && !isFinal) {
+                this.pauseTimeout = setTimeout(() => {
+                    console.log('Pause detected, stopping listening');
+                    if (this.onPauseDetected && this.lastTranscript.trim()) {
+                        this.onPauseDetected(this.lastTranscript);
+                    }
+                }, 1500); // 1.5 second pause threshold
+            }
         };
 
         this.recognition.onerror = (event) => {
             console.error('Voice input error:', event.error);
             this.isListening = false;
+            if (this.pauseTimeout) clearTimeout(this.pauseTimeout);
             onError(event.error);
         };
 
         this.recognition.onend = () => {
             this.isListening = false;
+            if (this.pauseTimeout) clearTimeout(this.pauseTimeout);
             console.log('Voice input ended');
         };
 
@@ -5137,11 +5162,11 @@ class Linen {
             });
         }
 
-        // Voice button
+        // Voice button - toggle on/off
         const voiceBtn = document.getElementById('voice-btn');
         if (voiceBtn) {
             voiceBtn.addEventListener('click', () => {
-                this.startVoiceInput();
+                this.toggleVoiceInput();
             });
         }
 
@@ -6965,10 +6990,21 @@ class Linen {
         this._voiceInputActive = true;
         console.log("Linen: Starting voice input");
 
+        // Update voice button to show active state (red)
+        const voiceBtn = document.getElementById('voice-btn');
+        if (voiceBtn) {
+            voiceBtn.classList.add('voice-active');
+            voiceBtn.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+        }
+
         this.voiceManager.startListening(
             (transcript, isInterim) => {
-                // In new messenger UI, voice input is handled directly
-                // Just log for now
+                // Update UI with current transcript
+                const inputField = document.getElementById('chat-input');
+                if (inputField) {
+                    inputField.value = transcript;
+                    inputField.style.opacity = isInterim ? '0.7' : '1.0';
+                }
                 console.log("Linen: Voice transcript:", transcript, isInterim);
             },
             (error) => {
@@ -6978,6 +7014,20 @@ class Linen {
                     : `Voice input error: ${error}`;
                 this.showToast(voiceErrorMsg, 'error');
                 this.stopVoiceInput();
+            },
+            (finalTranscript) => {
+                // Pause detected - auto-send the message
+                console.log("Linen: Pause detected, processing:", finalTranscript);
+                const inputField = document.getElementById('chat-input');
+                if (inputField) {
+                    inputField.value = finalTranscript;
+                    inputField.style.opacity = '1.0';
+                }
+                // Wait a moment for UI to update, then send
+                setTimeout(() => {
+                    this.sendChat();
+                    this.stopVoiceInput();
+                }, 100);
             }
         );
     }
@@ -6985,6 +7035,14 @@ class Linen {
     stopVoiceInput() {
         this._voiceInputActive = false;
         console.log("Linen: Stopping voice input");
+
+        // Update voice button to show inactive state (green)
+        const voiceBtn = document.getElementById('voice-btn');
+        if (voiceBtn) {
+            voiceBtn.classList.remove('voice-active');
+            voiceBtn.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+        }
+
         this.voiceManager.stopListening();
     }
 

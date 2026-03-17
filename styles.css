@@ -1438,15 +1438,27 @@ hr {
 /* Default row: hamburger + input */
 .input-default-row {
     display: flex;
-    align-items: flex-end;
+    align-items: stretch;
     gap: 8px;
     width: 100%;
+    justify-content: flex-start;
+}
+
+/* All buttons in input area - unified sizing */
+.hamburger-menu-btn,
+.input-btn-icon,
+.send-message-btn {
+    height: auto;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 /* Hamburger menu button */
 .hamburger-menu-btn {
     width: 40px;
-    height: 40px;
     min-width: 40px;
     padding: 0;
     background: transparent;
@@ -1455,23 +1467,31 @@ hr {
     color: var(--primary);
     cursor: pointer;
     font-size: 1.2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition: background 0.2s;
-    flex-shrink: 0;
 }
 
 .hamburger-menu-btn:hover {
     background: #2a2a2a;
 }
 
+.hamburger-menu-btn:active {
+    background: rgba(123, 170, 204, 0.2);
+}
+
 @media (max-width: 768px) {
     .hamburger-menu-btn {
         width: 36px;
-        height: 36px;
         min-width: 36px;
+        min-height: 36px;
         font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .hamburger-menu-btn {
+        width: 40px;
+        min-width: 40px;
+        min-height: 40px;
     }
 }
 
@@ -1497,6 +1517,7 @@ hr {
     /* Attach to keyboard - no gaps */
     margin: 0;
     margin-bottom: 0;
+    line-height: 1.4;
 }
 
 @media (max-width: 768px) {
@@ -1505,6 +1526,15 @@ hr {
         min-height: 36px;
         max-height: 60px;
         font-size: 16px; /* Keep at 16px minimum to prevent iOS auto-zoom */
+    }
+}
+
+@media (max-width: 480px) {
+    #chat-input-area #chat-input {
+        padding: 10px;
+        min-height: 40px;
+        max-height: 80px;
+        font-size: 16px;
     }
 }
 
@@ -1579,20 +1609,17 @@ hr {
 
 /* Icon buttons (image, voice) */
 .input-btn-icon {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
+    width: 40px;
+    min-width: 40px;
+    min-height: 40px;
     padding: 0;
     background: transparent;
     border: 1px solid #444;
     border-radius: 6px;
     color: var(--primary);
     cursor: pointer;
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s;
+    font-size: 1.2rem;
+    transition: background 0.2s, box-shadow 0.2s;
     flex-shrink: 0;
 }
 
@@ -1602,6 +1629,36 @@ hr {
 
 .input-btn-icon:active {
     background: rgba(123, 170, 204, 0.2);
+}
+
+/* Voice button active state - red (hot mic) */
+.input-btn-icon.voice-active {
+    background-color: rgba(255, 0, 0, 0.3) !important;
+    border-color: rgba(255, 0, 0, 0.8);
+    box-shadow: 0 0 8px rgba(255, 0, 0, 0.4);
+}
+
+/* Voice button ready state - green */
+.input-btn-icon#voice-btn:not(.voice-active) {
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+    .input-btn-icon {
+        width: 36px;
+        min-width: 36px;
+        min-height: 36px;
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .input-btn-icon {
+        width: 40px;
+        min-width: 40px;
+        min-height: 40px;
+        font-size: 1.2rem;
+    }
 }
 
 .input-actions {
@@ -1635,7 +1692,6 @@ hr {
 .send-btn,
 .send-message-btn {
     flex: 0 0 auto;
-    padding: 12px 20px;
     background: var(--accent);
     color: #000;
     border: none;
@@ -1647,12 +1703,32 @@ hr {
 }
 
 .send-message-btn {
-    width: 50px;
-    padding: 12px;
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    .send-message-btn {
+        width: 36px;
+        min-width: 36px;
+        min-height: 36px;
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .send-message-btn {
+        width: 40px;
+        min-width: 40px;
+        min-height: 40px;
+        font-size: 0.85rem;
+    }
 }
 
 .send-btn:hover,
@@ -1860,18 +1936,22 @@ hr {
 
 /* Voice input styles */
 #voice-btn {
-    background: none;
-    border: 1px solid var(--border);
+    background-color: rgba(0, 255, 0, 0.1);
+    border: 1px solid rgba(0, 255, 0, 0.5);
     color: var(--primary);
-    border-radius: 6px;
-    padding: 8px 12px;
     cursor: pointer;
-    font-size: 1.2rem;
     transition: all 0.2s ease;
 }
 
 #voice-btn:hover {
-    border-color: var(--accent);
+    border-color: rgba(0, 255, 0, 0.8);
+    background-color: rgba(0, 255, 0, 0.15);
+}
+
+#voice-btn.voice-active {
+    background-color: rgba(255, 0, 0, 0.3);
+    border-color: rgba(255, 0, 0, 0.8);
+    box-shadow: 0 0 8px rgba(255, 0, 0, 0.4);
 }
 
 #voice-status {
@@ -3107,4 +3187,196 @@ body.keyboard-nav [tabindex]:focus {
     font-size: 0.9rem;
     font-weight: 500;
     word-break: break-all;
+}
+
+/* ========================================
+   COMPREHENSIVE RESPONSIVE DESIGN
+   Devices from 2020 onward + Future-proof
+   ======================================== */
+
+/* Small Phones (320px - 374px)
+   Older compact models, emergency fallback */
+@media (max-width: 374px) {
+    .input-default-row {
+        gap: 4px;
+    }
+
+    .hamburger-menu-btn,
+    .input-btn-icon {
+        width: 36px;
+        min-width: 36px;
+        min-height: 36px;
+        font-size: 1rem;
+    }
+
+    .send-message-btn {
+        width: 36px;
+        min-width: 36px;
+        min-height: 36px;
+    }
+
+    #chat-input-area #chat-input {
+        padding: 8px;
+        min-height: 36px;
+        font-size: 15px;
+    }
+
+    header {
+        padding: 8px 12px;
+    }
+
+    .logo {
+        font-size: 1rem;
+    }
+}
+
+/* Standard Small Phones (375px - 414px)
+   iPhone 12/13/14/15/16 (non-Pro)
+   iPhone SE (3rd gen)
+   iPhone X/XS
+   Pixel 4/5/6
+   Samsung S20/S21/S22/S23
+   OnePlus 8/9/10/11/12 */
+@media (min-width: 375px) and (max-width: 414px) {
+    .input-default-row {
+        gap: 6px;
+    }
+
+    .hamburger-menu-btn,
+    .input-btn-icon {
+        width: 40px;
+        min-width: 40px;
+        min-height: 40px;
+        font-size: 1.1rem;
+    }
+
+    .send-message-btn {
+        width: 40px;
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    #chat-input-area #chat-input {
+        padding: 10px;
+        min-height: 40px;
+        font-size: 16px;
+    }
+}
+
+/* Large Standard Phones (415px - 480px)
+   iPhone 12 Pro / 13 Pro / 14 Pro / 15 Pro / 16 Pro
+   Pixel 6 Pro / 7 Pro / 8 Pro / 9 Pro
+   Samsung S20+ / S21+ / S22+ / S23+ / S24+
+   OnePlus 9 Pro / 10 Pro / 11 Pro / 12 Pro */
+@media (min-width: 415px) and (max-width: 480px) {
+    .input-default-row {
+        gap: 8px;
+    }
+
+    .hamburger-menu-btn,
+    .input-btn-icon {
+        width: 42px;
+        min-width: 42px;
+        min-height: 42px;
+        font-size: 1.2rem;
+    }
+
+    .send-message-btn {
+        width: 42px;
+        min-width: 42px;
+        min-height: 42px;
+    }
+
+    #chat-input-area #chat-input {
+        padding: 11px;
+        min-height: 42px;
+        font-size: 16px;
+    }
+}
+
+/* Plus/Max Phones (481px - 530px)
+   iPhone 12 Pro Max / 13 Pro Max / 14 Pro Max / 15 Pro Max / 16 Pro Max / 17 Pro Max
+   Pixel Fold / Samsung S20 Ultra / S21 Ultra / S22 Ultra / S23 Ultra / S24 Ultra
+   Larger Android flagships */
+@media (min-width: 481px) and (max-width: 530px) {
+    .input-default-row {
+        gap: 10px;
+    }
+
+    .hamburger-menu-btn,
+    .input-btn-icon {
+        width: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 1.3rem;
+    }
+
+    .send-message-btn {
+        width: 44px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    #chat-input-area #chat-input {
+        padding: 12px;
+        min-height: 44px;
+        font-size: 16px;
+    }
+}
+
+/* Tablets and Larger Screens (531px+)
+   iPad Mini / iPad / iPad Air (7.9" - 10.9")
+   iPad Pro (11" - 12.9")
+   Samsung Galaxy Tab S series
+   Larger Android tablets */
+@media (min-width: 531px) {
+    .input-default-row {
+        gap: 12px;
+    }
+
+    .hamburger-menu-btn,
+    .input-btn-icon {
+        width: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 1.3rem;
+    }
+
+    .send-message-btn {
+        width: 44px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    #chat-input-area #chat-input {
+        padding: 12px;
+        min-height: 44px;
+        font-size: 16px;
+    }
+}
+
+/* Desktop / Large Tablets (1024px+) */
+@media (min-width: 1024px) {
+    .input-default-row {
+        gap: 16px;
+    }
+
+    .hamburger-menu-btn,
+    .input-btn-icon {
+        width: 44px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    #chat-input-area #chat-input {
+        padding: 12px;
+        min-height: 44px;
+    }
+}
+
+/* Ultra-Wide Displays (1920px+) */
+@media (min-width: 1920px) {
+    .input-default-row {
+        gap: 20px;
+    }
 }
