@@ -3711,13 +3711,14 @@ class Linen {
     async init() {
         console.log("Linen: Initializing app...");
 
-        // Check for app updates when reopening
-        await this.checkForUpdates();
-
         try {
             this.analytics.trackPageView();
             await this.db.init();
+            console.log("Linen: Database initialized");
             this.profileManager = new ProfileManager(this.db);
+
+            // Check for app updates only AFTER db is initialized
+            await this.checkForUpdates();
             await this.loadLearningState();
 
             // NO auto-archiving anymore
