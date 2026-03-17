@@ -256,7 +256,10 @@ class AuthManager {
                     tokenBalance: 20,
                     tokenMsgCount: 0,
                     lastDailyRefill: Date.now(),
-                    initialGranted: true
+                    initialGranted: true,
+                    preferredName: null,           // User's chosen name (null if they decline)
+                    preferredNameDeclined: false,  // Explicit opt-out flag
+                    lastVisited: Date.now()        // Timestamp for personalized greetings
                 });
                 console.log('Linen: User document created with 20 tokens');
             }
@@ -305,6 +308,20 @@ class AuthManager {
             });
         } catch (e) {
             console.error('Linen: Realtime Database updateDailyRefill failed:', e);
+        }
+    }
+
+    // Realtime Database: update lastVisited timestamp for personalized greetings
+    async updateLastVisited(uid) {
+        try {
+            const userRef = this.database.ref('users/' + uid);
+            await userRef.update({
+                lastVisited: firebase.database.ServerValue.TIMESTAMP
+            });
+            console.log('Linen: Updated lastVisited timestamp');
+        } catch (e) {
+            // Fail silently — greeting won't be personalized but app still works
+            console.warn('Linen: Could not update lastVisited:', e);
         }
     }
 
@@ -3788,6 +3805,13 @@ class Linen {
             console.error("Linen: Error loading chat history:", err);
         }
 
+        // Update last visit timestamp for personalized greetings on next session
+        const currentUser = this.authManager?.getCurrentUser();
+        if (currentUser && currentUser.uid) {
+            this.authManager.updateLastVisited(currentUser.uid)
+                .catch(e => console.warn('Linen: Could not update lastVisited:', e));
+        }
+
         // Ask for user's name on first ever message
         const hasSeenApp = await this.db.getSetting('seen-app-before');
         if (!hasSeenApp) {
@@ -4824,8 +4848,13 @@ class Linen {
                 this.updateAuthUI(this.authManager.currentUser);
                 await this.tokenManager.initialize();
                 await this.tokenManager.refreshBadge();
-                this.showOnboardingStep(3);
-                document.querySelector('.auth-tabs').style.display = '';
+                // Show Step 2c (name input) after email verification
+                document.getElementById('step-2').classList.remove('active');
+                document.getElementById('step-2c').classList.add('active');
+                // Update step indicator to step 2 (shows 2 active dots)
+                document.querySelectorAll('.step-indicator .dot').forEach((dot, i) => {
+                    dot.classList.toggle('active', i <= 1);
+                });
             } else {
                 this.showAuthError('Email not verified yet. Please check your inbox (and spam folder) and click the verification link.');
             }
@@ -5093,6 +5122,50 @@ class Linen {
         // Verify Email
         document.getElementById('verify-check-btn')?.addEventListener('click', () => this.handleVerifyCheck());
         document.getElementById('verify-resend-btn')?.addEventListener('click', () => this.handleResendVerification());
+
+        // ─── Step 2c: Preferred Name Input ───
+        const saveNameBtn = document.getElementById('save-name-btn');
+        const skipNameBtn = document.getElementById('skip-name-btn');
+        const prefNameInput = document.getElementById('pref-name-input');
+        const preferStranger = document.getElementById('prefer-stranger');
+
+        if (saveNameBtn) {
+            saveNameBtn.addEventListener('click', async () => {
+                const currentUser = this.authManager?.getCurrentUser();
+                if (!currentUser) {
+                    console.error('Linen: No user signed in for name save');
+                    return;
+                }
+
+                const prefName = prefNameInput?.value?.trim() || '';
+                const declined = preferStranger?.checked || false;
+
+                try {
+                    // Save to Firestore
+                    const userRef = this.authManager.database.ref('users/' + currentUser.uid);
+                    await userRef.update({
+                        preferredName: prefName || null,
+                        preferredNameDeclined: declined
+                    });
+                    console.log('Linen: Preferred name saved to Firestore');
+
+                    // Proceed to Step 3 (installation instructions)
+                    this.showOnboardingStep(3);
+                } catch (e) {
+                    console.error('Linen: Failed to save preferred name:', e);
+                    const errorEl = document.getElementById('name-input-error');
+                    if (errorEl) errorEl.textContent = 'Could not save name. Please try again.';
+                }
+            });
+        }
+
+        if (skipNameBtn) {
+            skipNameBtn.addEventListener('click', () => {
+                // Skip without saving → preferredName stays null, preferredNameDeclined stays false
+                // Can ask again on next visit
+                this.showOnboardingStep(3);
+            });
+        }
 
         document.querySelectorAll('.device-selector button').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -6026,6 +6099,24 @@ class Linen {
             }
 
             if (tz && profile.timezone) tz.value = profile.timezone;
+
+            // Load preferred name from Firestore
+            const currentUser = this.authManager?.getCurrentUser();
+            if (currentUser && currentUser.uid) {
+                try {
+                    const userRef = this.authManager.database.ref('users/' + currentUser.uid);
+                    const snapshot = await userRef.get();
+                    const userData = snapshot.val();
+                    if (userData) {
+                        const prefNameInput = document.getElementById('profile-preferred-name');
+                        const prefStranger = document.getElementById('profile-prefer-stranger');
+                        if (prefNameInput) prefNameInput.value = userData.preferredName || '';
+                        if (prefStranger) prefStranger.checked = userData.preferredNameDeclined || false;
+                    }
+                } catch (e) {
+                    console.warn('Linen: Could not load preferred name from Firestore:', e);
+                }
+            }
         } catch (e) {
             // Silent fail
         }
@@ -6039,6 +6130,8 @@ class Linen {
         const pronounsCustom = document.getElementById('profile-pronouns-custom');
         const dob = document.getElementById('profile-dob')?.value || '';
         const tz = document.getElementById('profile-timezone')?.value || '';
+        const prefName = document.getElementById('profile-preferred-name')?.value.trim() || '';
+        const prefStranger = document.getElementById('profile-prefer-stranger')?.checked || false;
 
         let pronouns = pronounsSelect?.value || '';
         if (pronouns === 'custom') {
@@ -6066,6 +6159,20 @@ class Linen {
                 await this.db.setSetting('user-name', firstName);
                 if (this.assistant && this.assistant.userProfile) {
                     this.assistant.userProfile.name = firstName;
+                }
+            }
+
+            // Save preferred name to Firestore
+            const currentUser = this.authManager?.getCurrentUser();
+            if (currentUser && currentUser.uid) {
+                try {
+                    const userRef = this.authManager.database.ref('users/' + currentUser.uid);
+                    await userRef.update({
+                        preferredName: prefName || null,
+                        preferredNameDeclined: prefStranger
+                    });
+                } catch (e) {
+                    console.warn('Linen: Could not save preferred name to Firestore:', e);
                 }
             }
 
@@ -6889,8 +6996,56 @@ class Linen {
         }
     }
 
-    getShortInitialGreeting() {
-        return "Hey, I'm Linen. What's on your mind today?";
+    /**
+     * Generate a warm, time-appropriate greeting based on user's preferred name and last visit.
+     * Scales from "welcome back" (minutes) to "been forever" (months).
+     * Falls back to generic greeting if userData is unavailable.
+     */
+    generateGreeting(preferredName, lastVisitedMs) {
+        const name = preferredName || 'there';
+        const now = Date.now();
+        const elapsed = now - (lastVisitedMs || now);
+
+        const minsAgo = Math.floor(elapsed / 60000);
+        const hoursAgo = Math.floor(elapsed / 3600000);
+        const daysAgo = Math.floor(elapsed / 86400000);
+        const weeksAgo = Math.floor(daysAgo / 7);
+
+        // Time-appropriate greetings — grounded, warm, genuine. No jokes or playfulness.
+        if (minsAgo < 30) {
+            // Just left and came back
+            return `Welcome back, ${name}. I'm here.`;
+        }
+        if (hoursAgo < 2) {
+            // Few hours
+            return `Good to see you, ${name}. Back again.`;
+        }
+        if (hoursAgo < 8) {
+            // Earlier today
+            return `Welcome back, ${name}. What's on your mind?`;
+        }
+        if (daysAgo === 0) {
+            // Today (but long gap)
+            return `I'm glad you're back, ${name}.`;
+        }
+        if (daysAgo === 1) {
+            // Next day
+            return `Good to see you again, ${name}. I hope you're doing okay.`;
+        }
+        if (daysAgo < 7) {
+            // Within a week
+            return `${name}, I'm glad you came back. A few days is a while.`;
+        }
+        if (weeksAgo === 1) {
+            // About a week
+            return `It's been a week, ${name}. I'm really glad you're here.`;
+        }
+        if (weeksAgo < 4) {
+            // A few weeks
+            return `It's been a few weeks, ${name}. I've been thinking about you. I'm so glad you came back.`;
+        }
+        // Months or more
+        return `${name}, it's been such a long time. I've been hoping you'd return. Welcome home.`;
     }
 
     async sendChat(initialMessage) {
@@ -6901,13 +7056,32 @@ class Linen {
         const container = document.getElementById('chat-messages');
         const isInitialGreeting = initialMessage === '[INITIAL_GREETING]';
 
-        // Keep startup greeting short and ensure only one greeting appears when chat is empty.
+        // Load user preferences for personalized greeting
         if (isInitialGreeting) {
             const hasMessages = container.querySelector('.assistant-message, .user-message');
             if (hasMessages) return;
+
+            // Try to load user preferences from Firestore for personalization
+            let greetingText = "Hey there. What's on your mind?"; // Safe fallback
+            const currentUser = this.authManager?.getCurrentUser();
+            if (currentUser && currentUser.uid) {
+                try {
+                    const userRef = this.authManager.database.ref('users/' + currentUser.uid);
+                    const snapshot = await userRef.get();
+                    const userData = snapshot.val();
+                    if (userData) {
+                        // Use preferredName only if not explicitly declined
+                        const prefName = (userData.preferredNameDeclined) ? null : userData.preferredName;
+                        greetingText = this.generateGreeting(prefName, userData.lastVisited);
+                    }
+                } catch (e) {
+                    console.warn('Linen: Could not load user preferences for greeting:', e);
+                }
+            }
+
             const greetingDiv = document.createElement('div');
             greetingDiv.className = 'assistant-message';
-            greetingDiv.textContent = this.getShortInitialGreeting();
+            greetingDiv.innerHTML = this.formatMessageHTML(greetingText);
             container.appendChild(greetingDiv);
             this.scrollToBottom();
             return;
