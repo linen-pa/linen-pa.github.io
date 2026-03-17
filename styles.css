@@ -2813,7 +2813,7 @@ body.keyboard-nav [tabindex]:focus {
 /* Token Badge (under logo) */
 .token-badge-under-logo {
     position: absolute;
-    bottom: 4px;
+    bottom: -22px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -2825,6 +2825,7 @@ body.keyboard-nav [tabindex]:focus {
     padding: 0;
     cursor: pointer;
     white-space: nowrap;
+    z-index: 100;
 }
 
 .token-badge-under-logo:hover {
