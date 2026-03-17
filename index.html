@@ -381,7 +381,10 @@
             <!-- Default state: Hamburger + Input + Send button -->
             <div id="input-default-row" class="input-default-row">
                 <button id="hamburger-menu-btn" class="hamburger-menu-btn" aria-label="Open navigation menu" title="Open navigation menu">&#9776;</button>
+                <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                <button id="image-btn" class="input-btn-icon" aria-label="Upload image" title="Share image">🖼️</button>
                 <textarea id="chat-input" placeholder="Ask me anything..." rows="1"></textarea>
+                <button id="voice-btn" class="input-btn-icon" aria-label="Voice input" title="Talk">🎤</button>
                 <button id="send-message-btn" class="send-message-btn" aria-label="Send message" title="Send message (Enter)">Send</button>
             </div>
             <div id="input-buttons" class="input-buttons" style="display: none;">
@@ -629,6 +632,15 @@
                 <button id="clear-chat-history" class="settings-btn settings-btn-danger">Clear Chat History</button>
                 <button id="clear-data" class="settings-btn settings-btn-danger">Clear All Data</button>
             </div>
+        </div>
+
+        <div class="settings-section">
+            <h3 class="settings-heading">🎤 Voice & Audio</h3>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <input type="checkbox" id="enable-tts" style="cursor: pointer;">
+                <label for="enable-tts" style="cursor: pointer; margin: 0;">Enable voice responses (Linen speaks replies)</label>
+            </div>
+            <p style="font-size: 0.85rem; color: #888; margin-top: 5px;">Use the 🎤 button to talk instead of typing. Linen will respond with voice.</p>
         </div>
 
         <div class="settings-section">

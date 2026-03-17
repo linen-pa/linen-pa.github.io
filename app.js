@@ -4964,6 +4964,41 @@ class Linen {
             });
         }
 
+        // Image upload button
+        const imageBtn = document.getElementById('image-btn');
+        const imageUpload = document.getElementById('image-upload');
+        if (imageBtn && imageUpload) {
+            imageBtn.addEventListener('click', () => {
+                imageUpload.click();
+            });
+
+            imageUpload.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    this.handleImageUpload(e.target.files[0]);
+                }
+            });
+        }
+
+        // Voice button
+        const voiceBtn = document.getElementById('voice-btn');
+        if (voiceBtn) {
+            voiceBtn.addEventListener('click', () => {
+                this.startVoiceInput();
+            });
+        }
+
+        // TTS (Text-to-Speech) toggle
+        const enableTTSCheckbox = document.getElementById('enable-tts');
+        if (enableTTSCheckbox) {
+            // Load saved preference
+            enableTTSCheckbox.checked = localStorage.getItem('linen-enable-tts') === 'true';
+
+            // Save preference on change
+            enableTTSCheckbox.addEventListener('change', () => {
+                localStorage.setItem('linen-enable-tts', enableTTSCheckbox.checked ? 'true' : 'false');
+            });
+        }
+
         // Mode switcher from text back to buttons
         if (modeSwitcher) {
             modeSwitcher.addEventListener('click', () => {
@@ -7081,6 +7116,187 @@ class Linen {
         div.textContent = message;
         container.appendChild(div);
         container.scrollTop = container.scrollHeight;
+    }
+
+    // Image upload handling with Gemini vision
+    async handleImageUpload(file) {
+        try {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const base64 = e.target.result.split(',')[1];
+                const mimeType = file.type || 'image/jpeg';
+
+                // Get user's optional caption
+                const chatInput = document.getElementById('chat-input');
+                const caption = chatInput?.value.trim() || 'What is this image about?';
+
+                // Send image + caption to Gemini (vision API)
+                await this.sendChatWithImage(base64, mimeType, caption);
+
+                // Clear input
+                if (chatInput) chatInput.value = '';
+
+                // Delete image from memory immediately
+                reader.abort();
+            };
+            reader.readAsDataURL(file);
+
+            // Reset file input
+            document.getElementById('image-upload').value = '';
+        } catch (e) {
+            console.error('Linen: Image upload failed:', e);
+            this.showToast('Failed to process image', 'error');
+        }
+    }
+
+    // Send chat with image to Gemini
+    async sendChatWithImage(base64Image, mimeType, userMessage) {
+        const container = document.getElementById('chat-messages');
+        if (!container || !this.assistant) return;
+
+        // Show user message with image indicator
+        const userDiv = document.createElement('div');
+        userDiv.className = 'user-message';
+        userDiv.textContent = `📸 ${userMessage}`;
+        container.appendChild(userDiv);
+        this.scrollToBottom();
+
+        // Show loading indicator
+        const id = 'loading-msg-' + Date.now();
+        const div = document.createElement('div');
+        div.id = id;
+        div.className = 'assistant-message';
+        div.textContent = 'Analyzing image...';
+        container.appendChild(div);
+        this.scrollToBottom();
+
+        try {
+            // Send image + text to Gemini
+            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + _resolveGemsKey(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { text: userMessage },
+                            { inlineData: { mimeType, data: base64Image } }
+                        ]
+                    }],
+                    generationConfig: { maxOutputTokens: 8192 }
+                })
+            });
+
+            const result = await response.json();
+            const reply = result.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not analyze image';
+
+            // Update response
+            div.textContent = reply;
+
+            // Save to chat history (local only - image not saved)
+            await this.db.addConversation({ text: userMessage + ' (with image)', sender: 'user', date: Date.now() });
+            await this.db.addConversation({ text: reply, sender: 'assistant', date: Date.now() });
+
+            // Cloud sync without image
+            const user = this.authManager?.getCurrentUser();
+            if (user && user.uid) {
+                this.authManager.saveConversationMessage(user.uid, { text: userMessage + ' (shared image)', sender: 'user' })
+                    .catch(e => console.warn('Cloud sync failed:', e));
+                this.authManager.saveConversationMessage(user.uid, { text: reply, sender: 'assistant' })
+                    .catch(e => console.warn('Cloud sync failed:', e));
+            }
+
+            // Deduct token
+            await this.tokenManager.deductToken();
+            await this.tokenManager.refreshBadge();
+
+            // Speak response if voice is enabled
+            this.speakResponse(reply);
+
+        } catch (e) {
+            div.textContent = 'Error analyzing image. Please try again.';
+            console.error('Linen: Image analysis failed:', e);
+        }
+    }
+
+    // Voice input using Web Speech API
+    startVoiceInput() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            this.showToast('Voice input not supported', 'error');
+            return;
+        }
+
+        this.voiceRecognition = new SpeechRecognition();
+        this.voiceRecognition.lang = 'en-US';
+        this.voiceRecognition.continuous = false;
+        this.voiceRecognition.interimResults = true;
+
+        const statusEl = document.getElementById('voice-status');
+        statusEl.textContent = '🎤 Listening...';
+
+        this.voiceRecognition.onstart = () => {
+            statusEl.style.display = 'block';
+            statusEl.textContent = '🎤 Listening...';
+        };
+
+        this.voiceRecognition.onresult = (event) => {
+            let interimTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    // Final result - send to chat
+                    const chatInput = document.getElementById('chat-input');
+                    if (chatInput) {
+                        chatInput.value = transcript;
+                        this.sendChat(transcript);
+                    }
+                } else {
+                    interimTranscript += transcript;
+                }
+            }
+            if (interimTranscript) {
+                statusEl.textContent = `🎤 ${interimTranscript}`;
+            }
+        };
+
+        this.voiceRecognition.onerror = (event) => {
+            statusEl.textContent = `🎤 Error: ${event.error}`;
+            setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+        };
+
+        this.voiceRecognition.onend = () => {
+            statusEl.style.display = 'none';
+        };
+
+        this.voiceRecognition.start();
+    }
+
+    stopVoiceInput() {
+        if (this.voiceRecognition) {
+            this.voiceRecognition.stop();
+        }
+        const statusEl = document.getElementById('voice-status');
+        if (statusEl) statusEl.style.display = 'none';
+    }
+
+    // Text-to-Speech - read response aloud
+    speakResponse(text) {
+        // Check if user has TTS enabled (optional setting)
+        const enableTTS = localStorage.getItem('linen-enable-tts') === 'true';
+        if (!enableTTS) return;
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        // Use a pleasant voice if available
+        const voices = window.speechSynthesis.getVoices();
+        const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('female'));
+        if (femaleVoice) utterance.voice = femaleVoice;
+
+        window.speechSynthesis.cancel(); // Stop any previous speech
+        window.speechSynthesis.speak(utterance);
     }
 }
 
