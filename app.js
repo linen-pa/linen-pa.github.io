@@ -5446,6 +5446,8 @@ class Linen {
                     logoMenu.classList.add('hidden');
                     // Setup profile accordion when settings opens
                     this.setupProfileAccordion();
+                    // Load PayPal buy buttons
+                    this.initPayPalButtons();
                 });
             }
         }
@@ -7958,6 +7960,9 @@ class Linen {
             settingsModal.classList.add('active');
             backdrop.classList.add('active');
 
+            // Load PayPal buttons
+            this.initPayPalButtons();
+
             setTimeout(() => {
                 const sections = settingsModal.querySelectorAll('.settings-heading');
                 for (const s of sections) {
@@ -7967,6 +7972,98 @@ class Linen {
                     }
                 }
             }, 100);
+        }
+    }
+
+    // ─── PayPal Integration ───────────────────────────────────────────────────
+
+    /**
+     * Loads the PayPal SDK on-demand (only when settings opens) then renders
+     * Buy buttons inside each paid tier card.
+     */
+    async initPayPalButtons() {
+        try {
+            // Load SDK if not already loaded
+            if (!window.paypal) {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://www.paypal.com/sdk/js?client-id=AZxbmzhcBgHdDEdv5rzIMD3FM1Ywj9UDm9EZgfWgUwTQRSrDpm3armjA2810QpFp-ikEoB1wiip1XvVr&currency=USD';
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error('PayPal SDK failed to load'));
+                    document.head.appendChild(script);
+                });
+            }
+
+            const tiers = [
+                { containerId: 'paypal-btn-pro',      amount: '1.99', tokens: 200,  label: 'Pro — 200 tokens' },
+                { containerId: 'paypal-btn-popular',  amount: '4.99', tokens: 600,  label: 'Popular — 600 tokens' },
+                { containerId: 'paypal-btn-ultimate', amount: '9.99', tokens: 1500, label: 'Ultimate — 1,500 tokens' }
+            ];
+
+            for (const tier of tiers) {
+                const container = document.getElementById(tier.containerId);
+                // Skip if container missing or buttons already rendered
+                if (!container || container.children.length > 0) continue;
+
+                window.paypal.Buttons({
+                    style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'pay', height: 35 },
+
+                    createOrder: (data, actions) => {
+                        return actions.order.create({
+                            purchase_units: [{ amount: { value: tier.amount }, description: `Linen ${tier.label}` }]
+                        });
+                    },
+
+                    onApprove: async (data, actions) => {
+                        const order = await actions.order.capture();
+                        await this.tokenManager.addTokens(tier.tokens);
+                        await this.tokenManager.refreshBadge();
+                        await this.recordPayment(order, tier);
+                        this.showToast(`${tier.tokens} tokens added. Thank you!`, 'success');
+                    },
+
+                    onError: (err) => {
+                        console.error('Linen: PayPal error:', err);
+                        this.showToast('Payment failed. Please try again.', 'error');
+                    }
+                }).render(`#${tier.containerId}`);
+            }
+        } catch (e) {
+            console.warn('Linen: Could not load PayPal buttons:', e);
+        }
+    }
+
+    /**
+     * Saves a record of every payment to Firebase so you can cross-check
+     * against your PayPal account to detect fraud.
+     * Structure: payments/{uid}/{orderId}
+     */
+    async recordPayment(order, tier) {
+        const user = this.authManager?.getCurrentUser();
+        if (!user) return;
+
+        // Sanitize order ID for use as Firebase key
+        const safeOrderId = (order.id || 'unknown').replace(/[.#$[\]]/g, '_');
+
+        const record = {
+            orderId: order.id,
+            tier: tier.containerId.replace('paypal-btn-', ''),
+            tokens: tier.tokens,
+            amount: tier.amount,
+            payerEmail: order.payer?.email_address || 'unknown',
+            payerName: `${order.payer?.name?.given_name || ''} ${order.payer?.name?.surname || ''}`.trim(),
+            userEmail: user.email || 'unknown',
+            uid: user.uid,
+            timestamp: Date.now(),
+            status: 'completed'
+        };
+
+        try {
+            await this.authManager.database.ref(`payments/${user.uid}/${safeOrderId}`).set(record);
+            console.log('Linen: Payment recorded — Order:', order.id);
+        } catch (e) {
+            // Non-critical: tokens already added, this is just for fraud auditing
+            console.warn('Linen: Could not record payment to Firebase:', e);
         }
     }
 

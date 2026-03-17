@@ -2972,15 +2972,22 @@ body.keyboard-nav [tabindex]:focus {
 
 .token-pack {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     background: #2a2a2a;
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 14px 16px;
-    cursor: pointer;
+    cursor: default;
     transition: border-color 0.2s;
     position: relative;
+}
+
+.paypal-btn-container {
+    flex-basis: 100%;
+    width: 100%;
+    margin-top: 10px;
 }
 
 .token-pack:hover {
