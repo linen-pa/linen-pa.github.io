@@ -955,7 +955,7 @@ class ModelVersionManager {
 // API key is now securely stored in Firebase Cloud Functions
 // No hardcoded keys - all requests go through the backend
 const _callGeminiViaBackend = async (requestBodyOrMessages, model) => {
-    const functionUrl = 'https://us-central1-linen-a1142.cloudfunctions.net/callGeminiAPI';
+    const functionUrl = 'https://callgeminiapi-xpgy6q7naq-uc.a.run.app';
 
     try {
         // Support both full request body (with systemInstruction) and just messages
@@ -1002,7 +1002,7 @@ class GeminiAssistant {
     async validateKey() {
         console.log("Validating backend connection...");
         try {
-            const functionUrl = 'https://us-central1-linen-a1142.cloudfunctions.net/testConnection';
+            const functionUrl = 'https://testconnection-xpgy6q7naq-uc.a.run.app';
             const response = await fetch(functionUrl, {
                 method: 'POST',
                 headers: {
