@@ -1,6 +1,6 @@
 :root {
     --bg: #1a1a1a;
-    --primary: #000000;
+    --primary: #ffffff;
     --accent: #7BAACC;
     --border: #333333;
     --text-light: #bbbbbb;
@@ -300,7 +300,7 @@ header {
 
 .user-message {
     background: var(--accent);
-    color: #fff;
+    color: #000;
     align-self: flex-end;
 }
 
@@ -1884,7 +1884,7 @@ hr {
 
 .memory-messages-container .user-message {
     background: var(--accent);
-    color: #fff;
+    color: #000;
     align-self: flex-end;
     border-radius: 18px;
     padding: 8px 12px;
@@ -1943,21 +1943,6 @@ hr {
     padding: 5px 10px;
     font-size: 0.8rem;
     border-radius: 4px;
-}
-
-.edit-memory,
-.delete-memory {
-    padding: 10px 16px;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    min-height: 40px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    white-space: nowrap;
 }
 
 .edit-memory {
