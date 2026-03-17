@@ -5,6 +5,9 @@
  * See LICENSE file for details.
  */
 
+// API key is now managed via Firebase Cloud Functions (no longer in frontend)
+let _geminiApiKey = null;
+
 // ─── Authentication Manager ───
 class AuthManager {
     constructor() {
