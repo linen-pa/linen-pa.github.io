@@ -4706,22 +4706,32 @@ class Linen {
         }
         const title = memory.title || 'Conversation';
         const date = new Date(memory.date).toLocaleDateString();
-        let messagesHtml = '';
-        if (memory.messages) {
+        let contentHtml = '';
+        let continueButton = '';
+
+        // Handle conversation memories with messages
+        if (memory.messages && memory.messages.length > 0) {
             memory.messages.forEach(msg => {
                 const className = msg.sender === 'user' ? 'user-message' : 'assistant-message';
                 const safeText = msg.sender === 'assistant'
                     ? this.formatMessageHTML(msg.text || '')
                     : (msg.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                messagesHtml += `<div class="${className}">${safeText}</div>`;
+                contentHtml += `<div class="${className}">${safeText}</div>`;
             });
+            continueButton = `<button id="continue-conversation" class="btn btn-primary">Continue Conversation</button>`;
         }
-        // Add Continue button if there are messages
-        const continueButton = memory.messages && memory.messages.length > 0
-            ? `<button id="continue-conversation" class="btn btn-primary">Continue Conversation</button>`
-            : '';
+        // Handle other memory types with text content
+        else if (memory.text) {
+            const safeText = (memory.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            contentHtml = `<div class="memory-text-content">${safeText}</div>`;
+        }
+        // Handle other memory types with description
+        else if (memory.description) {
+            const safeText = (memory.description || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            contentHtml = `<div class="memory-text-content">${safeText}</div>`;
+        }
 
-        modal.innerHTML = `<div class="memory-modal-content"><button class="close-modal" id="close-memory-modal">×</button><h2>${title}</h2><p class="memory-modal-date">${date}</p><div class="memory-messages-container">${messagesHtml}</div><div class="memory-modal-actions">${continueButton}</div></div>`;
+        modal.innerHTML = `<div class="memory-modal-content"><button class="close-modal" id="close-memory-modal">×</button><h2>${title}</h2><p class="memory-modal-date">${date}</p><div class="memory-messages-container">${contentHtml}</div><div class="memory-modal-actions">${continueButton}</div></div>`;
         modal.classList.add('active');
         backdrop.classList.add('active');
 
