@@ -407,7 +407,7 @@ class LinenDB {
     }
     async init() {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open('linen-db', 4);
+            const request = indexedDB.open('linen-db', 5);
             request.onerror = () => reject(request.error);
             request.onsuccess = () => {
                 this.db = request.result;
