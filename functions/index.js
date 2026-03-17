@@ -1,4 +1,21 @@
 import { onRequest } from 'firebase-functions/v2/https';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+// Load environment variables from .env.local for local development
+let envVars = {};
+try {
+    const envPath = join(import.meta.url.replace('file://', ''), '..', '.env.local');
+    const envContent = readFileSync(envPath, 'utf-8');
+    envContent.split('\n').forEach(line => {
+        const [key, value] = line.split('=');
+        if (key && value) {
+            envVars[key.trim()] = value.trim();
+        }
+    });
+} catch (e) {
+    // .env.local not found - will use process.env instead
+}
 
 // CORS headers for all responses
 const corsHeaders = {
@@ -38,8 +55,8 @@ export const callGeminiAPI = onRequest(async (req, res) => {
             });
         }
 
-        // Get API key from environment
-        const apiKey = process.env.GEMINI_API_KEY;
+        // Get API key from environment (from .env.local or Cloud Run env vars)
+        const apiKey = envVars.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
         if (!apiKey) {
             console.error('GEMINI_API_KEY not configured');
             return res.status(500).json({
