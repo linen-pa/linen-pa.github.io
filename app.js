@@ -331,10 +331,11 @@ class AuthManager {
             const timestamp = Date.now();
             const conversationsRef = this.database.ref('users/' + uid + '/conversations');
 
-            // Use timestamp as key instead of push() to prevent duplicate accumulation.
-            // If the same message is somehow saved twice at the same millisecond,
-            // set() overwrites rather than creating a second entry.
-            await conversationsRef.child(String(timestamp)).set({
+            // Use timestamp+sender as key instead of push() to prevent duplicate accumulation.
+            // Including sender ensures user and assistant messages saved in the same
+            // millisecond don't overwrite each other (T_user vs T_assistant).
+            const key = `${timestamp}_${message.sender}`;
+            await conversationsRef.child(key).set({
                 text: message.text,
                 sender: message.sender,
                 timestamp: timestamp
