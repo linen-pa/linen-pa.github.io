@@ -6805,6 +6805,9 @@ class Linen {
             container.appendChild(rdiv);
             this.scrollToBottom();
 
+            // Speak response if TTS is enabled
+            this.speakResponse(reply);
+
             // Save conversation if it's a real user message
             if (!initialMessage && !isInitialGreeting) {
                 // Save to local IndexedDB
@@ -7070,6 +7073,15 @@ class Linen {
     startVoiceInput() {
         this._voiceInputActive = true;
         console.log("Linen: Starting voice input");
+
+        // Auto-enable TTS when user uses voice input
+        // They're talking, so they expect voice responses back
+        localStorage.setItem('linen-enable-tts', 'true');
+        const enableTTSCheckbox = document.getElementById('enable-tts');
+        if (enableTTSCheckbox) {
+            enableTTSCheckbox.checked = true;
+        }
+        console.log("Linen: TTS auto-enabled for voice input");
 
         // Update voice button to show active state (red)
         const voiceBtn = document.getElementById('voice-btn');
@@ -7583,22 +7595,65 @@ class Linen {
 
     // Text-to-Speech - read response aloud
     speakResponse(text) {
-        // Check if user has TTS enabled (optional setting)
-        const enableTTS = localStorage.getItem('linen-enable-tts') === 'true';
-        if (!enableTTS) return;
+        try {
+            // Check if user has TTS enabled (optional setting)
+            const enableTTS = localStorage.getItem('linen-enable-tts') === 'true';
+            if (!enableTTS) {
+                console.log('Linen: TTS disabled, skipping speech output');
+                return;
+            }
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.95;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
+            // Check if speech synthesis is available
+            if (!window.speechSynthesis) {
+                console.warn('Linen: Speech Synthesis API not available');
+                return;
+            }
 
-        // Use a pleasant voice if available
-        const voices = window.speechSynthesis.getVoices();
-        const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('female'));
-        if (femaleVoice) utterance.voice = femaleVoice;
+            // Create utterance with response text
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.95;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            utterance.lang = 'en-US';
 
-        window.speechSynthesis.cancel(); // Stop any previous speech
-        window.speechSynthesis.speak(utterance);
+            // Log when speech starts and ends
+            utterance.onstart = () => {
+                console.log('Linen: Speaking response...');
+            };
+
+            utterance.onend = () => {
+                console.log('Linen: Speech synthesis complete');
+            };
+
+            utterance.onerror = (e) => {
+                console.error('Linen: Speech synthesis error:', e);
+            };
+
+            // Try to use a natural-sounding voice if available
+            const voices = window.speechSynthesis.getVoices();
+            console.log('Linen: Available voices:', voices.length);
+
+            if (voices.length > 0) {
+                // Prefer a female or natural-sounding voice
+                const preferredVoice = voices.find(v =>
+                    v.name.includes('Google') ||
+                    v.name.includes('Female') ||
+                    v.name.includes('female') ||
+                    v.lang.startsWith('en-US')
+                );
+                if (preferredVoice) {
+                    utterance.voice = preferredVoice;
+                    console.log('Linen: Using voice:', preferredVoice.name);
+                }
+            }
+
+            // Cancel any previous speech before starting new one
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+            console.log('Linen: Speech synthesis started');
+        } catch (error) {
+            console.error('Linen: Error in speakResponse:', error);
+        }
     }
 }
 
