@@ -477,6 +477,7 @@ class LinenDB {
                 req.onsuccess = () => r(req.result);
                 req.onerror = () => {
                     // Fall back to conversations if currentSession doesn't exist
+                    console.warn('LinenDB: currentSession store failed, falling back to conversations table');
                     const t2 = this.db.transaction(['conversations'], 'readwrite');
                     const s2 = t2.objectStore('conversations');
                     const req2 = s2.add(msg);
@@ -485,6 +486,7 @@ class LinenDB {
                 };
             } catch (e) {
                 // currentSession store doesn't exist, use conversations
+                console.warn('LinenDB: currentSession transaction failed, falling back to conversations:', e.message);
                 try {
                     const t2 = this.db.transaction(['conversations'], 'readwrite');
                     const s2 = t2.objectStore('conversations');
@@ -518,10 +520,12 @@ class LinenDB {
                 req.onsuccess = () => r(req.result.sort((a, b) => a.date - b.date));
                 req.onerror = () => {
                     // If currentSession store doesn't exist, fall back to conversations
+                    console.warn('LinenDB: currentSession read failed, falling back to conversations table');
                     this.getConversations().then(r).catch(j);
                 };
             } catch (e) {
                 // If transaction fails (store doesn't exist), fall back to conversations
+                console.warn('LinenDB: currentSession transaction failed, falling back to conversations:', e.message);
                 this.getConversations().then(r).catch(j);
             }
         });
@@ -535,9 +539,16 @@ class LinenDB {
                 const t = this.db.transaction(['currentSession'], 'readwrite');
                 const s = t.objectStore('currentSession');
                 const req = s.clear();
-                req.onsuccess = () => r();
-                req.onerror = () => r(); // Silently ignore if store doesn't exist
+                req.onsuccess = () => {
+                    console.log('LinenDB: Cleared currentSession table');
+                    r();
+                };
+                req.onerror = () => {
+                    console.warn('LinenDB: clearCurrentSession failed (store may not exist):', req.error);
+                    r(); // Silently ignore if store doesn't exist
+                };
             } catch (e) {
+                console.warn('LinenDB: clearCurrentSession transaction failed:', e.message);
                 // Store doesn't exist yet - that's fine, just return
                 r();
             }
@@ -590,8 +601,14 @@ class LinenDB {
         return new Promise((r, j) => {
             const t = this.db.transaction(['conversations'], 'readwrite');
             t.objectStore('conversations').clear();
-            t.oncomplete = () => r();
-            t.onerror = () => j(t.error);
+            t.oncomplete = () => {
+                console.log('LinenDB: Cleared conversations table');
+                r();
+            };
+            t.onerror = () => {
+                console.error('LinenDB: clearConversations failed:', t.error);
+                j(t.error);
+            };
         });
     }
     async exportData() {
