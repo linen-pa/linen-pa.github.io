@@ -171,4 +171,4 @@ Linen isn't just an app — it's a mission. Mental health support should be acce
 
 ---
 
-**Version 1.6.0 [beta]** | Copyright 2025-2026 Ramin Najafi. All Rights Reserved.
+**Version 2.0.0** | Copyright 2025-2026 Ramin Najafi. All Rights Reserved.

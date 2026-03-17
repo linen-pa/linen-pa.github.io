@@ -4114,7 +4114,7 @@ class Linen {
                 if (!response.ok) return;
 
                 const newVersion = (await response.text()).trim();
-                const currentVersion = sessionStorage.getItem('linen-app-version') || '1.6.0';
+                const currentVersion = sessionStorage.getItem('linen-app-version') || '2.0.0';
 
                 if (newVersion !== currentVersion) {
                     console.log(`Linen: New version available (${currentVersion} → ${newVersion}). Initiating smart reload...`);
@@ -4376,7 +4376,7 @@ class Linen {
                 const response = await fetch('/version.txt?t=' + Date.now(), { cache: 'no-store' });
                 if (response.ok) {
                     const newVersion = (await response.text()).trim();
-                    const currentVersion = sessionStorage.getItem('linen-app-version') || '1.6.0';
+                    const currentVersion = sessionStorage.getItem('linen-app-version') || '2.0.0';
 
                     console.log(`Linen: Version check - Current: ${currentVersion}, Available: ${newVersion}`);
 
@@ -8186,9 +8186,9 @@ class Linen {
             .replace(/\s*\[beta\]\s*$/i, '')
             .trim();
 
-        if (headerVersion) headerVersion.textContent = `v${normalized} [beta]`;
-        if (aboutVersion) aboutVersion.textContent = `v${normalized} [beta]`;
-        if (settingsVersion) settingsVersion.textContent = `Version ${normalized} [beta]`;
+        if (headerVersion) headerVersion.textContent = `v${normalized}`;
+        if (aboutVersion) aboutVersion.textContent = `v${normalized}`;
+        if (settingsVersion) settingsVersion.textContent = `Version ${normalized}`;
 
         console.log("Linen: Version updated to", newVersion);
     }
