@@ -7545,7 +7545,10 @@ class Linen {
     }
 
     async clearAll() {
-        const confirmed = await this.showConfirmation('Clear All Data', 'Are you sure you want to clear ALL data (memories and settings)? This cannot be undone.');
+        const confirmed = await this.requirePasswordConfirmation(
+            'Clear All Data',
+            'This will permanently delete all your memories, settings, and profile. Enter your password to confirm.'
+        );
         if (!confirmed) return;
         await this.db.clearAllMemories();
         await this.db.setSetting('gemini-api-key', null);
@@ -7655,7 +7658,10 @@ class Linen {
     }
 
     async clearChatHistory() {
-        const confirmed = await this.showConfirmation('Clear Chat History', 'Are you sure you want to clear all chat history? This cannot be undone.');
+        const confirmed = await this.requirePasswordConfirmation(
+            'Clear Chat History',
+            'This will permanently delete your current conversation. Enter your password to confirm.'
+        );
         if (!confirmed) return;
         await this.db.clearConversations();
         this.loadChatHistory();
@@ -8168,6 +8174,83 @@ class Linen {
      * Show a custom confirmation modal that blends with the app design
      * Returns a promise that resolves to true if confirmed, false if cancelled
      */
+    /**
+     * Requires the user to re-enter their password before a destructive action proceeds.
+     * Uses Firebase reauthentication to verify. Returns true if verified, false if cancelled.
+     */
+    async requirePasswordConfirmation(title, description) {
+        return new Promise((resolve) => {
+            const modal    = document.getElementById('password-confirm-modal');
+            const titleEl  = document.getElementById('password-confirm-title');
+            const descEl   = document.getElementById('password-confirm-desc');
+            const input    = document.getElementById('password-confirm-input');
+            const errorEl  = document.getElementById('password-confirm-error');
+            const cancelBtn  = document.getElementById('password-confirm-cancel');
+            const submitBtn  = document.getElementById('password-confirm-submit');
+
+            if (!modal) { resolve(false); return; }
+
+            titleEl.textContent = title;
+            descEl.textContent  = description;
+            input.value         = '';
+            errorEl.textContent = '';
+            submitBtn.disabled  = false;
+            submitBtn.textContent = 'Confirm';
+
+            modal.style.display = 'flex';
+            setTimeout(() => input.focus(), 100);
+
+            const cleanup = () => {
+                modal.style.display = 'none';
+                input.value = '';
+                errorEl.textContent = '';
+                submitBtn.removeEventListener('click', onSubmit);
+                cancelBtn.removeEventListener('click', onCancel);
+                input.removeEventListener('keydown', onKey);
+            };
+
+            const onCancel = () => { cleanup(); resolve(false); };
+
+            const onSubmit = async () => {
+                const password = input.value;
+                if (!password) {
+                    errorEl.textContent = 'Please enter your password.';
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Verifying...';
+                errorEl.textContent = '';
+
+                try {
+                    const user = this.authManager?.getCurrentUser();
+                    if (!user || !user.email) {
+                        // No auth — skip verification and proceed
+                        cleanup();
+                        resolve(true);
+                        return;
+                    }
+                    const credential = firebase.auth.EmailAuthProvider.credential(user.email, password);
+                    await user.reauthenticateWithCredential(credential);
+                    cleanup();
+                    resolve(true);
+                } catch (e) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Confirm';
+                    errorEl.textContent = 'Incorrect password. Try again.';
+                    input.value = '';
+                    input.focus();
+                }
+            };
+
+            const onKey = (e) => { if (e.key === 'Enter') onSubmit(); };
+
+            submitBtn.addEventListener('click', onSubmit);
+            cancelBtn.addEventListener('click', onCancel);
+            input.addEventListener('keydown', onKey);
+        });
+    }
+
     async showConfirmation(title, message) {
         return new Promise((resolve) => {
             const modal = document.getElementById('confirmation-modal');

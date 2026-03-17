@@ -814,6 +814,20 @@
 
 <div id="toast"></div>
 
+<!-- Password confirmation modal for destructive actions -->
+<div id="password-confirm-modal" class="password-confirm-overlay" style="display:none;">
+    <div class="password-confirm-box">
+        <h3 id="password-confirm-title">Confirm Action</h3>
+        <p id="password-confirm-desc" class="password-confirm-desc"></p>
+        <input type="password" id="password-confirm-input" placeholder="Enter your password" autocomplete="current-password">
+        <p id="password-confirm-error" class="password-confirm-error"></p>
+        <div class="password-confirm-btns">
+            <button id="password-confirm-cancel" class="settings-btn settings-btn-secondary">Cancel</button>
+            <button id="password-confirm-submit" class="settings-btn settings-btn-danger">Confirm</button>
+        </div>
+    </div>
+</div>
+
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>

@@ -949,6 +949,60 @@ hr {
     font-size: 0.8rem;
     margin-top: 15px;
 }
+/* Password confirmation modal */
+.password-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+    padding: 20px;
+}
+
+.password-confirm-box {
+    background: #1a1a1a;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.password-confirm-box h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #e74c3c;
+}
+
+.password-confirm-desc {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.password-confirm-error {
+    font-size: 0.85rem;
+    color: #e74c3c;
+    margin: 0;
+    min-height: 18px;
+}
+
+.password-confirm-btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.password-confirm-btns .settings-btn {
+    flex: 1;
+}
+
 /* Settings modal sections */
 .settings-section {
     display: flex;
