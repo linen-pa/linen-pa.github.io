@@ -7197,7 +7197,19 @@ class Linen {
         const convs = await this.db.getCurrentSessionMessages();
         container.innerHTML = '';
         if (!convs || convs.length === 0) return;
-        convs.forEach(msg => {
+
+        // Deduplicate messages: keep track of what we've displayed
+        const seen = new Set();
+        const dedupedMsgs = [];
+        for (const msg of convs) {
+            const key = `${msg.sender}|${msg.text}|${msg.date}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                dedupedMsgs.push(msg);
+            }
+        }
+
+        dedupedMsgs.forEach(msg => {
             const div = document.createElement('div');
             div.className = msg.sender === 'user' ? 'user-message' : 'assistant-message';
             if (msg.sender === 'assistant') {
