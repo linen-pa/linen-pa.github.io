@@ -7987,7 +7987,7 @@ class Linen {
             if (!window.paypal) {
                 await new Promise((resolve, reject) => {
                     const script = document.createElement('script');
-                    script.src = 'https://www.paypal.com/sdk/js?client-id=AZxbmzhcBgHdDEdv5rzIMD3FM1Ywj9UDm9EZgfWgUwTQRSrDpm3armjA2810QpFp-ikEoB1wiip1XvVr&currency=USD';
+                    script.src = 'https://www.paypal.com/sdk/js?client-id=AZxbmzhcBgHdDEdv5rzIMD3FM1Ywj9UDm9EZgfWgUwTQRSrDpm3armjA2810QpFp-ikEoB1wiip1XvVr&currency=USD&disable-funding=card,credit,venmo,paylater';
                     script.onload = resolve;
                     script.onerror = () => reject(new Error('PayPal SDK failed to load'));
                     document.head.appendChild(script);
@@ -8002,8 +8002,26 @@ class Linen {
 
             for (const tier of tiers) {
                 const container = document.getElementById(tier.containerId);
-                // Skip if container missing or buttons already rendered
-                if (!container || container.children.length > 0) continue;
+                if (!container) continue;
+
+                // Wire up click-to-expand on the parent card (only once)
+                const card = container.closest('.token-pack');
+                if (card && !card.dataset.paypalBound) {
+                    card.dataset.paypalBound = 'true';
+                    card.style.cursor = 'pointer';
+                    card.addEventListener('click', (e) => {
+                        // Don't collapse if clicking inside the PayPal button itself
+                        if (container.contains(e.target)) return;
+                        const isOpen = card.classList.contains('expanded');
+                        // Close all tier cards first
+                        document.querySelectorAll('.token-pack.expanded').forEach(c => c.classList.remove('expanded'));
+                        // Toggle this one
+                        if (!isOpen) card.classList.add('expanded');
+                    });
+                }
+
+                // Skip rendering PayPal buttons if already rendered
+                if (container.children.length > 0) continue;
 
                 window.paypal.Buttons({
                     style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'pay', height: 35 },
@@ -8019,6 +8037,8 @@ class Linen {
                         await this.tokenManager.addTokens(tier.tokens);
                         await this.tokenManager.refreshBadge();
                         await this.recordPayment(order, tier);
+                        // Close the card after successful payment
+                        container.closest('.token-pack')?.classList.remove('expanded');
                         this.showToast(`${tier.tokens} tokens added. Thank you!`, 'success');
                     },
 

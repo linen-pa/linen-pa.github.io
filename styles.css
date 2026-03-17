@@ -2987,7 +2987,19 @@ body.keyboard-nav [tabindex]:focus {
 .paypal-btn-container {
     flex-basis: 100%;
     width: 100%;
-    margin-top: 10px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, margin-top 0.3s ease;
+    margin-top: 0;
+}
+
+.token-pack.expanded .paypal-btn-container {
+    max-height: 120px;
+    margin-top: 12px;
+}
+
+.token-pack.expanded {
+    border-color: var(--accent);
 }
 
 .token-pack:hover {
