@@ -3811,8 +3811,6 @@ class Linen {
                     const dedupedConvs = smartDedup(cloudConversations);
                     const hadDuplicates = dedupedConvs.length < cloudConversations.length;
 
-                    const hadDuplicates = dedupedConvs.length < cloudConversations.length;
-
                     // Replace local conversations with cloud versions
                     // Clear BOTH tables — currentSession (normal) and conversations (fallback for older browsers)
                     console.log(`Linen: Loading ${dedupedConvs.length} conversations from cloud`);
