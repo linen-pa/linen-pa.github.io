@@ -1945,6 +1945,21 @@ hr {
     border-radius: 4px;
 }
 
+.edit-memory,
+.delete-memory {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
 .edit-memory {
     background-color: #3498db; /* Blue for edit */
     color: white;

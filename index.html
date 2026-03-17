@@ -438,6 +438,18 @@
 
     <div id="voice-status"></div>
 
+    <!-- Custom Confirmation Modal (replaces browser confirm) -->
+    <div id="confirmation-modal" class="modal" style="display: none; z-index: 1001;">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2 id="confirmation-title">Confirm Action</h2>
+            <p id="confirmation-message">Are you sure?</p>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button id="confirmation-cancel" class="btn btn-secondary">Cancel</button>
+                <button id="confirmation-confirm" class="btn btn-danger">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modals and Panels -->
     <div id="modal-backdrop"></div>
 

@@ -6269,7 +6269,8 @@ class Linen {
     }
 
     async clearProfile() {
-        if (!confirm('Are you sure you want to clear all profile data? This cannot be undone.')) return;
+        const confirmed = await this.showConfirmation('Clear Profile Data', 'Are you sure you want to clear all profile data? This cannot be undone.');
+        if (!confirmed) return;
         try {
             await this.profileManager.deleteProfile();
             // Reset form fields
@@ -6824,7 +6825,8 @@ class Linen {
 
     async deleteAgent(agentId) {
         console.log("Linen: Deleting agent:", agentId);
-        if (!confirm('Are you sure you want to delete this API key?')) return;
+        const confirmed = await this.showConfirmation('Delete API Key', 'Are you sure you want to delete this API key?');
+        if (!confirmed) return;
 
         const wasPrimary = this.agentManager.agents.find(a => a.id === agentId)?.isPrimary;
         this.agentManager.removeAgent(agentId);
@@ -7356,7 +7358,8 @@ class Linen {
     }
 
     async clearAll() {
-        if (!confirm('Are you sure you want to clear ALL data (memories and settings)? This cannot be undone.')) return;
+        const confirmed = await this.showConfirmation('Clear All Data', 'Are you sure you want to clear ALL data (memories and settings)? This cannot be undone.');
+        if (!confirmed) return;
         await this.db.clearAllMemories();
         await this.db.setSetting('gemini-api-key', null);
         await this.db.setSetting('agent-ids', null);
@@ -7445,7 +7448,8 @@ class Linen {
     }
 
     async clearChatHistory() {
-        if (!confirm('Are you sure you want to clear all chat history? This cannot be undone.')) return;
+        const confirmed = await this.showConfirmation('Clear Chat History', 'Are you sure you want to clear all chat history? This cannot be undone.');
+        if (!confirmed) return;
         await this.db.clearConversations();
         this.loadChatHistory();
         this.showToast('Chat history cleared.', 'info');
@@ -7548,7 +7552,8 @@ class Linen {
         memoriesList.querySelectorAll('.delete-memory').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation(); // Prevent card click event
-                if (confirm('Are you sure you want to delete this memory?')) {
+                const confirmed = await this.showConfirmation('Delete Memory', 'Are you sure you want to delete this memory?');
+                if (confirmed) {
                     await this.db.deleteMemory(parseInt(e.target.dataset.id));
                     this.loadMemories(document.getElementById('memory-search').value);
                 }
@@ -7837,6 +7842,63 @@ class Linen {
             toast.classList.remove('show');
             this._toastTimer = null;
         }, 4000);
+    }
+
+    /**
+     * Show a custom confirmation modal that blends with the app design
+     * Returns a promise that resolves to true if confirmed, false if cancelled
+     */
+    async showConfirmation(title, message) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('confirmation-modal');
+            const backdrop = document.getElementById('modal-backdrop');
+            const titleEl = document.getElementById('confirmation-title');
+            const messageEl = document.getElementById('confirmation-message');
+            const confirmBtn = document.getElementById('confirmation-confirm');
+            const cancelBtn = document.getElementById('confirmation-cancel');
+
+            if (!modal || !backdrop) {
+                // Fallback to native confirm if modal not found
+                resolve(confirm(message));
+                return;
+            }
+
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+
+            const cleanup = () => {
+                modal.style.display = 'none';
+                backdrop.classList.remove('active');
+                confirmBtn.removeEventListener('click', onConfirm);
+                cancelBtn.removeEventListener('click', onCancel);
+            };
+
+            const onConfirm = () => {
+                cleanup();
+                resolve(true);
+            };
+
+            const onCancel = () => {
+                cleanup();
+                resolve(false);
+            };
+
+            confirmBtn.addEventListener('click', onConfirm);
+            cancelBtn.addEventListener('click', onCancel);
+
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.right = '0';
+            modal.style.bottom = '0';
+            backdrop.classList.add('active');
+
+            // Focus confirm button for accessibility
+            confirmBtn.focus();
+        });
     }
 
     updateVersion(newVersion) {
