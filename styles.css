@@ -74,9 +74,9 @@ header {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 12px 10px;
+    padding: 16px 10px 12px 10px;
     height: auto;
-    background-color: var(--header-bg);
+    background-color: rgba(0, 0, 0, 0.4);
     box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     z-index: 10;
     flex-shrink: 0; /* Prevent header from shrinking */
@@ -88,18 +88,18 @@ header {
 }
 
 #logo {
-    height: 80px;
+    height: 90px;
     cursor: pointer;
     transition: transform 0.2s;
 }
 
 @media (max-width: 768px) {
     #logo {
-        height: 60px;
+        height: 70px;
     }
 
     header {
-        padding: 12px 10px 8px 10px; /* More top padding to move logo/tokens up */
+        padding: 14px 10px 10px 10px;
     }
 
     /* Prevent iOS auto-zoom on input focus - 16px is the threshold */
@@ -2813,7 +2813,7 @@ body.keyboard-nav [tabindex]:focus {
 /* Token Badge (under logo) */
 .token-badge-under-logo {
     position: absolute;
-    bottom: -12px;
+    bottom: 4px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
