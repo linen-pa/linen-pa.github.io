@@ -1683,10 +1683,12 @@ class VoiceManager {
         if (SpeechRecognition) {
             try {
                 this.recognition = new SpeechRecognition();
-                this.recognition.continuous = true;
-                this.recognition.interimResults = true;
+                this.recognition.continuous = true; // Keep listening across speech gaps
+                this.recognition.interimResults = true; // Show results as user speaks
                 this.recognition.lang = 'en-US';
+                this.recognition.maxAlternatives = 1;
                 console.log('VoiceManager: Web Speech API initialized successfully');
+                console.log('VoiceManager: Continuous mode enabled - will keep listening through pauses');
             } catch (error) {
                 console.error('VoiceManager: Failed to initialize Web Speech API:', error);
                 this.recognition = null;
@@ -1756,24 +1758,27 @@ class VoiceManager {
             console.log('Transcript:', { transcript, isFinal, lastTranscript: this.lastTranscript });
             onResult(transcript, !isFinal);
 
-            // If speech detected, set pause detection timer
-            // Trigger on either interim results after speech or on final result
-            if (transcript.trim()) {
-                if (isFinal) {
-                    // Final result received - process immediately
-                    console.log('Final result detected, processing:', transcript);
+            // Only auto-send on final results (when the browser detects end of speech)
+            // Don't use aggressive pause detection - let user click mic again to stop
+            // This prevents cutting off users mid-sentence
+            if (transcript.trim() && isFinal) {
+                // Final result received - wait a bit longer before auto-sending
+                // in case user wants to continue speaking
+                console.log('Final result detected:', transcript);
+
+                // Clear any pending timeout
+                if (this.pauseTimeout) {
+                    clearTimeout(this.pauseTimeout);
+                }
+
+                // Wait 3 seconds for user to resume speaking
+                // If no new speech detected in 3 seconds, auto-send
+                this.pauseTimeout = setTimeout(() => {
+                    console.log('No new speech for 3 seconds, auto-sending final transcript');
                     if (this.onPauseDetected && this.lastTranscript.trim()) {
                         this.onPauseDetected(this.lastTranscript);
                     }
-                } else {
-                    // Interim result - wait for pause to process
-                    this.pauseTimeout = setTimeout(() => {
-                        console.log('Pause detected after interim result, stopping listening');
-                        if (this.onPauseDetected && this.lastTranscript.trim()) {
-                            this.onPauseDetected(this.lastTranscript);
-                        }
-                    }, 1500); // 1.5 second pause threshold
-                }
+                }, 3000); // 3 second timeout before auto-send
             }
         };
 
@@ -1823,7 +1828,14 @@ class VoiceManager {
                 clearTimeout(this.pauseTimeout);
                 this.pauseTimeout = null;
             }
-            console.log('Voice input ended');
+            console.log('VoiceManager: Recognition ended');
+
+            // If continuous mode was on but it stopped unexpectedly, restart
+            // This can happen in some browsers where recognition stops after silence
+            if (this.recognition && this.recognition.continuous && this.isListening === false) {
+                console.log('VoiceManager: Recognition stopped unexpectedly in continuous mode');
+                // Don't auto-restart - let user manually restart by clicking mic again
+            }
         };
 
         try {
@@ -7072,7 +7084,7 @@ class Linen {
 
     startVoiceInput() {
         this._voiceInputActive = true;
-        console.log("Linen: Starting voice input");
+        console.log("Linen: Starting voice input - User can speak freely, click mic again when done");
 
         // Auto-enable TTS when user uses voice input
         // They're talking, so they expect voice responses back
@@ -7088,6 +7100,7 @@ class Linen {
         if (voiceBtn) {
             voiceBtn.classList.add('voice-active');
             voiceBtn.style.backgroundColor = ''; // Let CSS handle the background
+            voiceBtn.title = 'Click to stop listening'; // Update tooltip
         }
 
         this.voiceManager.startListening(
