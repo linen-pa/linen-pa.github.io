@@ -5427,7 +5427,8 @@ class Linen {
             }
 
             if (logoMemoriesBtn) {
-                logoMemoriesBtn.addEventListener('click', () => {
+                logoMemoriesBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     this.loadMemories();
                     memoriesPanel.classList.add('active');
                     backdrop.classList.add('active');
@@ -5436,7 +5437,8 @@ class Linen {
             }
 
             if (logoSettingsBtn) {
-                logoSettingsBtn.addEventListener('click', () => {
+                logoSettingsBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     // Clear any stuck inline pointer-events from pitch modal
                     settingsModal.style.pointerEvents = '';
                     settingsModal.classList.add('active');
@@ -5843,7 +5845,8 @@ class Linen {
 
         // Open utilities modal
         if (logoutilitiesBtn) {
-            logoutilitiesBtn.addEventListener('click', () => {
+            logoutilitiesBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 if (utilitiesModal) {
                     utilitiesModal.classList.add('active');
                     backdrop.classList.add('active');
