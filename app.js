@@ -3655,13 +3655,26 @@ class Linen {
             // User explicitly archives via "Archive Chat" button when done
             // This allows them to continue sessions without losing work
 
-            // Initialize token system
-            await this.tokenManager.initialize();
-            await this.tokenManager.refreshBadge();
+            // Initialize token system (with error handling for database issues)
+            try {
+                await this.tokenManager.initialize();
+                await this.tokenManager.refreshBadge();
+            } catch (e) {
+                console.warn('Linen: Token system initialization error (continuing with local defaults):', e);
+                // Continue anyway - tokens will use local storage defaults
+            }
 
-            // Migrate legacy key and load all agents
-            await this.migrateLegacyKey();
-            await this.agentManager.loadAgents();
+            // Migrate legacy key and load all agents (with error handling)
+            try {
+                await this.migrateLegacyKey();
+            } catch (e) {
+                console.warn('Linen: Legacy key migration error (non-critical):', e);
+            }
+            try {
+                await this.agentManager.loadAgents();
+            } catch (e) {
+                console.warn('Linen: Agent loading error (non-critical):', e);
+            }
 
             const apiKey = await this.db.getSetting('gemini-api-key');
             const primaryAgentId = await this.db.getSetting('primary-agent-id');
