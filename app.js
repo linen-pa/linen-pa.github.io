@@ -403,7 +403,7 @@ class LinenDB {
     }
     async init() {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open('linen-db', 4);
+            const request = indexedDB.open('linen-db', 6);
             request.onerror = () => reject(request.error);
             request.onsuccess = () => {
                 this.db = request.result;
@@ -420,6 +420,12 @@ class LinenDB {
                 }
                 if (!db.objectStoreNames.contains('conversations')) {
                     db.createObjectStore('conversations', {
+                        keyPath: 'id',
+                        autoIncrement: true
+                    });
+                }
+                if (!db.objectStoreNames.contains('currentSession')) {
+                    db.createObjectStore('currentSession', {
                         keyPath: 'id',
                         autoIncrement: true
                     });
@@ -460,10 +466,12 @@ class LinenDB {
             req.onerror = () => j(req.error);
         });
     }
+    // Add message to currentSession (temporary working chat)
+    // NOT to permanent conversations table (which is now for archived chats only)
     async addConversation(msg) {
         return new Promise((r, j) => {
-            const t = this.db.transaction(['conversations'], 'readwrite');
-            const s = t.objectStore('conversations');
+            const t = this.db.transaction(['currentSession'], 'readwrite');
+            const s = t.objectStore('currentSession');
             const req = s.add(msg);
             req.onsuccess = () => r(req.result);
             req.onerror = () => j(req.error);
@@ -478,6 +486,29 @@ class LinenDB {
             req.onerror = () => j(req.error);
         });
     }
+
+    // Get all messages from currentSession (temporary working chat)
+    async getCurrentSessionMessages() {
+        return new Promise((r, j) => {
+            const t = this.db.transaction(['currentSession'], 'readonly');
+            const s = t.objectStore('currentSession');
+            const req = s.getAll();
+            req.onsuccess = () => r(req.result.sort((a, b) => a.date - b.date));
+            req.onerror = () => j(req.error);
+        });
+    }
+
+    // Clear all messages from currentSession (when archiving or starting new chat)
+    async clearCurrentSession() {
+        return new Promise((r, j) => {
+            const t = this.db.transaction(['currentSession'], 'readwrite');
+            const s = t.objectStore('currentSession');
+            const req = s.clear();
+            req.onsuccess = () => r();
+            req.onerror = () => j(req.error);
+        });
+    }
+
     async getSetting(key) {
         console.log(`LinenDB: Attempting to get setting for key: ${key}`);
         return new Promise((r, j) => {
@@ -3628,15 +3659,10 @@ class Linen {
             this.profileManager = new ProfileManager(this.db);
             await this.loadLearningState();
 
-            const existingConvs = await this.db.getConversations();
-            // Only archive if there's actual user interaction (more than just initial greeting/bot messages)
-            // Check if there are user messages and more than just one exchange
-            const hasUserMessages = existingConvs && existingConvs.some(c => c.sender === 'user');
-            if (existingConvs && existingConvs.length > 2 && hasUserMessages) {
-                const sessionTitle = this.generateSessionTitle(existingConvs);
-                await this.db.archiveSession({ title: sessionTitle, messages: existingConvs, date: Date.now(), preview: existingConvs[existingConvs.length - 1]?.text || 'Previous conversation', messageCount: existingConvs.length });
-            }
-            await this.db.clearCurrentSession();
+            // NO auto-archiving anymore
+            // currentSession messages will persist across refresh/reload
+            // User explicitly archives via "Archive Chat" button when done
+            // This allows them to continue sessions without losing work
 
             // Initialize token system
             await this.tokenManager.initialize();
@@ -3801,6 +3827,8 @@ class Linen {
         try {
             await this.loadChatHistory();
             console.log("Linen: Chat history loaded");
+            // Update archive button visibility based on loaded messages
+            await this.updateArchiveButtonVisibility();
         } catch (err) {
             console.error("Linen: Error loading chat history:", err);
         }
@@ -4666,6 +4694,9 @@ class Linen {
         document.getElementById('memories-panel').classList.remove('active');
         document.getElementById('modal-backdrop').classList.remove('active');
 
+        // Clear any existing currentSession before restoring archived messages
+        await this.db.clearCurrentSession();
+
         // Clear current chat
         const container = document.getElementById('chat-messages');
         container.innerHTML = '';
@@ -4688,6 +4719,9 @@ class Linen {
             for (const msg of memory.messages) {
                 await this.db.addConversation(msg);
             }
+
+            // Update archive button visibility (now that messages are in currentSession)
+            await this.updateArchiveButtonVisibility();
 
             this.showToast(`Restored: ${memory.title}`, 'success');
         }
@@ -5257,6 +5291,15 @@ class Linen {
                     logoMenu.classList.add('hidden');
                     // Setup profile accordion when settings opens
                     this.setupProfileAccordion();
+                });
+            }
+
+            // Archive chat button
+            const logoArchiveBtn = document.getElementById('logo-archive-chat');
+            if (logoArchiveBtn) {
+                logoArchiveBtn.addEventListener('click', () => {
+                    logoMenu.classList.add('hidden');
+                    this.archiveCurrentChat();
                 });
             }
 
@@ -6966,7 +7009,8 @@ class Linen {
 
     async loadChatHistory() {
         const container = document.getElementById('chat-messages');
-        const convs = await this.db.getConversations();
+        // Load from currentSession (temporary working chat), not old conversations table
+        const convs = await this.db.getCurrentSessionMessages();
         container.innerHTML = '';
         if (!convs || convs.length === 0) return;
         convs.forEach(msg => {
@@ -7181,6 +7225,9 @@ class Linen {
                 await this.db.addConversation({ text: msg, sender: 'user', date: Date.now() });
                 await this.db.addConversation({ text: reply, sender: 'assistant', date: Date.now() });
 
+                // Update archive button visibility (now that messages are in currentSession)
+                await this.updateArchiveButtonVisibility();
+
                 // Cloud sync: Also save to Firestore if user is authenticated
                 const user = this.authManager?.getCurrentUser();
                 if (user && user.uid) {
@@ -7290,8 +7337,10 @@ class Linen {
         window.location.reload();
     }
     async startNewChat() {
-        // Clear only the current conversation (messages on screen)
-        // Keep all saved history and memories intact
+        // Clear currentSession from IndexedDB (temp working chat)
+        // Keep all archived memories intact
+        await this.db.clearCurrentSession();
+
         const container = document.getElementById('chat-messages');
         container.innerHTML = '';
 
@@ -7300,10 +7349,64 @@ class Linen {
             this.assistant.clearSession();
         }
 
+        // Update archive button visibility (should be hidden since chat is now empty)
+        await this.updateArchiveButtonVisibility();
+
         this.showToast('New chat started!', 'success');
 
         // Start with greeting
         this.sendChat('[INITIAL_GREETING]');
+    }
+
+    async archiveCurrentChat() {
+        const messages = await this.db.getCurrentSessionMessages();
+        if (!messages || messages.length === 0) {
+            this.showToast('No messages to archive.', 'info');
+            return;
+        }
+
+        // Generate title from first user message
+        const sessionTitle = this.generateSessionTitle(messages);
+
+        try {
+            // Save to memories (permanent archive)
+            await this.db.archiveSession({
+                title: sessionTitle,
+                messages: messages,
+                date: Date.now(),
+                preview: messages[messages.length - 1]?.text,
+                messageCount: messages.length
+            });
+
+            // Clear current session
+            await this.db.clearCurrentSession();
+
+            // Refresh UI
+            await this.loadChatHistory();
+            await this.updateArchiveButtonVisibility();
+
+            this.showToast('Chat archived! Starting fresh.', 'success');
+
+            // Show greeting
+            this.sendChat('[INITIAL_GREETING]');
+        } catch (e) {
+            console.error('Failed to archive chat:', e);
+            this.showToast('Could not archive chat. Please try again.', 'error');
+        }
+    }
+
+    async updateArchiveButtonVisibility() {
+        const archiveBtn = document.getElementById('logo-archive-chat');
+        if (!archiveBtn) return;
+
+        try {
+            const messages = await this.db.getCurrentSessionMessages();
+            const hasMessages = messages && messages.length > 0;
+            archiveBtn.style.display = hasMessages ? 'block' : 'none';
+        } catch (e) {
+            console.warn('Could not check archive button visibility:', e);
+            archiveBtn.style.display = 'none';
+        }
     }
 
     async clearChatHistory() {
