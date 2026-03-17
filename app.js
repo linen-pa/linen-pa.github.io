@@ -331,10 +331,10 @@ class AuthManager {
             const timestamp = Date.now();
             const conversationsRef = this.database.ref('users/' + uid + '/conversations');
 
-            // Store conversations plaintext in cloud
-            // They're protected by Realtime Database security rules (only user can access their data)
-            // No need for client-side encryption since Firebase rules enforce access control
-            await conversationsRef.push({
+            // Use timestamp as key instead of push() to prevent duplicate accumulation.
+            // If the same message is somehow saved twice at the same millisecond,
+            // set() overwrites rather than creating a second entry.
+            await conversationsRef.child(String(timestamp)).set({
                 text: message.text,
                 sender: message.sender,
                 timestamp: timestamp
@@ -3780,49 +3780,36 @@ class Linen {
                 // Try to load conversations from Realtime Database (cloud-first approach)
                 const cloudConversations = await this.authManager.loadConversations(currentUser.uid);
                 if (cloudConversations && cloudConversations.length > 0) {
-                    // Detect and remove duplicate messages from cloud (may have accumulated due to bugs)
-                    // Strategy 1: Check if ENTIRE conversation is an exact N-fold repeat (3x, 2x, 4x)
-                    // Strategy 2: Fall back to set-based dedup if pattern doesn't match perfectly
-                    let dedupedConvs = cloudConversations;
-                    const n = cloudConversations.length;
-
-                    // Try pattern-based dedup first (most common case: perfect repetition)
-                    for (const factor of [3, 2, 4]) {
-                        if (n % factor !== 0) continue;
-                        const chunkSize = n / factor;
-                        const firstChunk = cloudConversations.slice(0, chunkSize);
-                        let isRepeated = true;
-                        for (let i = 1; i < factor && isRepeated; i++) {
-                            const chunk = cloudConversations.slice(i * chunkSize, (i + 1) * chunkSize);
-                            for (let j = 0; j < chunkSize; j++) {
-                                if (chunk[j].sender !== firstChunk[j].sender ||
-                                    chunk[j].text !== firstChunk[j].text) {
-                                    isRepeated = false;
-                                    break;
-                                }
+                    // Smart repeating-unit dedup:
+                    // Finds the shortest unit [A,B,...] that repeats from the start,
+                    // keeps one copy of that unit + any non-repeating tail messages.
+                    // Correctly handles interleaved patterns like [A,B,A,B,A,B] and
+                    // partial-tail cases like [A,B,A,B,A,B,C,D] → [A,B,C,D].
+                    const unitsMatch = (a, b) => {
+                        if (a.length !== b.length) return false;
+                        return a.every((m, i) => m.sender === b[i].sender && m.text === b[i].text);
+                    };
+                    const smartDedup = (msgs) => {
+                        const n = msgs.length;
+                        for (let unitLen = 1; unitLen <= Math.floor(n / 2); unitLen++) {
+                            const unit = msgs.slice(0, unitLen);
+                            // Confirm it repeats at least once starting at unitLen
+                            if (!unitsMatch(msgs.slice(unitLen, unitLen * 2), unit)) continue;
+                            // Walk forward eating full copies of the unit
+                            let i = unitLen;
+                            while (i + unitLen <= n && unitsMatch(msgs.slice(i, i + unitLen), unit)) {
+                                i += unitLen;
                             }
+                            // i is now the start of the non-repeating tail
+                            const tail = msgs.slice(i);
+                            console.log(`Linen: Detected repeating unit of ${unitLen} messages — deduplicating (tail: ${tail.length})`);
+                            return [...unit, ...tail];
                         }
-                        if (isRepeated) {
-                            console.log(`Linen: Detected ${factor}x duplicate cloud messages — deduplicating`);
-                            dedupedConvs = firstChunk;
-                            break;
-                        }
-                    }
+                        return msgs; // no repetition found
+                    };
 
-                    // If pattern dedup didn't work, fall back to consecutive-only dedup
-                    // ONLY removes consecutive duplicates (same sender + text appearing back-to-back)
-                    // This preserves legitimate repeated messages in different chats/contexts
-                    if (dedupedConvs === cloudConversations) {
-                        const consecutiveDedupedConvs = cloudConversations.filter((c, i, arr) => {
-                            if (i === 0) return true; // Always keep first message
-                            // Remove only if identical to immediately previous message
-                            return !(c.sender === arr[i-1].sender && c.text === arr[i-1].text);
-                        });
-                        if (consecutiveDedupedConvs.length < cloudConversations.length) {
-                            console.log(`Linen: Found ${cloudConversations.length - consecutiveDedupedConvs.length} consecutive duplicate messages — removing`);
-                            dedupedConvs = consecutiveDedupedConvs;
-                        }
-                    }
+                    const dedupedConvs = smartDedup(cloudConversations);
+                    const hadDuplicates = dedupedConvs.length < cloudConversations.length;
 
                     const hadDuplicates = dedupedConvs.length < cloudConversations.length;
 
@@ -5013,7 +5000,9 @@ class Linen {
                 await this.tokenManager.refreshBadge();
                 this.updateAuthUI(user);
                 document.getElementById('onboarding-overlay').style.display = 'none';
-                this.showToast(`Welcome back!`, 'success');
+                this.showToast(`Welcome back! Loading your chats...`, 'success');
+                // Reload to fully sync cloud data (chats, memories) for this device
+                setTimeout(() => location.reload(), 1000);
             }
         } catch (e) {
             const msg = e.code === 'auth/user-not-found' ? 'No account found with this email.'
