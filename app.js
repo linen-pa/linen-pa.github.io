@@ -403,7 +403,7 @@ class LinenDB {
     }
     async init() {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open('linen-db', 6);
+            const request = indexedDB.open('linen-db', 4);
             request.onerror = () => reject(request.error);
             request.onsuccess = () => {
                 this.db = request.result;
@@ -467,14 +467,34 @@ class LinenDB {
         });
     }
     // Add message to currentSession (temporary working chat)
-    // NOT to permanent conversations table (which is now for archived chats only)
+    // Falls back to conversations table if currentSession doesn't exist yet
     async addConversation(msg) {
         return new Promise((r, j) => {
-            const t = this.db.transaction(['currentSession'], 'readwrite');
-            const s = t.objectStore('currentSession');
-            const req = s.add(msg);
-            req.onsuccess = () => r(req.result);
-            req.onerror = () => j(req.error);
+            try {
+                const t = this.db.transaction(['currentSession'], 'readwrite');
+                const s = t.objectStore('currentSession');
+                const req = s.add(msg);
+                req.onsuccess = () => r(req.result);
+                req.onerror = () => {
+                    // Fall back to conversations if currentSession doesn't exist
+                    const t2 = this.db.transaction(['conversations'], 'readwrite');
+                    const s2 = t2.objectStore('conversations');
+                    const req2 = s2.add(msg);
+                    req2.onsuccess = () => r(req2.result);
+                    req2.onerror = () => j(req2.error);
+                };
+            } catch (e) {
+                // currentSession store doesn't exist, use conversations
+                try {
+                    const t2 = this.db.transaction(['conversations'], 'readwrite');
+                    const s2 = t2.objectStore('conversations');
+                    const req2 = s2.add(msg);
+                    req2.onsuccess = () => r(req2.result);
+                    req2.onerror = () => j(req2.error);
+                } catch (e2) {
+                    j(e2);
+                }
+            }
         });
     }
     async getConversations() {
@@ -488,24 +508,39 @@ class LinenDB {
     }
 
     // Get all messages from currentSession (temporary working chat)
+    // Falls back to conversations if currentSession doesn't exist yet
     async getCurrentSessionMessages() {
         return new Promise((r, j) => {
-            const t = this.db.transaction(['currentSession'], 'readonly');
-            const s = t.objectStore('currentSession');
-            const req = s.getAll();
-            req.onsuccess = () => r(req.result.sort((a, b) => a.date - b.date));
-            req.onerror = () => j(req.error);
+            try {
+                const t = this.db.transaction(['currentSession'], 'readonly');
+                const s = t.objectStore('currentSession');
+                const req = s.getAll();
+                req.onsuccess = () => r(req.result.sort((a, b) => a.date - b.date));
+                req.onerror = () => {
+                    // If currentSession store doesn't exist, fall back to conversations
+                    this.getConversations().then(r).catch(j);
+                };
+            } catch (e) {
+                // If transaction fails (store doesn't exist), fall back to conversations
+                this.getConversations().then(r).catch(j);
+            }
         });
     }
 
     // Clear all messages from currentSession (when archiving or starting new chat)
+    // Silently returns if currentSession doesn't exist (backward compatibility)
     async clearCurrentSession() {
         return new Promise((r, j) => {
-            const t = this.db.transaction(['currentSession'], 'readwrite');
-            const s = t.objectStore('currentSession');
-            const req = s.clear();
-            req.onsuccess = () => r();
-            req.onerror = () => j(req.error);
+            try {
+                const t = this.db.transaction(['currentSession'], 'readwrite');
+                const s = t.objectStore('currentSession');
+                const req = s.clear();
+                req.onsuccess = () => r();
+                req.onerror = () => r(); // Silently ignore if store doesn't exist
+            } catch (e) {
+                // Store doesn't exist yet - that's fine, just return
+                r();
+            }
         });
     }
 
