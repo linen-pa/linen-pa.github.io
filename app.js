@@ -1697,9 +1697,9 @@ class VoiceManager {
         // Stop any previous recognition session first
         if (this.isListening) {
             try {
-                this.recognition.stop();
+                this.recognition.abort();
             } catch (e) {
-                console.warn('Error stopping previous recognition:', e);
+                console.warn('Error aborting previous recognition:', e);
             }
         }
 
@@ -1708,14 +1708,22 @@ class VoiceManager {
         this.onPauseDetected = onPauseDetected;
         let transcript = '';
 
+        // Clear any previous pause timeout
+        if (this.pauseTimeout) {
+            clearTimeout(this.pauseTimeout);
+            this.pauseTimeout = null;
+        }
+
+        // Attach event handlers - these will replace any previous ones
         this.recognition.onstart = () => {
             console.log('Voice input started');
         };
 
         this.recognition.onresult = (event) => {
-            // Clear previous pause timeout
+            // Clear previous pause timeout on each new result
             if (this.pauseTimeout) {
                 clearTimeout(this.pauseTimeout);
+                this.pauseTimeout = null;
             }
 
             transcript = '';
@@ -1728,8 +1736,8 @@ class VoiceManager {
             const isFinal = event.results[event.results.length - 1].isFinal;
             onResult(transcript, !isFinal);
 
-            // If speech detected, set pause detection timer (1.5 seconds of silence)
-            if (transcript && !isFinal) {
+            // If speech detected (not final), set pause detection timer (1.5 seconds of silence)
+            if (transcript.trim() && !isFinal) {
                 this.pauseTimeout = setTimeout(() => {
                     console.log('Pause detected, stopping listening');
                     if (this.onPauseDetected && this.lastTranscript.trim()) {
@@ -1742,13 +1750,19 @@ class VoiceManager {
         this.recognition.onerror = (event) => {
             console.error('Voice input error:', event.error);
             this.isListening = false;
-            if (this.pauseTimeout) clearTimeout(this.pauseTimeout);
+            if (this.pauseTimeout) {
+                clearTimeout(this.pauseTimeout);
+                this.pauseTimeout = null;
+            }
             onError(event.error);
         };
 
         this.recognition.onend = () => {
             this.isListening = false;
-            if (this.pauseTimeout) clearTimeout(this.pauseTimeout);
+            if (this.pauseTimeout) {
+                clearTimeout(this.pauseTimeout);
+                this.pauseTimeout = null;
+            }
             console.log('Voice input ended');
         };
 
@@ -1762,6 +1776,12 @@ class VoiceManager {
     }
 
     stopListening() {
+        // Clear any pending pause timeout
+        if (this.pauseTimeout) {
+            clearTimeout(this.pauseTimeout);
+            this.pauseTimeout = null;
+        }
+
         if (this.recognition && this.isListening) {
             try {
                 this.recognition.stop();
@@ -6994,7 +7014,7 @@ class Linen {
         const voiceBtn = document.getElementById('voice-btn');
         if (voiceBtn) {
             voiceBtn.classList.add('voice-active');
-            voiceBtn.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+            voiceBtn.style.backgroundColor = ''; // Let CSS handle the background
         }
 
         this.voiceManager.startListening(
@@ -7040,7 +7060,7 @@ class Linen {
         const voiceBtn = document.getElementById('voice-btn');
         if (voiceBtn) {
             voiceBtn.classList.remove('voice-active');
-            voiceBtn.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+            voiceBtn.style.backgroundColor = ''; // Remove inline style, let CSS handle it
         }
 
         this.voiceManager.stopListening();
