@@ -3762,15 +3762,60 @@ class Linen {
                 // Try to load conversations from Realtime Database (cloud-first approach)
                 const cloudConversations = await this.authManager.loadConversations(currentUser.uid);
                 if (cloudConversations && cloudConversations.length > 0) {
+                    // Detect and remove N-fold duplicate messages (e.g. 3x triplication bug)
+                    // Only deduplicates if the ENTIRE conversation is an exact N-fold repeat
+                    let dedupedConvs = cloudConversations;
+                    const n = cloudConversations.length;
+                    for (const factor of [3, 2, 4]) {
+                        if (n % factor !== 0) continue;
+                        const chunkSize = n / factor;
+                        const firstChunk = cloudConversations.slice(0, chunkSize);
+                        let isRepeated = true;
+                        for (let i = 1; i < factor && isRepeated; i++) {
+                            const chunk = cloudConversations.slice(i * chunkSize, (i + 1) * chunkSize);
+                            for (let j = 0; j < chunkSize; j++) {
+                                if (chunk[j].sender !== firstChunk[j].sender ||
+                                    chunk[j].text !== firstChunk[j].text) {
+                                    isRepeated = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (isRepeated) {
+                            console.log(`Linen: Detected ${factor}x duplicate cloud messages — deduplicating`);
+                            dedupedConvs = firstChunk;
+                            break;
+                        }
+                    }
+                    const hadDuplicates = dedupedConvs.length < cloudConversations.length;
+
                     // Replace local conversations with cloud versions
-                    console.log(`Linen: Loaded ${cloudConversations.length} conversations from cloud`);
+                    // Clear BOTH tables — currentSession (normal) and conversations (fallback for older browsers)
+                    console.log(`Linen: Loading ${dedupedConvs.length} conversations from cloud`);
                     await this.db.clearCurrentSession();
-                    for (const conv of cloudConversations) {
+                    await this.db.clearConversations();
+                    for (const conv of dedupedConvs) {
                         await this.db.addConversation({
                             text: conv.text,
                             sender: conv.sender,
                             date: conv.timestamp || Date.now()
                         });
+                    }
+
+                    // If duplicates were found, clean up Firebase so future loads stay clean
+                    if (hadDuplicates) {
+                        try {
+                            await this.authManager.clearConversations(currentUser.uid);
+                            for (const conv of dedupedConvs) {
+                                await this.authManager.saveConversationMessage(currentUser.uid, {
+                                    text: conv.text,
+                                    sender: conv.sender
+                                });
+                            }
+                            console.log('Linen: Cleaned up duplicate messages in cloud storage');
+                        } catch (e) {
+                            console.warn('Linen: Could not clean up cloud duplicates:', e);
+                        }
                     }
                 }
 
