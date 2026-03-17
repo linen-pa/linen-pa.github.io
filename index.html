@@ -385,7 +385,6 @@
                 </button>
             </div>
             <div id="logo-menu" class="logo-menu hidden">
-                <button type="button" id="logo-utilities" class="menu-item" style="display: none;">⚡ Utilities</button>
                 <button type="button" id="logo-archive-chat" class="menu-item" style="display: none;" title="Archive current chat to memories">💾 Archive Chat</button>
                 <button type="button" id="logo-new-chat" class="menu-item">💬 New Chat</button>
                 <button type="button" id="logo-memories" class="menu-item">📚 Memories</button>
@@ -455,48 +454,6 @@
         <div id="memories-list"></div>
     </aside>
 
-    <!-- Utilities Modal -->
-    <div class="modal" id="utilities-modal" aria-label="Utilities panel">
-        <button class="close-modal" id="close-utilities-modal">×</button>
-        <div class="utilities-header">
-            <h2>⚡ Utilities</h2>
-            <div class="utilities-tabs">
-                <button type="button" class="utilities-tab active" data-tab="alarm-timer">⏰ Alarm & Timer</button>
-            </div>
-        </div>
-
-        <!-- Alarm & Timer Tab -->
-        <div id="alarm-timer-tab" class="utilities-tab-content active">
-            <!-- Alarm Clock -->
-            <div class="utility-section">
-                <h3>⏰ Alarm Clock</h3>
-                <div class="alarm-setup">
-                    <input type="time" id="alarm-time" />
-                    <input type="text" id="alarm-label" placeholder="Label (e.g., Wake up)" />
-                    <button type="button" id="set-alarm-btn" class="button-primary">Set Alarm</button>
-                </div>
-                <div id="active-alarms-list" class="active-utilities-list">
-                    <h4>Active Alarms</h4>
-                    <div id="alarms-container"></div>
-                </div>
-            </div>
-
-            <!-- Timer -->
-            <div class="utility-section">
-                <h3>⏱️ Timer</h3>
-                <div class="timer-setup">
-                    <input type="number" id="timer-minutes" placeholder="Minutes" min="0" max="59" />
-                    <input type="number" id="timer-seconds" placeholder="Seconds" min="0" max="59" />
-                    <button type="button" id="start-timer-btn" class="button-primary">Start Timer</button>
-                </div>
-                <div id="active-timers-list" class="active-utilities-list">
-                    <h4>Active Timers</h4>
-                    <div id="timers-container"></div>
-                </div>
-            </div>
-        </div>
-
-    </div>
 
     <div class="modal" id="settings-modal" aria-label="Settings panel">
         <button class="close-modal" id="close-settings-modal">×</button>
