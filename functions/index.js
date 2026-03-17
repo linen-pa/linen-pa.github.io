@@ -1,15 +1,11 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { defineSecret } from 'firebase-functions/params';
-
-// Define the Gemini API key as a secret
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 /**
  * Cloud Function: callGeminiAPI
  * Securely calls the Gemini API on behalf of the frontend
- * API key is stored in Firebase Secret Manager, never exposed to client
+ * API key is stored in environment variables (set via Firebase config), never exposed to client
  */
-export const callGeminiAPI = onCall({ secrets: [geminiApiKey] }, async (request) => {
+export const callGeminiAPI = onCall(async (request) => {
     try {
         const { messages, model = 'gemini-2.5-flash' } = request.data;
 
@@ -28,9 +24,19 @@ export const callGeminiAPI = onCall({ secrets: [geminiApiKey] }, async (request)
             );
         }
 
+        // Get API key from environment
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            console.error('GEMINI_API_KEY not configured');
+            throw new HttpsError(
+                'internal',
+                'API key not configured on backend'
+            );
+        }
+
         // Call Gemini API with secure key
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey.value()}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
                 headers: {
