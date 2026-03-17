@@ -563,17 +563,14 @@
     <div class="modal" id="settings-modal" aria-label="Settings panel">
         <button class="close-modal" id="close-settings-modal">×</button>
 
-        <div class="settings-section" id="account-section">
-            <h3 class="settings-heading">🔑 Account</h3>
-            <div class="account-info">
+        <!-- 1. Profile -->
+        <div class="settings-section" id="profile-section">
+            <div class="settings-account-bar">
+                <span class="settings-account-icon">👤</span>
                 <span class="account-email" id="settings-user-email">Not signed in</span>
             </div>
-            <button type="button" id="sign-out-btn" class="settings-btn settings-btn-danger" style="margin-top: 8px;">Sign Out</button>
-        </div>
-
-        <div class="settings-section" id="profile-section">
             <button type="button" class="accordion-header" id="profile-accordion-btn">
-                <span>👤 User Profile</span>
+                <span>Edit Profile</span>
                 <span class="accordion-icon">▼</span>
             </button>
             <div id="profile-form" class="profile-form" style="display: none;">
@@ -632,11 +629,7 @@
             </div>
         </div>
 
-        <div class="settings-section">
-            <h3 class="settings-heading">📱 Installation</h3>
-            <button id="install-app-btn" class="settings-btn settings-btn-primary">Install Linen as App</button>
-        </div>
-
+        <!-- 2. Tiers -->
         <div class="settings-section">
             <h3 class="settings-heading">⭐ Tiers</h3>
             <div class="token-settings-info">
@@ -674,6 +667,7 @@
             </div>
         </div>
 
+        <!-- 3. Data Management -->
         <div class="settings-section">
             <h3 class="settings-heading">🗂️ Data Management</h3>
             <div class="settings-btn-group">
@@ -684,42 +678,53 @@
             </div>
         </div>
 
+        <!-- 4. Updates, Refresh & Mic -->
         <div class="settings-section">
-            <h3 class="settings-heading">🎤 Voice & Audio</h3>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                <input type="checkbox" id="enable-tts" style="cursor: pointer;">
-                <label for="enable-tts" style="cursor: pointer; margin: 0;">Enable voice responses (Linen speaks replies)</label>
-            </div>
-            <p style="font-size: 0.85rem; color: #888; margin-top: 5px;">Use the 🎤 button to talk instead of typing. Linen will respond with voice.</p>
-        </div>
+            <h3 class="settings-heading">🔄 Updates & Audio</h3>
 
-        <div class="settings-section">
-            <h3 class="settings-heading">🔄 Updates</h3>
-            <button id="force-refresh-btn" class="settings-btn settings-btn-primary">Check for Updates & Refresh</button>
+            <div class="voice-toggle-row">
+                <div class="voice-toggle-info">
+                    <span class="voice-toggle-label">Voice Responses</span>
+                    <span class="voice-toggle-desc">Linen speaks its replies aloud</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="enable-tts">
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                </label>
+            </div>
+
+            <button id="mic-permission-btn" class="settings-btn settings-btn-secondary" style="margin-top: 12px;">🎤 Request Microphone Permission</button>
+            <button id="force-refresh-btn" class="settings-btn settings-btn-primary" style="margin-top: 8px;">Check for Updates</button>
             <button id="hard-refresh-btn" class="settings-btn settings-btn-hard-refresh">Hard Refresh (Clear Cache)</button>
             <p id="refresh-status" class="settings-status"></p>
         </div>
 
+        <!-- 5. Contact & Suggestions -->
         <div class="settings-section">
-            <h3 class="settings-heading">📬 Contact Support</h3>
-            <div id="contact-form">
-                <input type="text" id="contact-name" placeholder="Your Name">
-                <input type="email" id="contact-email" placeholder="Your Email">
-                <textarea id="contact-message" placeholder="Your Message"></textarea>
-                <button id="submit-contact" class="settings-btn settings-btn-primary">Send</button>
-                <p id="contact-status" class="settings-status"></p>
+            <h3 class="settings-heading">📬 Contact & Feedback</h3>
+            <div class="feedback-tabs">
+                <button class="feedback-tab active" data-tab="support">Support</button>
+                <button class="feedback-tab" data-tab="suggestions">Suggestions</button>
+            </div>
+            <div id="feedback-support" class="feedback-panel active">
+                <div id="contact-form">
+                    <input type="text" id="contact-name" placeholder="Your Name">
+                    <input type="email" id="contact-email" placeholder="Your Email">
+                    <textarea id="contact-message" placeholder="Your Message"></textarea>
+                    <button id="submit-contact" class="settings-btn settings-btn-primary">Send</button>
+                    <p id="contact-status" class="settings-status"></p>
+                </div>
+            </div>
+            <div id="feedback-suggestions" class="feedback-panel">
+                <div id="suggestions-form">
+                    <textarea id="suggestion-text" placeholder="What would make Linen better for you?"></textarea>
+                    <button id="submit-suggestion" class="settings-btn settings-btn-primary">Send Suggestion</button>
+                    <p id="suggestion-status" class="settings-status"></p>
+                </div>
             </div>
         </div>
 
-        <div class="settings-section">
-            <h3 class="settings-heading">💡 Suggestions & Ideas</h3>
-            <div id="suggestions-form">
-                <textarea id="suggestion-text" placeholder="What would make Linen better for you?"></textarea>
-                <button id="submit-suggestion" class="settings-btn settings-btn-primary">Send Suggestion</button>
-                <p id="suggestion-status" class="settings-status"></p>
-            </div>
-        </div>
-
+        <!-- 6. Privacy & Terms -->
         <div class="settings-section" id="privacy-section">
             <h3 class="settings-heading">🔐 Privacy & Terms</h3>
             <div class="trust-badges">
@@ -749,10 +754,22 @@
                 <button id="show-privacy-policy" class="settings-btn settings-btn-secondary">Privacy Policy</button>
                 <button id="show-terms" class="settings-btn settings-btn-secondary">Terms of Service</button>
             </div>
-
-            <button type="button" id="share-linen-btn" class="settings-btn settings-btn-primary" style="margin-top: 1rem;">📤 Share Linen</button>
         </div>
 
+        <!-- 7. Share & Install (side by side) -->
+        <div class="settings-section">
+            <div class="settings-btn-row">
+                <button type="button" id="share-linen-btn" class="settings-btn settings-btn-primary settings-btn-half">📤 Share</button>
+                <button id="install-app-btn" class="settings-btn settings-btn-primary settings-btn-half">📲 Install App</button>
+            </div>
+        </div>
+
+        <!-- 8. Sign Out -->
+        <div class="settings-section" id="account-section">
+            <button type="button" id="sign-out-btn" class="settings-btn settings-btn-danger" style="width: 100%;">Sign Out</button>
+        </div>
+
+        <!-- 9. Version -->
         <p id="version-info">Version 2.0.0</p>
     </div>
 </div>

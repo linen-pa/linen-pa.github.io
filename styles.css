@@ -1030,6 +1030,146 @@ hr {
     gap: 8px;
 }
 
+/* Side-by-side button row */
+.settings-btn-row {
+    display: flex;
+    gap: 10px;
+}
+
+.settings-btn-half {
+    flex: 1;
+}
+
+/* Account bar at top of profile section */
+.settings-account-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #2a2a2a;
+    border-radius: 10px;
+    margin-bottom: 4px;
+}
+
+.settings-account-icon {
+    font-size: 1.2rem;
+}
+
+.settings-account-bar .account-email {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    word-break: break-all;
+}
+
+/* Voice toggle row */
+.voice-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #2a2a2a;
+    border-radius: 10px;
+}
+
+.voice-toggle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.voice-toggle-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.voice-toggle-desc {
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+
+/* Toggle switch */
+.toggle-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-track {
+    width: 44px;
+    height: 24px;
+    background: #444;
+    border-radius: 12px;
+    transition: background 0.25s;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+}
+
+.toggle-thumb {
+    width: 20px;
+    height: 20px;
+    background: #888;
+    border-radius: 50%;
+    transition: transform 0.25s, background 0.25s;
+}
+
+.toggle-switch input:checked + .toggle-track {
+    background: var(--accent);
+}
+
+.toggle-switch input:checked + .toggle-track .toggle-thumb {
+    transform: translateX(20px);
+    background: #fff;
+}
+
+/* Feedback tabs */
+.feedback-tabs {
+    display: flex;
+    gap: 0;
+    background: #2a2a2a;
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.feedback-tab {
+    flex: 1;
+    padding: 8px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.feedback-tab.active {
+    background: var(--accent);
+    color: #000;
+    font-weight: 600;
+}
+
+.feedback-panel {
+    display: none;
+}
+
+.feedback-panel.active {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 /* Contact & Suggestions forms */
 #contact-form,
 #suggestions-form {

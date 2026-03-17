@@ -5742,6 +5742,32 @@ class Linen {
         // Suggestions
         document.getElementById('submit-suggestion').addEventListener('click', () => this.submitSuggestion());
 
+        // Feedback tabs (Support / Suggestions toggle)
+        document.querySelectorAll('.feedback-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.feedback-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.feedback-panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                const target = tab.dataset.tab === 'support' ? 'feedback-support' : 'feedback-suggestions';
+                document.getElementById(target)?.classList.add('active');
+            });
+        });
+
+        // Mic permission button
+        const micPermBtn = document.getElementById('mic-permission-btn');
+        if (micPermBtn) {
+            micPermBtn.addEventListener('click', async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    stream.getTracks().forEach(t => t.stop());
+                    micPermBtn.textContent = '✅ Microphone access granted';
+                    micPermBtn.disabled = true;
+                } catch (e) {
+                    micPermBtn.textContent = '❌ Permission denied — check browser settings';
+                }
+            });
+        }
+
         // Voice Modal Lightbox
         const voiceModal = document.getElementById('voice-modal');
         const lightboxStopBtn = document.getElementById('lightbox-stop-btn');
