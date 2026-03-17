@@ -7851,14 +7851,12 @@ class Linen {
     async showConfirmation(title, message) {
         return new Promise((resolve) => {
             const modal = document.getElementById('confirmation-modal');
-            const backdrop = document.getElementById('modal-backdrop');
             const titleEl = document.getElementById('confirmation-title');
             const messageEl = document.getElementById('confirmation-message');
             const confirmBtn = document.getElementById('confirmation-confirm');
             const cancelBtn = document.getElementById('confirmation-cancel');
 
-            if (!modal || !backdrop) {
-                // Fallback to native confirm if modal not found
+            if (!modal) {
                 resolve(confirm(message));
                 return;
             }
@@ -7868,35 +7866,17 @@ class Linen {
 
             const cleanup = () => {
                 modal.style.display = 'none';
-                backdrop.classList.remove('active');
                 confirmBtn.removeEventListener('click', onConfirm);
                 cancelBtn.removeEventListener('click', onCancel);
             };
 
-            const onConfirm = () => {
-                cleanup();
-                resolve(true);
-            };
-
-            const onCancel = () => {
-                cleanup();
-                resolve(false);
-            };
+            const onConfirm = () => { cleanup(); resolve(true); };
+            const onCancel  = () => { cleanup(); resolve(false); };
 
             confirmBtn.addEventListener('click', onConfirm);
             cancelBtn.addEventListener('click', onCancel);
 
             modal.style.display = 'flex';
-            modal.style.justifyContent = 'center';
-            modal.style.alignItems = 'center';
-            modal.style.position = 'fixed';
-            modal.style.top = '0';
-            modal.style.left = '0';
-            modal.style.right = '0';
-            modal.style.bottom = '0';
-            backdrop.classList.add('active');
-
-            // Focus confirm button for accessibility
             confirmBtn.focus();
         });
     }

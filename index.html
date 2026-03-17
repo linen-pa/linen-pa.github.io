@@ -438,14 +438,14 @@
 
     <div id="voice-status"></div>
 
-    <!-- Custom Confirmation Modal (replaces browser confirm) -->
-    <div id="confirmation-modal" class="modal" style="display: none; z-index: 1001;">
-        <div class="modal-content" style="max-width: 400px;">
-            <h2 id="confirmation-title">Confirm Action</h2>
-            <p id="confirmation-message">Are you sure?</p>
-            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
-                <button id="confirmation-cancel" class="btn btn-secondary">Cancel</button>
-                <button id="confirmation-confirm" class="btn btn-danger">Confirm</button>
+    <!-- Custom Confirmation Dialog (self-contained, above all other layers) -->
+    <div id="confirmation-modal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.65); justify-content:center; align-items:center;">
+        <div style="background:#2a2a2a; border-radius:10px; padding:24px 28px; width:90%; max-width:360px; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+            <h3 id="confirmation-title" style="margin:0 0 10px; font-size:1rem; color:#fff;"></h3>
+            <p id="confirmation-message" style="margin:0 0 22px; font-size:0.9rem; color:#bbb; line-height:1.5;"></p>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button id="confirmation-cancel" style="padding:8px 18px; border-radius:6px; border:1px solid #555; background:transparent; color:#ccc; cursor:pointer; font-size:0.9rem;">Cancel</button>
+                <button id="confirmation-confirm" style="padding:8px 18px; border-radius:6px; border:none; background:#e74c3c; color:#fff; cursor:pointer; font-size:0.9rem; font-weight:600;">Delete</button>
             </div>
         </div>
     </div>

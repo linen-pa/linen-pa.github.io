@@ -468,8 +468,6 @@ button:hover {
 
 .delete-memory {
     background: #e74c3c;
-    padding: 5px 10px;
-    font-size: 0.8rem;
 }
 
 #onboarding-overlay {
@@ -1939,9 +1937,11 @@ hr {
 }
 
 .memory-card-actions button {
-    padding: 5px 10px;
+    padding: 0 10px;
+    height: 28px;
     font-size: 0.8rem;
     border-radius: 4px;
+    box-sizing: border-box;
 }
 
 .edit-memory {
