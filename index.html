@@ -210,9 +210,6 @@
                     <h4 style="margin-top: 1rem; color: var(--accent);">👤 Personalized Experience</h4>
                     <p>Tell Linen what to call you. Set your pronouns, birthday, and timezone. Each time you return, Linen greets you personally — with warmth that scales to how long you've been away, from "back already?" to "it's been a while, I'm glad you're here."</p>
 
-                    <h4 style="margin-top: 1rem; color: var(--accent);">🗓️ Calendar & Reminders</h4>
-                    <p>Mention something you need to remember and Linen creates a reminder or calendar event automatically. No separate apps, no friction.</p>
-
                     <h4 style="margin-top: 1rem; color: var(--accent);">📱 Installable Progressive Web App</h4>
                     <p>Install Linen on your phone, tablet, or desktop straight from the browser — no app store needed. It works like a native app, loads instantly, and functions even when you're offline.</p>
 
@@ -271,7 +268,6 @@
                         <li><strong>💾 Session Persistence:</strong> Your current conversation survives page refreshes. Nothing is lost until you choose to archive or start fresh.</li>
                         <li><strong>📚 Archive Chat:</strong> Explicitly save any conversation to your permanent memory library. New Chat always starts clean.</li>
                         <li><strong>🧠 Memory System:</strong> Linen auto-detects and saves important facts from conversations. Search, browse, and restore past sessions.</li>
-                        <li><strong>🗓️ Calendar & Reminders:</strong> Create events and reminders from natural conversation — no manual entry needed.</li>
                         <li><strong>🚨 Crisis Detection:</strong> Automatically detects distress signals and responds with compassion, grounding techniques, and appropriate resources.</li>
                         <li><strong>🔄 Auto Updates:</strong> Background update checks with adaptive intervals based on network and battery. Silent, non-disruptive.</li>
                         <li><strong>🛡️ Deployment Validation:</strong> Every update passes automated syntax checks before going live — broken code can never reach users.</li>
@@ -466,9 +462,6 @@
             <h2>⚡ Utilities</h2>
             <div class="utilities-tabs">
                 <button type="button" class="utilities-tab active" data-tab="alarm-timer">⏰ Alarm & Timer</button>
-                <button type="button" class="utilities-tab" data-tab="notes">📝 Notes</button>
-                <button type="button" class="utilities-tab" data-tab="calendar">📅 Calendar</button>
-                <button type="button" class="utilities-tab" data-tab="reminders">🔔 Reminders</button>
             </div>
         </div>
 
@@ -503,58 +496,6 @@
             </div>
         </div>
 
-        <!-- Notes Tab -->
-        <div id="notes-tab" class="utilities-tab-content">
-            <div class="utility-section">
-                <h3>📝 Notes</h3>
-                <textarea id="note-input" placeholder="Write your note here..." rows="6"></textarea>
-                <div class="notes-actions">
-                    <button type="button" id="save-note-btn" class="button-primary">Save Note</button>
-                    <button type="button" id="share-note-btn" class="button-secondary">Share Note</button>
-                </div>
-                <div id="notes-list" class="notes-list">
-                    <h4>My Notes</h4>
-                    <div id="notes-container"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Calendar Tab -->
-        <div id="calendar-tab" class="utilities-tab-content">
-            <div class="utility-section">
-                <h3>📅 Calendar</h3>
-                <div class="event-setup">
-                    <input type="text" id="event-title" placeholder="Event name" />
-                    <input type="datetime-local" id="event-datetime" />
-                    <textarea id="event-description" placeholder="Event description" rows="3"></textarea>
-                    <button type="button" id="add-event-btn" class="button-primary">Add Event</button>
-                </div>
-                <div id="events-list" class="events-list">
-                    <h4>Upcoming Events</h4>
-                    <div id="events-container"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Reminders Tab -->
-        <div id="reminders-tab" class="utilities-tab-content">
-            <div class="utility-section">
-                <h3>🔔 Reminders</h3>
-                <div class="reminder-setup">
-                    <input type="text" id="reminder-text" placeholder="What do you want to remember?" />
-                    <input type="datetime-local" id="reminder-time" />
-                    <select id="reminder-method">
-                        <option value="push">Push Notification</option>
-                        <option value="email">Email Notification</option>
-                    </select>
-                    <button type="button" id="create-reminder-btn" class="button-primary">Create Reminder</button>
-                </div>
-                <div id="reminders-list" class="reminders-list">
-                    <h4>Active Reminders</h4>
-                    <div id="reminders-container"></div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <div class="modal" id="settings-modal" aria-label="Settings panel">
@@ -781,7 +722,6 @@
         <ul>
             <li>All your conversations with Linen</li>
             <li>Your saved memories and archived chats</li>
-            <li>Your calendar events and reminders</li>
             <li>Your profile details (name, pronouns, birthday, timezone)</li>
         </ul>
 
