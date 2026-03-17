@@ -1681,15 +1681,24 @@ class VoiceManager {
     initRecognition() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
-            this.recognition = new SpeechRecognition();
-            this.recognition.continuous = true; // Changed to true to keep listening
-            this.recognition.interimResults = true;
-            this.recognition.lang = 'en-US';
+            try {
+                this.recognition = new SpeechRecognition();
+                this.recognition.continuous = true;
+                this.recognition.interimResults = true;
+                this.recognition.lang = 'en-US';
+                console.log('VoiceManager: Web Speech API initialized successfully');
+            } catch (error) {
+                console.error('VoiceManager: Failed to initialize Web Speech API:', error);
+                this.recognition = null;
+            }
+        } else {
+            console.warn('VoiceManager: Web Speech API not supported in this browser');
         }
     }
 
     startListening(onResult, onError, onPauseDetected) {
         if (!this.recognition) {
+            console.error('VoiceManager: Speech recognition not available');
             onError('Speech recognition not supported in this browser');
             return;
         }
@@ -1698,8 +1707,9 @@ class VoiceManager {
         if (this.isListening) {
             try {
                 this.recognition.abort();
+                console.log('VoiceManager: Aborted previous recognition session');
             } catch (e) {
-                console.warn('Error aborting previous recognition:', e);
+                console.warn('VoiceManager: Error aborting previous recognition:', e);
             }
         }
 
@@ -1714,12 +1724,20 @@ class VoiceManager {
             this.pauseTimeout = null;
         }
 
+        console.log('VoiceManager: Starting new listening session');
+
         // Attach event handlers - these will replace any previous ones
         this.recognition.onstart = () => {
-            console.log('Voice input started');
+            console.log('VoiceManager: Recognition started - listening for speech...');
         };
 
         this.recognition.onresult = (event) => {
+            console.log('Voice result event:', {
+                resultIndex: event.resultIndex,
+                resultsLength: event.results.length,
+                isFinal: event.results.length > 0 ? event.results[event.results.length - 1].isFinal : false
+            });
+
             // Clear previous pause timeout on each new result
             if (this.pauseTimeout) {
                 clearTimeout(this.pauseTimeout);
@@ -1734,16 +1752,28 @@ class VoiceManager {
 
             this.lastTranscript = transcript;
             const isFinal = event.results[event.results.length - 1].isFinal;
+
+            console.log('Transcript:', { transcript, isFinal, lastTranscript: this.lastTranscript });
             onResult(transcript, !isFinal);
 
-            // If speech detected (not final), set pause detection timer (1.5 seconds of silence)
-            if (transcript.trim() && !isFinal) {
-                this.pauseTimeout = setTimeout(() => {
-                    console.log('Pause detected, stopping listening');
+            // If speech detected, set pause detection timer
+            // Trigger on either interim results after speech or on final result
+            if (transcript.trim()) {
+                if (isFinal) {
+                    // Final result received - process immediately
+                    console.log('Final result detected, processing:', transcript);
                     if (this.onPauseDetected && this.lastTranscript.trim()) {
                         this.onPauseDetected(this.lastTranscript);
                     }
-                }, 1500); // 1.5 second pause threshold
+                } else {
+                    // Interim result - wait for pause to process
+                    this.pauseTimeout = setTimeout(() => {
+                        console.log('Pause detected after interim result, stopping listening');
+                        if (this.onPauseDetected && this.lastTranscript.trim()) {
+                            this.onPauseDetected(this.lastTranscript);
+                        }
+                    }, 1500); // 1.5 second pause threshold
+                }
             }
         };
 
@@ -1754,7 +1784,37 @@ class VoiceManager {
                 clearTimeout(this.pauseTimeout);
                 this.pauseTimeout = null;
             }
-            onError(event.error);
+
+            // Provide user-friendly error messages
+            let errorMessage = event.error;
+            switch (event.error) {
+                case 'no-permission':
+                    errorMessage = 'Microphone permission denied. Check browser settings.';
+                    break;
+                case 'network':
+                    errorMessage = 'Network error. Check your connection.';
+                    break;
+                case 'not-allowed':
+                    errorMessage = 'Microphone not allowed. Check browser permissions.';
+                    break;
+                case 'no-speech':
+                    errorMessage = 'No speech detected. Try speaking louder or closer to mic.';
+                    break;
+                case 'audio-capture':
+                    errorMessage = 'No microphone found. Check your device.';
+                    break;
+                case 'service-not-allowed':
+                    errorMessage = 'Speech recognition service not available.';
+                    break;
+                case 'bad-grammar':
+                    errorMessage = 'Speech recognition error. Try again.';
+                    break;
+                case 'aborted':
+                    console.log('Speech recognition aborted by user');
+                    return; // User intentionally stopped, don't show error
+            }
+            console.error('Error details:', errorMessage);
+            onError(errorMessage);
         };
 
         this.recognition.onend = () => {
@@ -1768,10 +1828,11 @@ class VoiceManager {
 
         try {
             this.recognition.start();
+            console.log('VoiceManager: Recognition.start() called successfully');
         } catch (error) {
-            console.error('Error starting recognition:', error);
+            console.error('VoiceManager: Error starting recognition:', error);
             this.isListening = false;
-            onError('Failed to start speech recognition');
+            onError('Failed to start speech recognition: ' + error.message);
         }
     }
 
@@ -7028,10 +7089,15 @@ class Linen {
                 console.log("Linen: Voice transcript:", transcript, isInterim);
             },
             (error) => {
-                console.error('Voice input error:', error);
-                const voiceErrorMsg = error === 'no-speech'
-                    ? "Couldn't hear you. Try again or use text input."
-                    : `Voice input error: ${error}`;
+                console.error('Linen: Voice input error:', error);
+                let voiceErrorMsg = error;
+
+                // Handle error messages from VoiceManager
+                if (typeof error === 'string') {
+                    voiceErrorMsg = error;
+                }
+
+                console.error('Linen: Showing error toast:', voiceErrorMsg);
                 this.showToast(voiceErrorMsg, 'error');
                 this.stopVoiceInput();
             },
