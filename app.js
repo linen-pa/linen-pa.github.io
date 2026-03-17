@@ -3988,13 +3988,6 @@ class Linen {
         } catch (err) {
             console.error("Linen: Error in bindEvents():", err);
         }
-        console.log("Linen: Cleaning up local duplicates");
-        try {
-            await this.deduplicateLocalData();
-        } catch (err) {
-            console.warn("Linen: Error deduplicating local data:", err);
-        }
-
         console.log("Linen: Loading chat history");
         try {
             await this.loadChatHistory();
