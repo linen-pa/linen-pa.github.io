@@ -5446,7 +5446,45 @@ class Linen {
                     this.setupProfileAccordion();
                 });
             }
+        }
 
+        // Document-level click-outside handler — closes panels/modals when clicking outside them
+        document.addEventListener('click', (e) => {
+            // Close memories panel when clicking outside it
+            const memoriesPanelEl = document.getElementById('memories-panel');
+            if (memoriesPanelEl && memoriesPanelEl.classList.contains('active')) {
+                if (!memoriesPanelEl.contains(e.target)) {
+                    memoriesPanelEl.classList.remove('active');
+                    backdrop.classList.remove('active');
+                }
+            }
+            // Close settings modal when clicking outside it
+            const settingsModalEl = document.getElementById('settings-modal');
+            if (settingsModalEl && settingsModalEl.classList.contains('active')) {
+                if (!settingsModalEl.contains(e.target)) {
+                    settingsModalEl.classList.remove('active');
+                    backdrop.classList.remove('active');
+                }
+            }
+            // Close about modal when clicking outside it
+            const aboutModalEl = document.getElementById('about-modal');
+            if (aboutModalEl && aboutModalEl.classList.contains('active')) {
+                if (!aboutModalEl.contains(e.target)) {
+                    aboutModalEl.classList.remove('active');
+                    backdrop.classList.remove('active');
+                }
+            }
+            // Close utilities modal when clicking outside it
+            const utilitiesModalEl = document.getElementById('utilities-modal');
+            if (utilitiesModalEl && utilitiesModalEl.classList.contains('active')) {
+                if (!utilitiesModalEl.contains(e.target)) {
+                    utilitiesModalEl.classList.remove('active');
+                    backdrop.classList.remove('active');
+                }
+            }
+        });
+
+        if (logo && logoMenu) {
             // Archive chat button
             const logoArchiveBtn = document.getElementById('logo-archive-chat');
             if (logoArchiveBtn) {
