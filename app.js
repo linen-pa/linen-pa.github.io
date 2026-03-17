@@ -2009,11 +2009,20 @@ class VoiceManager {
             }
             console.log('VoiceManager: Recognition ended');
 
-            // If continuous mode was on but it stopped unexpectedly, restart
-            // This can happen in some browsers where recognition stops after silence
-            if (this.recognition && this.recognition.continuous && this.isListening === false) {
-                console.log('VoiceManager: Recognition stopped unexpectedly in continuous mode');
-                // Don't auto-restart - let user manually restart by clicking mic again
+            // Auto-restart if voice mode is still supposed to be active
+            // This handles browsers that stop recognition after silence gaps
+            if (this.shouldContinue) {
+                setTimeout(() => {
+                    if (this.shouldContinue) {
+                        try {
+                            this.recognition.start();
+                            this.isListening = true;
+                            console.log('VoiceManager: Auto-restarted listening after end');
+                        } catch (e) {
+                            console.warn('VoiceManager: Could not auto-restart:', e);
+                        }
+                    }
+                }, 250);
             }
         };
 
@@ -7582,67 +7591,65 @@ class Linen {
 
     startVoiceInput() {
         this._voiceInputActive = true;
-        console.log("Linen: Starting voice input - User can speak freely, click mic again when done");
-
-        // Auto-enable TTS when user uses voice input
-        // They're talking, so they expect voice responses back
-        localStorage.setItem('linen-enable-tts', 'true');
-        const enableTTSCheckbox = document.getElementById('enable-tts');
-        if (enableTTSCheckbox) {
-            enableTTSCheckbox.checked = true;
-        }
-        console.log("Linen: TTS auto-enabled for voice input");
+        this._lastInputWasVoice = false;
+        console.log("Linen: Starting voice input - mic stays on until user clicks again");
 
         // Update voice button to show active state (red)
         const voiceBtn = document.getElementById('voice-btn');
         if (voiceBtn) {
             voiceBtn.classList.add('voice-active');
-            voiceBtn.style.backgroundColor = ''; // Let CSS handle the background
-            voiceBtn.title = 'Click to stop listening'; // Update tooltip
+            voiceBtn.style.backgroundColor = '';
+            voiceBtn.title = 'Click to stop listening';
         }
 
-        this.voiceManager.startListening(
-            (transcript, isInterim) => {
-                // Update UI with current transcript
-                const inputField = document.getElementById('chat-input');
-                if (inputField) {
-                    inputField.value = transcript;
-                    inputField.style.opacity = isInterim ? '0.7' : '1.0';
-                }
-                console.log("Linen: Voice transcript:", transcript, isInterim);
-            },
-            (error) => {
-                console.error('Linen: Voice input error:', error);
-                let voiceErrorMsg = error;
-
-                // Handle error messages from VoiceManager
-                if (typeof error === 'string') {
-                    voiceErrorMsg = error;
-                }
-
-                console.error('Linen: Showing error toast:', voiceErrorMsg);
-                this.showToast(voiceErrorMsg, 'error');
-                this.stopVoiceInput();
-            },
-            (finalTranscript) => {
-                // Pause detected - auto-send the message
-                console.log("Linen: Pause detected, processing:", finalTranscript);
-                const inputField = document.getElementById('chat-input');
-                if (inputField) {
-                    inputField.value = finalTranscript;
-                    inputField.style.opacity = '1.0';
-                }
-                // Wait a moment for UI to update, then send
-                setTimeout(() => {
-                    this.sendChat();
-                    this.stopVoiceInput();
-                }, 100);
+        // Store callbacks so we can re-attach them when restarting the mic after TTS
+        const onTranscript = (transcript, isInterim) => {
+            const inputField = document.getElementById('chat-input');
+            if (inputField) {
+                inputField.value = transcript;
+                inputField.style.opacity = isInterim ? '0.7' : '1.0';
             }
-        );
+        };
+
+        const onError = (error) => {
+            console.error('Linen: Voice input error:', error);
+            this.showToast(typeof error === 'string' ? error : 'Voice error', 'error');
+            this.stopVoiceInput();
+        };
+
+        const onPauseDetected = (finalTranscript) => {
+            console.log("Linen: Pause detected, sending:", finalTranscript);
+            const inputField = document.getElementById('chat-input');
+            if (inputField) {
+                inputField.value = finalTranscript;
+                inputField.style.opacity = '1.0';
+            }
+
+            // Flag this turn as voice so TTS responds
+            this._lastInputWasVoice = true;
+
+            // Pause mic while AI processes — mic restarts after TTS finishes
+            this.voiceManager.shouldContinue = false;
+            this.voiceManager.stopListening();
+
+            setTimeout(() => {
+                this.sendChat();
+                // _voiceInputActive stays true — mic will restart in speakResponse().onend
+            }, 100);
+        };
+
+        // Keep callbacks accessible for mic restart after TTS
+        this._voiceCallbacks = { onTranscript, onError, onPauseDetected };
+
+        this.voiceManager.shouldContinue = true;
+        this.voiceManager.startListening(onTranscript, onError, onPauseDetected);
     }
 
     stopVoiceInput() {
         this._voiceInputActive = false;
+        this._lastInputWasVoice = false;
+        this._voiceCallbacks = null;
+        if (this.voiceManager) this.voiceManager.shouldContinue = false;
         console.log("Linen: Stopping voice input");
 
         // Update voice button to show inactive state (green)
@@ -8144,63 +8151,78 @@ class Linen {
     // Text-to-Speech - read response aloud
     speakResponse(text) {
         try {
-            // Check if user has TTS enabled (optional setting)
-            const enableTTS = localStorage.getItem('linen-enable-tts') === 'true';
-            if (!enableTTS) {
-                console.log('Linen: TTS disabled, skipping speech output');
+            // Speak if: (1) this message was sent by voice, OR (2) user has always-on TTS in settings
+            const alwaysOnTTS = localStorage.getItem('linen-enable-tts') === 'true';
+            if (!this._lastInputWasVoice && !alwaysOnTTS) {
+                console.log('Linen: Text input, TTS skipped');
                 return;
             }
 
-            // Check if speech synthesis is available
             if (!window.speechSynthesis) {
                 console.warn('Linen: Speech Synthesis API not available');
+                // Still restart mic if voice mode is on
+                this._restartMicAfterTTS();
                 return;
             }
 
-            // Create utterance with response text
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.rate = 0.95;
             utterance.pitch = 1.0;
             utterance.volume = 1.0;
             utterance.lang = 'en-US';
 
-            // Log when speech starts and ends
             utterance.onstart = () => {
                 console.log('Linen: Speaking response...');
             };
 
             utterance.onend = () => {
                 console.log('Linen: Speech synthesis complete');
+                // Restart mic now that AI has finished speaking
+                this._restartMicAfterTTS();
             };
 
             utterance.onerror = (e) => {
                 console.error('Linen: Speech synthesis error:', e);
+                // Restart mic even on TTS error so user isn't stuck
+                this._restartMicAfterTTS();
             };
 
-            // Try to use a natural-sounding voice if available
+            // Pick a natural-sounding voice
             const voices = window.speechSynthesis.getVoices();
-            console.log('Linen: Available voices:', voices.length);
-
             if (voices.length > 0) {
-                // Prefer a female or natural-sounding voice
                 const preferredVoice = voices.find(v =>
                     v.name.includes('Google') ||
                     v.name.includes('Female') ||
                     v.name.includes('female') ||
                     v.lang.startsWith('en-US')
                 );
-                if (preferredVoice) {
-                    utterance.voice = preferredVoice;
-                    console.log('Linen: Using voice:', preferredVoice.name);
-                }
+                if (preferredVoice) utterance.voice = preferredVoice;
             }
 
-            // Cancel any previous speech before starting new one
             window.speechSynthesis.cancel();
             window.speechSynthesis.speak(utterance);
-            console.log('Linen: Speech synthesis started');
+            console.log('Linen: Speaking AI response');
         } catch (error) {
             console.error('Linen: Error in speakResponse:', error);
+            this._restartMicAfterTTS();
+        }
+    }
+
+    /** Restart mic listening after TTS finishes, if voice mode is still active */
+    _restartMicAfterTTS() {
+        this._lastInputWasVoice = false;
+        if (this._voiceInputActive && this._voiceCallbacks && this.voiceManager) {
+            setTimeout(() => {
+                if (this._voiceInputActive) {
+                    console.log('Linen: Restarting mic after TTS');
+                    this.voiceManager.shouldContinue = true;
+                    this.voiceManager.startListening(
+                        this._voiceCallbacks.onTranscript,
+                        this._voiceCallbacks.onError,
+                        this._voiceCallbacks.onPauseDetected
+                    );
+                }
+            }, 400); // Small pause so mic doesn't catch the tail of TTS audio
         }
     }
 }
