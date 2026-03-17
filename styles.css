@@ -1030,6 +1030,12 @@ hr {
     gap: 8px;
 }
 
+.settings-btn-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
 /* Side-by-side button row */
 .settings-btn-row {
     display: flex;
