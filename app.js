@@ -954,16 +954,26 @@ class ModelVersionManager {
 
 // API key is now securely stored in Firebase Cloud Functions
 // No hardcoded keys - all requests go through the backend
-const _callGeminiViaBackend = async (messages, model) => {
+const _callGeminiViaBackend = async (requestBodyOrMessages, model) => {
     const functionUrl = 'https://us-central1-linen-a1142.cloudfunctions.net/callGeminiAPI';
 
     try {
+        // Support both full request body (with systemInstruction) and just messages
+        let body;
+        if (requestBodyOrMessages.contents !== undefined) {
+            // Full request body with systemInstruction
+            body = JSON.stringify({ ...requestBodyOrMessages, model: model || 'gemini-2.5-flash' });
+        } else {
+            // Just messages array (legacy)
+            body = JSON.stringify({ contents: requestBodyOrMessages, model: model || 'gemini-2.5-flash' });
+        }
+
         const response = await fetch(functionUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ messages, model: model || 'gemini-2.5-flash' }),
+            body,
         });
 
         if (!response.ok) {
@@ -1241,8 +1251,8 @@ Be intelligent about response length. Someone saying "I'm anxious about my prese
             try {
                 console.log(`Trying model: ${model}`);
 
-                // Call the secure backend Cloud Function
-                const data = await _callGeminiViaBackend(requestBody.contents, model);
+                // Call the secure backend Cloud Function with full request body including system prompt
+                const data = await _callGeminiViaBackend(requestBody, model);
 
                 const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!reply) throw new Error('No response from assistant');
@@ -7199,10 +7209,11 @@ class Linen {
         if (!convs || convs.length === 0) return;
 
         // Deduplicate messages: keep track of what we've displayed
+        // Use only sender + text (ignore timestamps which may vary)
         const seen = new Set();
         const dedupedMsgs = [];
         for (const msg of convs) {
-            const key = `${msg.sender}|${msg.text}|${msg.date}`;
+            const key = `${msg.sender}|${msg.text}`;
             if (!seen.has(key)) {
                 seen.add(key);
                 dedupedMsgs.push(msg);

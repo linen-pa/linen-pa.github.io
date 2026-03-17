@@ -40,18 +40,18 @@ export const callGeminiAPI = onRequest(async (req, res) => {
     res.set(corsHeaders);
 
     try {
-        const { messages, model = 'gemini-2.5-flash' } = req.body;
+        const { contents, systemInstruction, generationConfig, model = 'gemini-2.5-flash' } = req.body;
 
         // Validate input
-        if (!messages || !Array.isArray(messages)) {
+        if (!contents || !Array.isArray(contents)) {
             return res.status(400).json({
-                error: 'Missing or invalid messages array',
+                error: 'Missing or invalid contents array',
             });
         }
 
-        if (messages.length === 0) {
+        if (contents.length === 0) {
             return res.status(400).json({
-                error: 'Messages array cannot be empty',
+                error: 'Contents array cannot be empty',
             });
         }
 
@@ -64,6 +64,22 @@ export const callGeminiAPI = onRequest(async (req, res) => {
             });
         }
 
+        // Build request body with systemInstruction
+        const requestPayload = {
+            contents,
+            generationConfig: generationConfig || {
+                temperature: 1,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 8192,
+            },
+        };
+
+        // Add system instruction if provided
+        if (systemInstruction) {
+            requestPayload.systemInstruction = systemInstruction;
+        }
+
         // Call Gemini API with secure key
         const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -72,15 +88,7 @@ export const callGeminiAPI = onRequest(async (req, res) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    contents: messages,
-                    generationConfig: {
-                        temperature: 1,
-                        topK: 40,
-                        topP: 0.95,
-                        maxOutputTokens: 8192,
-                    },
-                }),
+                body: JSON.stringify(requestPayload),
             }
         );
 
