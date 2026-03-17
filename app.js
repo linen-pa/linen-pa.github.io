@@ -955,11 +955,23 @@ class ModelVersionManager {
 // API key is now securely stored in Firebase Cloud Functions
 // No hardcoded keys - all requests go through the backend
 const _callGeminiViaBackend = async (messages, model) => {
-    const functions = firebase.functions();
-    const callGeminiAPI = functions.httpsCallable('callGeminiAPI');
+    const functionUrl = 'https://us-central1-linen-a1142.cloudfunctions.net/callGeminiAPI';
 
     try {
-        const result = await callGeminiAPI({ messages, model });
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ messages, model: model || 'gemini-2.5-flash' }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Cloud Function request failed');
+        }
+
+        const result = await response.json();
         return result.data;
     } catch (error) {
         console.error('Cloud Function error:', error);
@@ -980,13 +992,22 @@ class GeminiAssistant {
     async validateKey() {
         console.log("Validating backend connection...");
         try {
-            // Validate by testing the Cloud Function
-            const functions = firebase.functions();
-            const testConnection = functions.httpsCallable('testConnection');
-            const result = await testConnection();
+            const functionUrl = 'https://us-central1-linen-a1142.cloudfunctions.net/testConnection';
+            const response = await fetch(functionUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            });
 
-            console.log("Backend validation result:", result.data.success);
-            if (result.data.success) {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            console.log("Backend validation result:", result.success);
+            if (result.success) {
                 return { valid: true };
             }
             return { valid: false, error: 'Backend connection failed. Please try again.' };
