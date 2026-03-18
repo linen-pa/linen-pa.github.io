@@ -7629,18 +7629,18 @@ class Linen {
             if (!userIsPaid) {
                 const blockedDiv = document.createElement('div');
                 blockedDiv.className = 'assistant-message';
-                blockedDiv.innerHTML = this.formatMessageHTML(`✨ **Image generation is a Pro feature.**\n\nUpgrade to Pro, Popular, or Ultimate in Settings to unlock it. Free tier still gets everything else — chat, memories, reminders, and more.`);
+                blockedDiv.innerHTML = this.formatMessageHTML(`✨ **Image generation is available on paid plans.**\n\nSubscribe to Pro ($1.99/mo), Popular ($4.99/mo), or Ultimate ($9.99/mo) in Settings to unlock it. Cancel anytime. Everything else — chat, memories, reminders — stays free.`);
                 container.appendChild(blockedDiv);
                 this.scrollToBottom();
                 return;
             }
 
-            // Gate: need at least 5 tokens
-            const currentBalance = await this.tokenManager.getBalance();
+            // Gate: need at least 5 tokens across free + tier pools
+            const currentBalance = await this.tokenManager.getTotalBalance();
             if (currentBalance < 5) {
                 const lowDiv = document.createElement('div');
                 lowDiv.className = 'assistant-message';
-                lowDiv.innerHTML = this.formatMessageHTML(`You need at least **5 tokens** to generate an image, but you only have **${currentBalance}**. Top up in Settings to continue.`);
+                lowDiv.innerHTML = this.formatMessageHTML(`You need at least **5 tokens** to generate an image, but you only have **${currentBalance}** left today. Your tokens reset daily — come back tomorrow or check Settings.`);
                 container.appendChild(lowDiv);
                 this.scrollToBottom();
                 return;
@@ -8541,10 +8541,17 @@ class Linen {
         const user = this.authManager?.getCurrentUser();
         if (!user) return false;
         try {
-            const snapshot = await this.authManager.database.ref('users/' + user.uid + '/hasPurchased').get();
-            return snapshot.val() === true;
+            const sub = await this.authManager.getSubscriptionData(user.uid);
+            // Active subscription required for premium features (image generation)
+            if (sub.subscriptionActive && sub.subscriptionTier) {
+                // Also verify expiry as a sanity check (webhook updates this on renewal)
+                if (sub.subscriptionExpiry && sub.subscriptionExpiry > Date.now()) {
+                    return true;
+                }
+            }
+            return false;
         } catch (e) {
-            console.warn('Linen: Could not check paid status:', e);
+            console.warn('Linen: Could not check subscription status:', e);
             return false;
         }
     }
