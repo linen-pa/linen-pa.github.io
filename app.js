@@ -1379,14 +1379,16 @@ Be intelligent about response length. Someone saying "I'm anxious about my prese
         const msg = userMessage.toLowerCase();
 
         // High-severity crisis keywords - immediate danger
+        // IMPORTANT: keep these specific and unambiguous.
+        // Do NOT add broad everyday phrases like "going to", "plan to", "i will", "pointless"
+        // — they fire on completely normal messages like "how are you going to remind me?"
         const severeCrisisKeywords = [
-            'suicidal', 'kill myself', 'kill myself', 'end my life', 'end it all',
+            'suicidal', 'kill myself', 'end my life', 'end it all',
             'want to die', 'wish i was dead', 'rather be dead',
-            'self harm', 'self-harm', 'hurt myself', 'cut myself', 'burn myself',
-            'starve myself', 'overdose', 'take pills',
+            'self harm', 'self-harm', 'cut myself', 'burn myself',
+            'starve myself', 'overdose',
             'hang myself', 'jump off', 'jump in front',
-            'no point living', 'no reason to live', 'pointless',
-            'plan to', 'going to', 'i will'
+            'no point living', 'no reason to live'
         ];
 
         // Check for severe crisis indicators
@@ -1721,14 +1723,16 @@ Be intelligent about response length. Someone saying "I'm anxious about my prese
         const msg = userMessage.toLowerCase();
 
         // High-severity crisis keywords - immediate danger
+        // IMPORTANT: keep these specific and unambiguous.
+        // Do NOT add broad everyday phrases like "going to", "plan to", "i will", "pointless"
+        // — they fire on completely normal messages like "how are you going to remind me?"
         const severeCrisisKeywords = [
-            'suicidal', 'kill myself', 'kill myself', 'end my life', 'end it all',
+            'suicidal', 'kill myself', 'end my life', 'end it all',
             'want to die', 'wish i was dead', 'rather be dead',
-            'self harm', 'self-harm', 'hurt myself', 'cut myself', 'burn myself',
-            'starve myself', 'overdose', 'take pills',
+            'self harm', 'self-harm', 'cut myself', 'burn myself',
+            'starve myself', 'overdose',
             'hang myself', 'jump off', 'jump in front',
-            'no point living', 'no reason to live', 'pointless',
-            'plan to', 'going to', 'i will'
+            'no point living', 'no reason to live'
         ];
 
         // Check for severe crisis indicators
@@ -1863,14 +1867,16 @@ Core Directives:
         const msg = userMessage.toLowerCase();
 
         // High-severity crisis keywords - immediate danger
+        // IMPORTANT: keep these specific and unambiguous.
+        // Do NOT add broad everyday phrases like "going to", "plan to", "i will", "pointless"
+        // — they fire on completely normal messages like "how are you going to remind me?"
         const severeCrisisKeywords = [
-            'suicidal', 'kill myself', 'kill myself', 'end my life', 'end it all',
+            'suicidal', 'kill myself', 'end my life', 'end it all',
             'want to die', 'wish i was dead', 'rather be dead',
-            'self harm', 'self-harm', 'hurt myself', 'cut myself', 'burn myself',
-            'starve myself', 'overdose', 'take pills',
+            'self harm', 'self-harm', 'cut myself', 'burn myself',
+            'starve myself', 'overdose',
             'hang myself', 'jump off', 'jump in front',
-            'no point living', 'no reason to live', 'pointless',
-            'plan to', 'going to', 'i will'
+            'no point living', 'no reason to live'
         ];
 
         // Check for severe crisis indicators
