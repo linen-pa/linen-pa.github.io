@@ -147,66 +147,39 @@ export const generateImage = onRequest(async (req, res) => {
             });
         }
 
-        // Try Vertex AI Imagen model first, then fallback to other options
-        let response = await fetch(
-            `https://us-central1-aiplatform.googleapis.com/v1/projects/linen-a1142/locations/us-central1/publishers/google/models/imagegeneration@006:predict`,
+        // Call gemini-2.5-flash-image — the correct model for image generation
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    instances: [
-                        {
-                            prompt: prompt,
-                        },
-                    ],
-                    parameters: {
-                        sampleCount: 1,
-                    },
+                    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                    generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
                 }),
             }
         );
 
-        // If Vertex AI fails, try the basic Gemini generateContent with a vision instruction
         if (!response.ok) {
-            console.log('Vertex AI image generation not available, using Gemini text response');
-            response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        contents: [
-                            {
-                                role: 'user',
-                                parts: [
-                                    {
-                                        text: `You are an image description expert. The user wants to generate an image with this description: "${prompt}". Since you cannot actually generate images, provide a detailed, professional description that could be used with an image generation tool. Include style suggestions, composition tips, lighting, mood, color palette, and any other visual details that would help someone understand exactly what image to create.`,
-                                    },
-                                ],
-                            },
-                        ],
-                    }),
-                }
-            );
-        }
-
-        if (!response.ok) {
-            const error = await response.json();
-            console.error('Gemini image generation error:', error);
+            const errBody = await response.json().catch(() => ({}));
+            console.error('Image generation failed:', errBody);
             return res.status(500).json({
-                error: `Image generation failed: ${error.error?.message || 'Unknown error'}`,
+                error: `Image generation failed: ${errBody.error?.message || 'Unknown error'}`,
             });
         }
 
         const data = await response.json();
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        const imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));
+
+        if (!imagePart) {
+            return res.status(500).json({ error: 'No image in response' });
+        }
+
         return res.json({
             success: true,
-            data: data,
+            imageData: imagePart.inlineData.data,
+            mimeType: imagePart.inlineData.mimeType,
         });
     } catch (error) {
         console.error('generateImage error:', error);

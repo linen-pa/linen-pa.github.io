@@ -1007,7 +1007,7 @@ const _generateImageViaBackend = async (prompt) => {
         }
 
         const result = await response.json();
-        return result.data;
+        return result; // Returns { success, imageData, mimeType } directly
     } catch (error) {
         console.error('Image generation error:', error);
         throw error;
@@ -1315,32 +1315,18 @@ Be intelligent about response length. Someone saying "I'm anxious about my prese
     async generateImage(prompt) {
         try {
             console.log('Generating image with prompt:', prompt);
-            const data = await _generateImageViaBackend(prompt);
+            const result = await _generateImageViaBackend(prompt);
 
-            // Try to extract actual image data first
-            const imageData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-            const mimeType = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
-
-            if (imageData) {
+            if (result.imageData) {
                 return {
                     success: true,
                     type: 'image',
-                    imageData: imageData,
-                    mimeType: mimeType || 'image/png'
+                    imageData: result.imageData,
+                    mimeType: result.mimeType || 'image/png'
                 };
             }
 
-            // Fallback: use text description from Gemini
-            const textDescription = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (textDescription) {
-                return {
-                    success: true,
-                    type: 'description',
-                    text: textDescription
-                };
-            }
-
-            throw new Error('No image or description in response');
+            throw new Error('No image data returned');
         } catch (error) {
             console.error('Image generation failed:', error);
             throw error;
