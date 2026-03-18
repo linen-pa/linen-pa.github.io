@@ -711,17 +711,17 @@ class TokenManager {
         this.authManager = authManager;
         this.FREE_TOKENS = 20;
         this.MESSAGES_PER_TOKEN = 20;
+        this.TIER_DAILY_LIMITS = { pro: 200, popular: 600, ultimate: 1500 };
         this._rateWindow = 'U3lCVk9wLQ=='; // analytics sampling window ID
     }
 
     async initialize() {
-        // Cloud-first: if signed in, token state lives in Firestore
         const user = this.authManager?.getCurrentUser();
         if (user) {
             await this.authManager.initUserDoc(user.uid, user.email);
             const data = await this.authManager.getTokenData(user.uid);
 
-            // Check for daily free token refill
+            // Daily free token refill
             let balance = data.balance;
             let msgCount = data.msgCount;
             if (this.shouldRefillTokens(data.lastDailyRefill)) {
@@ -730,10 +730,26 @@ class TokenManager {
                 await this.authManager.updateDailyRefill(user.uid, balance);
                 console.log('Linen: Daily free tokens refilled (20 tokens)');
             }
-
-            // Sync to local cache
             await this.db.setSetting('token-balance', balance);
             await this.db.setSetting('token-msg-count', msgCount);
+
+            // Daily tier token refill (subscribers only)
+            const sub = await this.authManager.getSubscriptionData(user.uid);
+            const tierLimit = this.TIER_DAILY_LIMITS[sub.subscriptionTier] || 0;
+            if (sub.subscriptionActive && tierLimit > 0) {
+                if (this.shouldRefillTokens(sub.lastTierRefill)) {
+                    await this.authManager.refillTierTokens(user.uid, tierLimit);
+                    await this.db.setSetting('tier-token-balance', tierLimit);
+                    await this.db.setSetting('tier-msg-count', 0);
+                    console.log(`Linen: Daily tier tokens refilled (${tierLimit}) for ${sub.subscriptionTier}`);
+                } else {
+                    await this.db.setSetting('tier-token-balance', sub.tierTokenBalance);
+                    await this.db.setSetting('tier-msg-count', sub.tierMsgCount);
+                }
+            } else {
+                await this.db.setSetting('tier-token-balance', 0);
+                await this.db.setSetting('tier-msg-count', 0);
+            }
         } else {
             // Offline / not signed in: local only
             const balance = await this.db.getSetting('token-balance');
@@ -748,12 +764,11 @@ class TokenManager {
         }
     }
 
-    // Check if 24 hours have passed since last daily refill
-    shouldRefillTokens(lastDailyRefill) {
-        if (!lastDailyRefill) return true; // Never refilled — give tokens
-        const lastRefillMs = lastDailyRefill.toMillis ? lastDailyRefill.toMillis() : lastDailyRefill;
-        const hoursSinceRefill = (Date.now() - lastRefillMs) / (1000 * 60 * 60);
-        return hoursSinceRefill >= 24;
+    // Returns true if 24 hours have passed since the last refill timestamp
+    shouldRefillTokens(lastRefill) {
+        if (!lastRefill) return true;
+        const lastMs = lastRefill.toMillis ? lastRefill.toMillis() : lastRefill;
+        return (Date.now() - lastMs) / (1000 * 60 * 60) >= 24;
     }
 
     async getBalance() {
@@ -761,62 +776,116 @@ class TokenManager {
         return balance ?? 0;
     }
 
+    async getTierBalance() {
+        const balance = await this.db.getSetting('tier-token-balance');
+        return balance ?? 0;
+    }
+
+    // Total available tokens across both free and tier pools
+    async getTotalBalance() {
+        return (await this.getBalance()) + (await this.getTierBalance());
+    }
+
     async getRemainingMessages() {
-        const balance = await this.getBalance();
+        const total = await this.getTotalBalance();
         const msgCount = await this.db.getSetting('token-msg-count') ?? 0;
-        return (balance * this.MESSAGES_PER_TOKEN) - msgCount;
+        return (total * this.MESSAGES_PER_TOKEN) - msgCount;
     }
 
     async deductToken() {
-        const balance = await this.getBalance();
-        if (balance <= 0) return false;
-        let msgCount = (await this.db.getSetting('token-msg-count')) ?? 0;
-        msgCount++;
-        let newBalance = balance;
-        let newMsgCount = msgCount;
-        if (msgCount >= this.MESSAGES_PER_TOKEN) {
-            newBalance = balance - 1;
-            newMsgCount = 0;
-            await this.db.setSetting('token-balance', newBalance);
-            await this.db.setSetting('token-msg-count', 0);
-            this.updateBadge(newBalance);
-        } else {
-            await this.db.setSetting('token-msg-count', msgCount);
-            this.updateBadge(balance);
+        // Always consume free tokens first
+        const freeBalance = await this.getBalance();
+        if (freeBalance > 0) {
+            let msgCount = (await this.db.getSetting('token-msg-count')) ?? 0;
+            msgCount++;
+            let newBalance = freeBalance;
+            let newMsgCount = msgCount;
+            if (msgCount >= this.MESSAGES_PER_TOKEN) {
+                newBalance = freeBalance - 1;
+                newMsgCount = 0;
+                await this.db.setSetting('token-balance', newBalance);
+                await this.db.setSetting('token-msg-count', 0);
+            } else {
+                await this.db.setSetting('token-msg-count', msgCount);
+            }
+            this.updateBadge(newBalance + await this.getTierBalance());
+            const user = this.authManager?.getCurrentUser();
+            if (user) {
+                try {
+                    await this.authManager.updateTokenData(user.uid, newBalance, newMsgCount);
+                } catch (e) { console.warn('Linen: Token sync failed:', e); }
+            }
+            return true;
         }
-        // Sync to Firestore
-        const user = this.authManager?.getCurrentUser();
-        if (user) {
-            try {
-                await this.authManager.updateTokenData(user.uid, newBalance, newMsgCount);
-            } catch (e) { console.warn('Linen: Token sync failed, will retry:', e); }
+
+        // Free exhausted — fall through to tier tokens
+        const tierBalance = await this.getTierBalance();
+        if (tierBalance > 0) {
+            let tierMsgCount = (await this.db.getSetting('tier-msg-count')) ?? 0;
+            tierMsgCount++;
+            let newTierBalance = tierBalance;
+            let newTierMsgCount = tierMsgCount;
+            if (tierMsgCount >= this.MESSAGES_PER_TOKEN) {
+                newTierBalance = tierBalance - 1;
+                newTierMsgCount = 0;
+                await this.db.setSetting('tier-token-balance', newTierBalance);
+                await this.db.setSetting('tier-msg-count', 0);
+            } else {
+                await this.db.setSetting('tier-msg-count', tierMsgCount);
+            }
+            this.updateBadge(newTierBalance);
+            const user = this.authManager?.getCurrentUser();
+            if (user) {
+                try {
+                    await this.authManager.updateTierTokens(user.uid, newTierBalance, newTierMsgCount);
+                } catch (e) { console.warn('Linen: Tier token sync failed:', e); }
+            }
+            return true;
         }
-        return true;
+
+        // Both pools exhausted
+        return false;
     }
 
     async deductTokensDirectly(amount) {
-        const balance = await this.getBalance();
-        if (balance < amount) return false;
-        const newBalance = balance - amount;
-        await this.db.setSetting('token-balance', newBalance);
-        this.updateBadge(newBalance);
-        // Sync to Firestore
-        const user = this.authManager?.getCurrentUser();
-        if (user) {
-            try {
-                const msgCount = (await this.db.getSetting('token-msg-count')) ?? 0;
-                await this.authManager.updateTokenData(user.uid, newBalance, msgCount);
-            } catch (e) { console.warn('Linen: Token sync failed:', e); }
+        // Try free pool first, then tier pool
+        const freeBalance = await this.getBalance();
+        if (freeBalance >= amount) {
+            const newBalance = freeBalance - amount;
+            await this.db.setSetting('token-balance', newBalance);
+            this.updateBadge(newBalance + await this.getTierBalance());
+            const user = this.authManager?.getCurrentUser();
+            if (user) {
+                try {
+                    const msgCount = (await this.db.getSetting('token-msg-count')) ?? 0;
+                    await this.authManager.updateTokenData(user.uid, newBalance, msgCount);
+                } catch (e) { console.warn('Linen: Token sync failed:', e); }
+            }
+            return true;
         }
-        return true;
+        const tierBalance = await this.getTierBalance();
+        if (tierBalance >= amount) {
+            const newTierBalance = tierBalance - amount;
+            await this.db.setSetting('tier-token-balance', newTierBalance);
+            this.updateBadge(newTierBalance);
+            const user = this.authManager?.getCurrentUser();
+            if (user) {
+                try {
+                    const tierMsgCount = (await this.db.getSetting('tier-msg-count')) ?? 0;
+                    await this.authManager.updateTierTokens(user.uid, newTierBalance, tierMsgCount);
+                } catch (e) { console.warn('Linen: Tier token sync failed:', e); }
+            }
+            return true;
+        }
+        return false;
     }
 
     async addTokens(amount) {
+        // Emergency grants always go into the free pool
         const balance = await this.getBalance();
         const newBalance = balance + amount;
         await this.db.setSetting('token-balance', newBalance);
-        this.updateBadge(newBalance);
-        // Sync to Firestore
+        this.updateBadge(newBalance + await this.getTierBalance());
         const user = this.authManager?.getCurrentUser();
         if (user) {
             try {
@@ -835,8 +904,8 @@ class TokenManager {
     }
 
     async refreshBadge() {
-        const balance = await this.getBalance();
-        this.updateBadge(balance);
+        const total = await this.getTotalBalance();
+        this.updateBadge(total);
     }
 }
 
@@ -7694,10 +7763,21 @@ class Linen {
             return;
         }
 
-        // Token check — all AI messages cost tokens
-        const balance = await this.tokenManager.getBalance();
-        if (balance <= 0) {
-            this.showTokenStoreModal();
+        // Token check — check combined free + tier balance
+        const totalBalance = await this.tokenManager.getTotalBalance();
+        if (totalBalance <= 0) {
+            // If they have an active subscription, they simply hit their daily limit
+            const user = this.authManager?.getCurrentUser();
+            const sub = user ? await this.authManager.getSubscriptionData(user.uid) : null;
+            if (sub?.subscriptionActive) {
+                const div2 = document.createElement('div');
+                div2.className = 'assistant-message';
+                div2.textContent = "You've used all your tokens for today. Your daily allowance resets in a few hours. I'll be right here when you're back. 🤍";
+                container.appendChild(div2);
+                this.scrollToBottom();
+            } else {
+                this.showTokenStoreModal();
+            }
             return;
         }
 
