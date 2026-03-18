@@ -216,7 +216,7 @@
                     <p>Install Linen on your phone, tablet, or desktop straight from the browser — no app store needed. It works like a native app, loads instantly, and functions even when you're offline.</p>
 
                     <h4 style="margin-top: 1rem; color: var(--accent);">⭐ Token-Based Pricing</h4>
-                    <p>Start free with 20 tokens, refreshed daily. Each token covers 20 AI messages. Need more? Top up with Pro ($1.99), Popular ($4.99), or Ultimate ($9.99) via PayPal — no subscription, no hidden fees, no card details stored. Pay only for what you use.</p>
+                    <p>Start free with 20 tokens refreshed daily — each token covers 20 AI messages. Subscribe for more: Pro ($1.99/mo), Popular ($4.99/mo), or Ultimate ($9.99/mo). Subscribers get extra daily tokens plus image generation. Cancel anytime. No card details stored.</p>
                 </div>
             </div>
         </div>
@@ -561,29 +561,33 @@
                 </div>
                 <p class="token-settings-desc">1 token = 20 AI messages.</p>
             </div>
+            <div id="subscription-status-bar" style="display:none;" class="subscription-status-bar"></div>
             <div class="token-packs-settings">
-                <div class="token-pack" data-amount="0">
+                <div class="token-pack" data-tier="free">
                     <div class="pack-name">Basic</div>
-                    <div class="pack-tokens">Free</div>
-                    <div class="pack-price">Limited access</div>
+                    <div class="pack-tokens">20 tokens/day</div>
+                    <div class="pack-price">Free</div>
                 </div>
-                <div class="token-pack" data-amount="200">
+                <div class="token-pack" data-tier="pro">
                     <div class="pack-name">Pro</div>
-                    <div class="pack-tokens">200 tokens</div>
-                    <div class="pack-price">$1.99</div>
+                    <div class="pack-tokens">+200 tokens/day</div>
+                    <div class="pack-price">$1.99/month</div>
+                    <div class="pack-perks">Image generation unlocked</div>
                     <div id="paypal-btn-pro" class="paypal-btn-container"></div>
                 </div>
-                <div class="token-pack popular" data-amount="600">
+                <div class="token-pack popular" data-tier="popular">
                     <div class="pack-badge">Best Value</div>
                     <div class="pack-name">Popular</div>
-                    <div class="pack-tokens">600 tokens</div>
-                    <div class="pack-price">$4.99</div>
+                    <div class="pack-tokens">+600 tokens/day</div>
+                    <div class="pack-price">$4.99/month</div>
+                    <div class="pack-perks">Image generation unlocked</div>
                     <div id="paypal-btn-popular" class="paypal-btn-container"></div>
                 </div>
-                <div class="token-pack" data-amount="1500">
+                <div class="token-pack" data-tier="ultimate">
                     <div class="pack-name">Ultimate</div>
-                    <div class="pack-tokens">1,500 tokens</div>
-                    <div class="pack-price">$9.99</div>
+                    <div class="pack-tokens">+1,500 tokens/day</div>
+                    <div class="pack-price">$9.99/month</div>
+                    <div class="pack-perks">Image generation unlocked</div>
                     <div id="paypal-btn-ultimate" class="paypal-btn-container"></div>
                 </div>
             </div>

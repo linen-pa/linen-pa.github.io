@@ -8403,19 +8403,24 @@ class Linen {
         }
     }
 
-    // ─── PayPal Integration ───────────────────────────────────────────────────
+    // ─── PayPal Subscription Integration ─────────────────────────────────────
 
     /**
-     * Loads the PayPal SDK on-demand (only when settings opens) then renders
-     * Buy buttons inside each paid tier card.
+     * Loads the PayPal Subscriptions SDK on-demand (only when settings opens)
+     * then renders Subscribe buttons inside each paid tier card.
+     * Uses vault=true&intent=subscription — different SDK from one-time payments.
      */
     async initPayPalButtons() {
         try {
-            // Load SDK if not already loaded
-            if (!window.paypal) {
+            // Show current subscription status bar
+            await this.refreshSubscriptionStatusBar();
+
+            // Load subscription SDK if not already loaded (different URL from one-time SDK)
+            if (!window.paypal || !window.paypal.Buttons) {
                 await new Promise((resolve, reject) => {
                     const script = document.createElement('script');
-                    script.src = 'https://www.paypal.com/sdk/js?client-id=AZxbmzhcBgHdDEdv5rzIMD3FM1Ywj9UDm9EZgfWgUwTQRSrDpm3armjA2810QpFp-ikEoB1wiip1XvVr&currency=USD&disable-funding=card,credit,venmo,paylater';
+                    script.src = 'https://www.paypal.com/sdk/js?client-id=AZxbmzhcBgHdDEdv5rzIMD3FM1Ywj9UDm9EZgfWgUwTQRSrDpm3armjA2810QpFp-ikEoB1wiip1XvVr&vault=true&intent=subscription';
+                    script.setAttribute('data-sdk-integration-source', 'button-factory');
                     script.onload = resolve;
                     script.onerror = () => reject(new Error('PayPal SDK failed to load'));
                     document.head.appendChild(script);
@@ -8423,9 +8428,9 @@ class Linen {
             }
 
             const tiers = [
-                { containerId: 'paypal-btn-pro',      amount: '1.99', tokens: 200,  label: 'Pro — 200 tokens' },
-                { containerId: 'paypal-btn-popular',  amount: '4.99', tokens: 600,  label: 'Popular — 600 tokens' },
-                { containerId: 'paypal-btn-ultimate', amount: '9.99', tokens: 1500, label: 'Ultimate — 1,500 tokens' }
+                { containerId: 'paypal-btn-pro',      planId: 'P-8JA60924BR1205352NG5TBHA', tierName: 'pro',      label: 'Pro',      dailyTokens: 200  },
+                { containerId: 'paypal-btn-popular',  planId: 'P-5SU13892KA649720WNG5TC3I', tierName: 'popular',  label: 'Popular',  dailyTokens: 600  },
+                { containerId: 'paypal-btn-ultimate', planId: 'P-7X1016697X939624PNG5TESY', tierName: 'ultimate', label: 'Ultimate', dailyTokens: 1500 },
             ];
 
             for (const tier of tiers) {
@@ -8438,82 +8443,93 @@ class Linen {
                     card.dataset.paypalBound = 'true';
                     card.style.cursor = 'pointer';
                     card.addEventListener('click', (e) => {
-                        // Don't collapse if clicking inside the PayPal button itself
                         if (container.contains(e.target)) return;
                         const isOpen = card.classList.contains('expanded');
-                        // Close all tier cards first
                         document.querySelectorAll('.token-pack.expanded').forEach(c => c.classList.remove('expanded'));
-                        // Toggle this one
                         if (!isOpen) card.classList.add('expanded');
                     });
                 }
 
-                // Skip rendering PayPal buttons if already rendered
+                // Skip re-rendering if buttons already exist
                 if (container.children.length > 0) continue;
 
                 window.paypal.Buttons({
-                    style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'pay', height: 35 },
+                    style: { layout: 'vertical', color: 'gold', shape: 'pill', label: 'subscribe', height: 35 },
 
-                    createOrder: (data, actions) => {
-                        return actions.order.create({
-                            purchase_units: [{ amount: { value: tier.amount }, description: `Linen ${tier.label}` }]
+                    createSubscription: (data, actions) => {
+                        const user = this.authManager?.getCurrentUser();
+                        return actions.subscription.create({
+                            plan_id:   tier.planId,
+                            custom_id: user?.uid || '', // Firebase UID — used by webhook to identify user
                         });
                     },
 
-                    onApprove: async (data, actions) => {
-                        const order = await actions.order.capture();
-                        await this.tokenManager.addTokens(tier.tokens);
-                        await this.tokenManager.refreshBadge();
-                        await this.recordPayment(order, tier);
-                        // Close the card after successful payment
+                    onApprove: async (data) => {
+                        // Subscription approved — update Firebase immediately (webhook will also fire)
+                        const user = this.authManager?.getCurrentUser();
+                        if (user) {
+                            const expiry = Date.now() + 32 * 24 * 60 * 60 * 1000;
+                            await this.authManager.database.ref('users/' + user.uid).update({
+                                subscriptionTier:   tier.tierName,
+                                subscriptionId:     data.subscriptionID,
+                                subscriptionExpiry: expiry,
+                                subscriptionActive: true,
+                                tierTokenBalance:   tier.dailyTokens,
+                                lastTierRefill:     Date.now(),
+                                hasPurchased:       true,
+                            });
+                            // Sync tier tokens to local cache
+                            await this.db.setSetting('tier-token-balance', tier.dailyTokens);
+                            await this.db.setSetting('tier-msg-count', 0);
+                            await this.tokenManager.refreshBadge();
+                            // Record subscription start in payments log
+                            await this.authManager.database.ref(`payments/${user.uid}/${data.subscriptionID}`).set({
+                                subscriptionId: data.subscriptionID,
+                                tier:           tier.tierName,
+                                planId:         tier.planId,
+                                dailyTokens:    tier.dailyTokens,
+                                userEmail:      user.email || 'unknown',
+                                uid:            user.uid,
+                                timestamp:      Date.now(),
+                                status:         'active',
+                            });
+                        }
                         container.closest('.token-pack')?.classList.remove('expanded');
-                        this.showToast(`${tier.tokens} tokens added. Thank you!`, 'success');
+                        await this.refreshSubscriptionStatusBar();
+                        this.showToast(`${tier.label} subscription active! ${tier.dailyTokens} extra tokens/day unlocked.`, 'success');
                     },
 
                     onError: (err) => {
-                        console.error('Linen: PayPal error:', err);
-                        this.showToast('Payment failed. Please try again.', 'error');
-                    }
+                        console.error('Linen: PayPal subscription error:', err);
+                        this.showToast('Subscription failed. Please try again.', 'error');
+                    },
                 }).render(`#${tier.containerId}`);
             }
         } catch (e) {
-            console.warn('Linen: Could not load PayPal buttons:', e);
+            console.warn('Linen: Could not load PayPal subscription buttons:', e);
         }
     }
 
     /**
-     * Saves a record of every payment to Firebase so you can cross-check
-     * against your PayPal account to detect fraud.
-     * Structure: payments/{uid}/{orderId}
+     * Shows the user's current subscription tier (or nothing if on free plan)
+     * in the status bar above the tier cards.
      */
-    async recordPayment(order, tier) {
+    async refreshSubscriptionStatusBar() {
+        const bar = document.getElementById('subscription-status-bar');
+        if (!bar) return;
         const user = this.authManager?.getCurrentUser();
-        if (!user) return;
-
-        // Sanitize order ID for use as Firebase key
-        const safeOrderId = (order.id || 'unknown').replace(/[.#$[\]]/g, '_');
-
-        const record = {
-            orderId: order.id,
-            tier: tier.containerId.replace('paypal-btn-', ''),
-            tokens: tier.tokens,
-            amount: tier.amount,
-            payerEmail: order.payer?.email_address || 'unknown',
-            payerName: `${order.payer?.name?.given_name || ''} ${order.payer?.name?.surname || ''}`.trim(),
-            userEmail: user.email || 'unknown',
-            uid: user.uid,
-            timestamp: Date.now(),
-            status: 'completed'
-        };
-
+        if (!user) { bar.style.display = 'none'; return; }
         try {
-            await this.authManager.database.ref(`payments/${user.uid}/${safeOrderId}`).set(record);
-            // Mark user as a paid member so features like image generation are unlocked
-            await this.authManager.database.ref('users/' + user.uid).update({ hasPurchased: true });
-            console.log('Linen: Payment recorded — Order:', order.id);
+            const sub = await this.authManager.getSubscriptionData(user.uid);
+            if (sub.subscriptionActive && sub.subscriptionTier) {
+                const label = sub.subscriptionTier.charAt(0).toUpperCase() + sub.subscriptionTier.slice(1);
+                bar.textContent = `✅ ${label} plan active`;
+                bar.style.display = 'block';
+            } else {
+                bar.style.display = 'none';
+            }
         } catch (e) {
-            // Non-critical: tokens already added, this is just for fraud auditing
-            console.warn('Linen: Could not record payment to Firebase:', e);
+            bar.style.display = 'none';
         }
     }
 
