@@ -4126,6 +4126,22 @@ class Linen {
             }, 300); // Wait for keyboard animation to complete
         });
 
+        // Stick input area to the top of the keyboard on iOS using visualViewport API.
+        // On iOS, position:fixed elements stay anchored to the layout viewport bottom,
+        // so the keyboard covers them. visualViewport tells us the visible area.
+        if (window.visualViewport) {
+            const appContainer = document.getElementById('app-container');
+            const onViewportChange = () => {
+                if (!appContainer) return;
+                const vv = window.visualViewport;
+                // Keyboard height = window height minus visible viewport height and its top offset
+                const keyboardHeight = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
+                appContainer.style.bottom = keyboardHeight + 'px';
+            };
+            window.visualViewport.addEventListener('resize', onViewportChange);
+            window.visualViewport.addEventListener('scroll', onViewportChange);
+        }
+
         // Flag to prevent auto-scroll while user is actively scrolling
         let isUserScrolling = false;
         let scrollTimeout;
