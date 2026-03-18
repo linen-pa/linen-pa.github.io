@@ -262,12 +262,66 @@ class AuthManager {
                     initialGranted: true,
                     preferredName: null,           // User's chosen name (null if they decline)
                     preferredNameDeclined: false,  // Explicit opt-out flag
-                    lastVisited: Date.now()        // Timestamp for personalized greetings
+                    lastVisited: Date.now(),       // Timestamp for personalized greetings
+                    // Subscription fields (set by PayPal webhook on activation)
+                    subscriptionTier:   null,
+                    subscriptionId:     null,
+                    subscriptionExpiry: null,
+                    subscriptionActive: false,
+                    tierTokenBalance:   0,
+                    tierMsgCount:       0,
+                    lastTierRefill:     null,
                 });
                 console.log('Linen: User document created with 20 tokens');
             }
         } catch (e) {
             console.error('Linen: Realtime Database initUserDoc failed (check security rules):', e);
+        }
+    }
+
+    // Realtime Database: get subscription data
+    async getSubscriptionData(uid) {
+        try {
+            const snapshot = await this.database.ref('users/' + uid).get();
+            if (snapshot.exists()) {
+                const d = snapshot.val();
+                return {
+                    subscriptionTier:   d.subscriptionTier   ?? null,
+                    subscriptionActive: d.subscriptionActive ?? false,
+                    subscriptionExpiry: d.subscriptionExpiry ?? null,
+                    tierTokenBalance:   d.tierTokenBalance   ?? 0,
+                    tierMsgCount:       d.tierMsgCount       ?? 0,
+                    lastTierRefill:     d.lastTierRefill     ?? null,
+                };
+            }
+        } catch (e) {
+            console.error('Linen: getSubscriptionData failed:', e);
+        }
+        return { subscriptionTier: null, subscriptionActive: false, subscriptionExpiry: null, tierTokenBalance: 0, tierMsgCount: 0, lastTierRefill: null };
+    }
+
+    // Realtime Database: update tier token balance (called during daily refill and deduction)
+    async updateTierTokens(uid, tierBalance, tierMsgCount) {
+        try {
+            await this.database.ref('users/' + uid).update({
+                tierTokenBalance: tierBalance,
+                tierMsgCount:     tierMsgCount,
+            });
+        } catch (e) {
+            console.error('Linen: updateTierTokens failed:', e);
+        }
+    }
+
+    // Realtime Database: refill daily tier tokens (resets balance + msg count + timestamp)
+    async refillTierTokens(uid, tierLimit) {
+        try {
+            await this.database.ref('users/' + uid).update({
+                tierTokenBalance: tierLimit,
+                tierMsgCount:     0,
+                lastTierRefill:   Date.now(),
+            });
+        } catch (e) {
+            console.error('Linen: refillTierTokens failed:', e);
         }
     }
 
