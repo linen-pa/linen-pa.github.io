@@ -7204,6 +7204,29 @@ class Linen {
      * Handles: bold, italic, code, headers, bullet lists, numbered lists, spacers.
      * All user-sourced strings are HTML-escaped first to prevent XSS.
      */
+
+    _extractImagePrompt(msg) {
+        const lower = msg.toLowerCase().trim();
+
+        // Explicit slash command
+        if (lower.startsWith('/imagine ')) return msg.substring(9).trim();
+
+        // Natural language patterns
+        const patterns = [
+            /^(?:please\s+)?(?:can you\s+)?(?:generate|create|make|draw|paint|design|show me|render)\s+(?:an?\s+)?image\s+(?:of\s+)?(.+)/i,
+            /^(?:please\s+)?(?:can you\s+)?(?:generate|create|make|draw|paint|design|render)\s+(?:a\s+)?(?:picture|photo|illustration|artwork|drawing|painting|sketch)\s+(?:of\s+)?(.+)/i,
+            /^image(?:\s+of)?\s*[:\-–]?\s*(.+)/i,
+            /^(?:draw|paint|sketch|illustrate)\s+(.+)/i,
+        ];
+
+        for (const pattern of patterns) {
+            const match = msg.match(pattern);
+            if (match) return match[1].trim();
+        }
+
+        return null; // Not an image request
+    }
+
     formatMessageHTML(text) {
         if (!text) return '';
 
@@ -7410,9 +7433,9 @@ class Linen {
             return;
         }
 
-        // Check for /imagine command for image generation
-        if (msg.startsWith('/imagine ')) {
-            const imagePrompt = msg.substring(9).trim();
+        // Detect image generation intent — natural language OR /imagine command
+        const imagePrompt = this._extractImagePrompt(msg);
+        if (imagePrompt) {
 
             if (!initialMessage) {
                 input.value = '';
