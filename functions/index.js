@@ -115,6 +115,83 @@ export const callGeminiAPI = onRequest(async (req, res) => {
 });
 
 /**
+ * Cloud Function: generateImage
+ * Generates images using Gemini's image generation capability
+ */
+export const generateImage = onRequest(async (req, res) => {
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+        res.set(corsHeaders);
+        res.status(204).send('');
+        return;
+    }
+
+    res.set(corsHeaders);
+
+    try {
+        const { prompt } = req.body;
+
+        // Validate input
+        if (!prompt || typeof prompt !== 'string') {
+            return res.status(400).json({
+                error: 'Missing or invalid prompt',
+            });
+        }
+
+        // Get API key from environment
+        const apiKey = process.env.GEMINI_API_KEY || envVars.GEMINI_API_KEY;
+        if (!apiKey) {
+            console.error('GEMINI_API_KEY not configured');
+            return res.status(500).json({
+                error: 'API key not configured on backend',
+            });
+        }
+
+        // Call Gemini image generation API
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [
+                        {
+                            role: 'user',
+                            parts: [
+                                {
+                                    text: prompt,
+                                },
+                            ],
+                        },
+                    ],
+                }),
+            }
+        );
+
+        if (!response.ok) {
+            const error = await response.json();
+            console.error('Gemini image generation error:', error);
+            return res.status(500).json({
+                error: `Image generation failed: ${error.error?.message || 'Unknown error'}`,
+            });
+        }
+
+        const data = await response.json();
+        return res.json({
+            success: true,
+            data: data,
+        });
+    } catch (error) {
+        console.error('generateImage error:', error);
+        return res.status(500).json({
+            error: error.message || 'Failed to generate image',
+        });
+    }
+});
+
+/**
  * Cloud Function: testConnection
  * Simple health check to verify the Cloud Function is working
  */

@@ -989,6 +989,31 @@ const _callGeminiViaBackend = async (requestBodyOrMessages, model) => {
     }
 };
 
+const _generateImageViaBackend = async (prompt) => {
+    const functionUrl = 'https://us-central1-linen-a1142.cloudfunctions.net/generateImage';
+
+    try {
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ prompt }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Image generation failed');
+        }
+
+        const result = await response.json();
+        return result.data;
+    } catch (error) {
+        console.error('Image generation error:', error);
+        throw error;
+    }
+};
+
 class GeminiAssistant {
     constructor(apiKey) {
         // Note: apiKey is no longer used - backend Cloud Function handles it securely
@@ -1038,7 +1063,7 @@ class GeminiAssistant {
 
         const memoryContext = this.buildMemoryContext(mems);
         const conversationContext = this.buildConversationContext(chats);
-        const systemPrompt = `**YOUR IDENTITY:** You are LINEN — Ramin Najafi's personal AI assistant created by Ramin Najafi. In your first message with a new conversation, introduce yourself naturally but briefly: "I'm Linen, Ramin's personal AI assistant." After that, just converse like a real friend. Don't repeat your identity constantly. Be warm, present, and human.
+        const systemPrompt = `**YOUR IDENTITY:** You are LINEN — Ramin Najafi's personal AI assistant created by Ramin Najafi. In your first message with a new conversation, introduce yourself naturally but briefly: "I'm Linen, Ramin's personal AI assistant." After that, just converse like a real friend. Don't repeat your identity constantly. Be warm, present, and human. You can generate images, write code, answer questions, and provide mental health support. You're a full-capability AI with a specialty in understanding emotions.
 
 **YOUR FIRST RULE — READ BEFORE ANYTHING ELSE:**
 You have two modes. Read the user's message and choose the right one:
@@ -1272,6 +1297,30 @@ Be intelligent about response length. Someone saying "I'm anxious about my prese
         throw error;
     }
 
+    async generateImage(prompt) {
+        try {
+            console.log('Generating image with prompt:', prompt);
+            const data = await _generateImageViaBackend(prompt);
+
+            // Extract image from response
+            const imageData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+            const mimeType = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
+
+            if (!imageData) {
+                throw new Error('No image data in response');
+            }
+
+            return {
+                success: true,
+                imageData: imageData,
+                mimeType: mimeType || 'image/png'
+            };
+        } catch (error) {
+            console.error('Image generation failed:', error);
+            throw error;
+        }
+    }
+
     buildMemoryContext(mems) {
         if (!mems || mems.length === 0) return 'No memories yet.';
         let c = 'Relevant memories for context:\n';
@@ -1359,7 +1408,7 @@ class OpenAIAssistant {
 
         const memoryContext = this.buildMemoryContext(mems);
         const conversationContext = this.buildConversationContext(chats);
-        const systemPrompt = `**YOUR IDENTITY:** You are LINEN — Ramin Najafi's personal AI assistant created by Ramin Najafi. In your first message with a new conversation, introduce yourself naturally but briefly: "I'm Linen, Ramin's personal AI assistant." After that, just converse like a real friend. Don't repeat your identity constantly. Be warm, present, and human.
+        const systemPrompt = `**YOUR IDENTITY:** You are LINEN — Ramin Najafi's personal AI assistant created by Ramin Najafi. In your first message with a new conversation, introduce yourself naturally but briefly: "I'm Linen, Ramin's personal AI assistant." After that, just converse like a real friend. Don't repeat your identity constantly. Be warm, present, and human. You can generate images, write code, answer questions, and provide mental health support. You're a full-capability AI with a specialty in understanding emotions.
 
 **YOUR FIRST RULE — READ BEFORE ANYTHING ELSE:**
 You have two modes. Read the user's message and choose the right one:
@@ -7331,6 +7380,60 @@ class Linen {
             greetingDiv.innerHTML = this.formatMessageHTML(greetingText);
             container.appendChild(greetingDiv);
             this.scrollToBottom();
+            return;
+        }
+
+        // Check for /imagine command for image generation
+        if (msg.startsWith('/imagine ')) {
+            const imagePrompt = msg.substring(9).trim();
+
+            if (!initialMessage) {
+                input.value = '';
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-message';
+                userDiv.textContent = msg;
+                container.appendChild(userDiv);
+                this.scrollToBottom();
+            }
+
+            const id = 'loading-msg-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'assistant-message';
+            div.textContent = 'Generating image...';
+            container.appendChild(div);
+            this.scrollToBottom();
+
+            try {
+                const imageResult = await this.assistant.generateImage(imagePrompt);
+                document.getElementById(id)?.remove();
+
+                const imgDiv = document.createElement('div');
+                imgDiv.className = 'assistant-message';
+                const img = document.createElement('img');
+                img.src = `data:${imageResult.mimeType};base64,${imageResult.imageData}`;
+                img.style.maxWidth = '100%';
+                img.style.borderRadius = '8px';
+                img.style.marginTop = '10px';
+                imgDiv.appendChild(img);
+
+                const caption = document.createElement('p');
+                caption.textContent = imagePrompt;
+                caption.style.fontSize = '0.9em';
+                caption.style.color = '#999';
+                caption.style.marginTop = '5px';
+                imgDiv.appendChild(caption);
+
+                container.appendChild(imgDiv);
+                this.scrollToBottom();
+            } catch (error) {
+                document.getElementById(id)?.remove();
+                const errDiv = document.createElement('div');
+                errDiv.className = 'assistant-message error-message';
+                errDiv.textContent = `Failed to generate image: ${error.message}`;
+                container.appendChild(errDiv);
+                this.scrollToBottom();
+            }
             return;
         }
 
