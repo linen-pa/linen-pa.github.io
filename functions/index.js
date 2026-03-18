@@ -74,6 +74,10 @@ export const callGeminiAPI = onRequest(async (req, res) => {
                 topP: 0.95,
                 maxOutputTokens: 8192,
             },
+            // Enable Google Search grounding so Gemini can look up real-time data
+            // (company info, news, prices, weather, etc.) just like it does natively.
+            // Gemini only triggers a search when it actually needs to — not for every message.
+            tools: [{ google_search: {} }],
         };
 
         // Add system instruction if provided
