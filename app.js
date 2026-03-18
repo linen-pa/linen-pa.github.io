@@ -990,7 +990,7 @@ const _callGeminiViaBackend = async (requestBodyOrMessages, model) => {
 };
 
 const _generateImageViaBackend = async (prompt) => {
-    const functionUrl = 'https://us-central1-linen-a1142.cloudfunctions.net/generateImage';
+    const functionUrl = 'https://generateimage-xpgy6q7naq-uc.a.run.app';
 
     try {
         const response = await fetch(functionUrl, {
@@ -1302,19 +1302,30 @@ Be intelligent about response length. Someone saying "I'm anxious about my prese
             console.log('Generating image with prompt:', prompt);
             const data = await _generateImageViaBackend(prompt);
 
-            // Extract image from response
+            // Try to extract actual image data first
             const imageData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
             const mimeType = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
 
-            if (!imageData) {
-                throw new Error('No image data in response');
+            if (imageData) {
+                return {
+                    success: true,
+                    type: 'image',
+                    imageData: imageData,
+                    mimeType: mimeType || 'image/png'
+                };
             }
 
-            return {
-                success: true,
-                imageData: imageData,
-                mimeType: mimeType || 'image/png'
-            };
+            // Fallback: use text description from Gemini
+            const textDescription = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (textDescription) {
+                return {
+                    success: true,
+                    type: 'description',
+                    text: textDescription
+                };
+            }
+
+            throw new Error('No image or description in response');
         } catch (error) {
             console.error('Image generation failed:', error);
             throw error;
@@ -7408,23 +7419,31 @@ class Linen {
                 const imageResult = await this.assistant.generateImage(imagePrompt);
                 document.getElementById(id)?.remove();
 
-                const imgDiv = document.createElement('div');
-                imgDiv.className = 'assistant-message';
-                const img = document.createElement('img');
-                img.src = `data:${imageResult.mimeType};base64,${imageResult.imageData}`;
-                img.style.maxWidth = '100%';
-                img.style.borderRadius = '8px';
-                img.style.marginTop = '10px';
-                imgDiv.appendChild(img);
+                const respDiv = document.createElement('div');
+                respDiv.className = 'assistant-message';
+
+                if (imageResult.type === 'image') {
+                    // Display actual generated image
+                    const img = document.createElement('img');
+                    img.src = `data:${imageResult.mimeType};base64,${imageResult.imageData}`;
+                    img.style.maxWidth = '100%';
+                    img.style.borderRadius = '8px';
+                    img.style.marginTop = '10px';
+                    respDiv.appendChild(img);
+                } else {
+                    // Display text description (fallback)
+                    respDiv.innerHTML = this.formatMessageHTML(imageResult.text);
+                }
 
                 const caption = document.createElement('p');
-                caption.textContent = imagePrompt;
-                caption.style.fontSize = '0.9em';
+                caption.textContent = `✨ Image idea: ${imagePrompt}`;
+                caption.style.fontSize = '0.85em';
                 caption.style.color = '#999';
-                caption.style.marginTop = '5px';
-                imgDiv.appendChild(caption);
+                caption.style.marginTop = '10px';
+                caption.style.fontStyle = 'italic';
+                respDiv.appendChild(caption);
 
-                container.appendChild(imgDiv);
+                container.appendChild(respDiv);
                 this.scrollToBottom();
             } catch (error) {
                 document.getElementById(id)?.remove();

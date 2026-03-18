@@ -147,28 +147,53 @@ export const generateImage = onRequest(async (req, res) => {
             });
         }
 
-        // Call Gemini image generation API
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateContent?key=${apiKey}`,
+        // Try Vertex AI Imagen model first, then fallback to other options
+        let response = await fetch(
+            `https://us-central1-aiplatform.googleapis.com/v1/projects/linen-a1142/locations/us-central1/publishers/google/models/imagegeneration@006:predict`,
             {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
                 },
                 body: JSON.stringify({
-                    contents: [
+                    instances: [
                         {
-                            role: 'user',
-                            parts: [
-                                {
-                                    text: prompt,
-                                },
-                            ],
+                            prompt: prompt,
                         },
                     ],
+                    parameters: {
+                        sampleCount: 1,
+                    },
                 }),
             }
         );
+
+        // If Vertex AI fails, try the basic Gemini generateContent with a vision instruction
+        if (!response.ok) {
+            console.log('Vertex AI image generation not available, using Gemini text response');
+            response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [
+                            {
+                                role: 'user',
+                                parts: [
+                                    {
+                                        text: `You are an image description expert. The user wants to generate an image with this description: "${prompt}". Since you cannot actually generate images, provide a detailed, professional description that could be used with an image generation tool. Include style suggestions, composition tips, lighting, mood, color palette, and any other visual details that would help someone understand exactly what image to create.`,
+                                    },
+                                ],
+                            },
+                        ],
+                    }),
+                }
+            );
+        }
 
         if (!response.ok) {
             const error = await response.json();
