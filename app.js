@@ -740,6 +740,23 @@ class TokenManager {
         return true;
     }
 
+    async deductTokensDirectly(amount) {
+        const balance = await this.getBalance();
+        if (balance < amount) return false;
+        const newBalance = balance - amount;
+        await this.db.setSetting('token-balance', newBalance);
+        this.updateBadge(newBalance);
+        // Sync to Firestore
+        const user = this.authManager?.getCurrentUser();
+        if (user) {
+            try {
+                const msgCount = (await this.db.getSetting('token-msg-count')) ?? 0;
+                await this.authManager.updateTokenData(user.uid, newBalance, msgCount);
+            } catch (e) { console.warn('Linen: Token sync failed:', e); }
+        }
+        return true;
+    }
+
     async addTokens(amount) {
         const balance = await this.getBalance();
         const newBalance = balance + amount;
@@ -7446,6 +7463,71 @@ class Linen {
                 this.scrollToBottom();
             }
 
+            // Gate: image generation requires a paid tier
+            const userIsPaid = await this.isPaidUser();
+            if (!userIsPaid) {
+                const blockedDiv = document.createElement('div');
+                blockedDiv.className = 'assistant-message';
+                blockedDiv.innerHTML = this.formatMessageHTML(`✨ **Image generation is a Pro feature.**\n\nUpgrade to Pro, Popular, or Ultimate in Settings to unlock it. Free tier still gets everything else — chat, memories, reminders, and more.`);
+                container.appendChild(blockedDiv);
+                this.scrollToBottom();
+                return;
+            }
+
+            // Gate: need at least 5 tokens
+            const currentBalance = await this.tokenManager.getBalance();
+            if (currentBalance < 5) {
+                const lowDiv = document.createElement('div');
+                lowDiv.className = 'assistant-message';
+                lowDiv.innerHTML = this.formatMessageHTML(`You need at least **5 tokens** to generate an image, but you only have **${currentBalance}**. Top up in Settings to continue.`);
+                container.appendChild(lowDiv);
+                this.scrollToBottom();
+                return;
+            }
+
+            // Show in-chat confirmation before spending tokens
+            const confirmId = 'img-confirm-' + Date.now();
+            const confirmDiv = document.createElement('div');
+            confirmDiv.id = confirmId;
+            confirmDiv.className = 'assistant-message';
+            confirmDiv.innerHTML = `
+                <p style="margin:0 0 12px 0;">Generating this image will use <strong>5 tokens</strong>. You currently have <strong>${currentBalance} tokens</strong>.</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button id="${confirmId}-yes" style="background:#5B8FB9;color:#fff;border:none;padding:8px 20px;border-radius:20px;cursor:pointer;font-size:0.9em;font-weight:600;">Generate ✨</button>
+                    <button id="${confirmId}-no" style="background:transparent;color:#888;border:1px solid #555;padding:8px 20px;border-radius:20px;cursor:pointer;font-size:0.9em;">Cancel</button>
+                </div>
+            `;
+            container.appendChild(confirmDiv);
+            this.scrollToBottom();
+
+            // Wait for user's decision
+            const userConfirmed = await new Promise(resolve => {
+                document.getElementById(`${confirmId}-yes`).addEventListener('click', () => resolve(true));
+                document.getElementById(`${confirmId}-no`).addEventListener('click', () => resolve(false));
+            });
+
+            document.getElementById(confirmId)?.remove();
+
+            if (!userConfirmed) {
+                const cancelDiv = document.createElement('div');
+                cancelDiv.className = 'assistant-message';
+                cancelDiv.textContent = 'No problem — image generation cancelled.';
+                container.appendChild(cancelDiv);
+                this.scrollToBottom();
+                return;
+            }
+
+            // Deduct 5 tokens upfront before generating
+            const deducted = await this.tokenManager.deductTokensDirectly(5);
+            if (!deducted) {
+                const errDiv = document.createElement('div');
+                errDiv.className = 'assistant-message error-message';
+                errDiv.textContent = 'Not enough tokens to generate an image.';
+                container.appendChild(errDiv);
+                this.scrollToBottom();
+                return;
+            }
+
             const id = 'loading-msg-' + Date.now();
             const div = document.createElement('div');
             div.id = id;
@@ -7486,9 +7568,11 @@ class Linen {
                 this.scrollToBottom();
             } catch (error) {
                 document.getElementById(id)?.remove();
+                // Refund the 5 tokens if generation failed
+                await this.tokenManager.addTokens(5);
                 const errDiv = document.createElement('div');
                 errDiv.className = 'assistant-message error-message';
-                errDiv.textContent = `Failed to generate image: ${error.message}`;
+                errDiv.textContent = `Failed to generate image: ${error.message}. Your 5 tokens have been refunded.`;
                 container.appendChild(errDiv);
                 this.scrollToBottom();
             }
@@ -8252,10 +8336,28 @@ class Linen {
 
         try {
             await this.authManager.database.ref(`payments/${user.uid}/${safeOrderId}`).set(record);
+            // Mark user as a paid member so features like image generation are unlocked
+            await this.authManager.database.ref('users/' + user.uid).update({ hasPurchased: true });
             console.log('Linen: Payment recorded — Order:', order.id);
         } catch (e) {
             // Non-critical: tokens already added, this is just for fraud auditing
             console.warn('Linen: Could not record payment to Firebase:', e);
+        }
+    }
+
+    /**
+     * Check whether the current user has ever made a purchase.
+     * Used to gate Pro-only features like image generation.
+     */
+    async isPaidUser() {
+        const user = this.authManager?.getCurrentUser();
+        if (!user) return false;
+        try {
+            const snapshot = await this.authManager.database.ref('users/' + user.uid + '/hasPurchased').get();
+            return snapshot.val() === true;
+        } catch (e) {
+            console.warn('Linen: Could not check paid status:', e);
+            return false;
         }
     }
 
