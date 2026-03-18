@@ -3544,7 +3544,7 @@ class Linen {
     async checkAndApplyEmergencyTokens(userMessage, assistantReply) {
         try {
             // NEVER grant emergency tokens during signup or with minimal conversation
-            const convs = await this.db.getConversations();
+            const convs = await this.db.getCurrentSessionMessages();
             if (convs.length < 6) return; // Need at least 3 exchanges of real conversation first
 
             const sentiment = this.detectUserSentiment(userMessage);
@@ -7372,7 +7372,7 @@ class Linen {
         let reply = '';
         try {
             const mems = await this.db.getAllMemories();
-            const convs = await this.db.getConversations();
+            const convs = await this.db.getCurrentSessionMessages();
 
             console.log("Linen: Sending to Gemini via:", this.currentAgent?.name || 'Built-in service');
             const isCrisis = !initialMessage && this.assistant?.detectCrisis && this.assistant.detectCrisis(msg);
