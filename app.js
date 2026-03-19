@@ -2065,11 +2065,6 @@ class VoiceManager {
     constructor() {
         this.isListening = false;
         this.recognition = null;
-        this.synthesis = window.speechSynthesis;
-        this.isSpeaking = false;
-        this.pauseTimeout = null;
-        this.lastTranscript = '';
-        this.onPauseDetected = null;
         this.initRecognition();
     }
 
@@ -2078,12 +2073,10 @@ class VoiceManager {
         if (SpeechRecognition) {
             try {
                 this.recognition = new SpeechRecognition();
-                this.recognition.continuous = true; // Keep listening across speech gaps
-                this.recognition.interimResults = true; // Show results as user speaks
+                this.recognition.continuous = false;    // Stop naturally after user pauses
+                this.recognition.interimResults = true; // Show transcript live as user speaks
                 this.recognition.lang = 'en-US';
                 this.recognition.maxAlternatives = 1;
-                console.log('VoiceManager: Web Speech API initialized successfully');
-                console.log('VoiceManager: Continuous mode enabled - will keep listening through pauses');
             } catch (error) {
                 console.error('VoiceManager: Failed to initialize Web Speech API:', error);
                 this.recognition = null;
@@ -2093,226 +2086,61 @@ class VoiceManager {
         }
     }
 
-    startListening(onResult, onError, onPauseDetected) {
+    startListening(onResult, onError, onDone) {
         if (!this.recognition) {
-            console.error('VoiceManager: Speech recognition not available');
-            onError('Speech recognition not supported in this browser');
+            onError('Speech-to-text is not supported in this browser. Try Chrome, Edge, or Safari.');
             return;
         }
 
-        // Stop any previous recognition session first
         if (this.isListening) {
-            try {
-                this.recognition.abort();
-                console.log('VoiceManager: Aborted previous recognition session');
-            } catch (e) {
-                console.warn('VoiceManager: Error aborting previous recognition:', e);
-            }
+            try { this.recognition.abort(); } catch (e) {}
         }
 
         this.isListening = true;
-        this.lastTranscript = '';
-        this.onPauseDetected = onPauseDetected;
         let transcript = '';
 
-        // Clear any previous pause timeout
-        if (this.pauseTimeout) {
-            clearTimeout(this.pauseTimeout);
-            this.pauseTimeout = null;
-        }
-
-        console.log('VoiceManager: Starting new listening session');
-
-        // Attach event handlers - these will replace any previous ones
         this.recognition.onstart = () => {
-            console.log('VoiceManager: Recognition started - listening for speech...');
+            console.log('VoiceManager: Listening...');
         };
 
         this.recognition.onresult = (event) => {
-            console.log('Voice result event:', {
-                resultIndex: event.resultIndex,
-                resultsLength: event.results.length,
-                isFinal: event.results.length > 0 ? event.results[event.results.length - 1].isFinal : false
-            });
-
-            // Clear previous pause timeout on each new result
-            if (this.pauseTimeout) {
-                clearTimeout(this.pauseTimeout);
-                this.pauseTimeout = null;
-            }
-
             transcript = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const transcriptSegment = event.results[i][0].transcript;
-                transcript += transcriptSegment;
+            for (let i = 0; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
             }
-
-            this.lastTranscript = transcript;
             const isFinal = event.results[event.results.length - 1].isFinal;
-
-            console.log('Transcript:', { transcript, isFinal, lastTranscript: this.lastTranscript });
             onResult(transcript, !isFinal);
-
-            // Only auto-send on final results (when the browser detects end of speech)
-            // Don't use aggressive pause detection - let user click mic again to stop
-            // This prevents cutting off users mid-sentence
-            if (transcript.trim() && isFinal) {
-                // Final result received - wait a bit longer before auto-sending
-                // in case user wants to continue speaking
-                console.log('Final result detected:', transcript);
-
-                // Clear any pending timeout
-                if (this.pauseTimeout) {
-                    clearTimeout(this.pauseTimeout);
-                }
-
-                // Wait 3 seconds for user to resume speaking
-                // If no new speech detected in 3 seconds, auto-send
-                this.pauseTimeout = setTimeout(() => {
-                    console.log('No new speech for 3 seconds, auto-sending final transcript');
-                    if (this.onPauseDetected && this.lastTranscript.trim()) {
-                        this.onPauseDetected(this.lastTranscript);
-                    }
-                }, 3000); // 3 second timeout before auto-send
-            }
         };
 
         this.recognition.onerror = (event) => {
-            console.error('Voice input error:', event.error);
             this.isListening = false;
-            if (this.pauseTimeout) {
-                clearTimeout(this.pauseTimeout);
-                this.pauseTimeout = null;
-            }
-
-            // Provide user-friendly error messages
-            let errorMessage = event.error;
-            switch (event.error) {
-                case 'no-permission':
-                    errorMessage = 'Microphone permission denied. Check browser settings.';
-                    break;
-                case 'network':
-                    errorMessage = 'Network error. Check your connection.';
-                    break;
-                case 'not-allowed':
-                    errorMessage = 'Microphone not allowed. Check browser permissions.';
-                    break;
-                case 'no-speech':
-                    errorMessage = 'No speech detected. Try speaking louder or closer to mic.';
-                    break;
-                case 'audio-capture':
-                    errorMessage = 'No microphone found. Check your device.';
-                    break;
-                case 'service-not-allowed':
-                    errorMessage = 'Speech recognition service not available.';
-                    break;
-                case 'bad-grammar':
-                    errorMessage = 'Speech recognition error. Try again.';
-                    break;
-                case 'aborted':
-                    console.log('Speech recognition aborted by user');
-                    return; // User intentionally stopped, don't show error
-            }
-            console.error('Error details:', errorMessage);
-            onError(errorMessage);
+            if (event.error === 'aborted') return;
+            let msg = 'Voice error. Try again.';
+            if (event.error === 'not-allowed' || event.error === 'no-permission') msg = 'Microphone permission denied. Check your browser settings.';
+            else if (event.error === 'no-speech') msg = 'No speech detected. Try again.';
+            else if (event.error === 'audio-capture') msg = 'No microphone found. Check your device.';
+            else if (event.error === 'network') msg = 'Network error. Check your connection.';
+            onError(msg);
         };
 
         this.recognition.onend = () => {
             this.isListening = false;
-            if (this.pauseTimeout) {
-                clearTimeout(this.pauseTimeout);
-                this.pauseTimeout = null;
-            }
-            console.log('VoiceManager: Recognition ended');
-
-            // Auto-restart if voice mode is still supposed to be active
-            // This handles browsers that stop recognition after silence gaps
-            if (this.shouldContinue) {
-                setTimeout(() => {
-                    if (this.shouldContinue) {
-                        try {
-                            this.recognition.start();
-                            this.isListening = true;
-                            console.log('VoiceManager: Auto-restarted listening after end');
-                        } catch (e) {
-                            console.warn('VoiceManager: Could not auto-restart:', e);
-                        }
-                    }
-                }, 250);
-            }
+            if (onDone) onDone(transcript);
         };
 
         try {
             this.recognition.start();
-            console.log('VoiceManager: Recognition.start() called successfully');
         } catch (error) {
-            console.error('VoiceManager: Error starting recognition:', error);
             this.isListening = false;
-            onError('Failed to start speech recognition: ' + error.message);
+            onError('Failed to start microphone: ' + error.message);
         }
     }
 
     stopListening() {
-        // Clear any pending pause timeout
-        if (this.pauseTimeout) {
-            clearTimeout(this.pauseTimeout);
-            this.pauseTimeout = null;
-        }
-
         if (this.recognition && this.isListening) {
-            try {
-                this.recognition.stop();
-                this.isListening = false;
-            } catch (error) {
-                console.error('Error stopping recognition:', error);
-                this.isListening = false;
-            }
-        } else if (this.recognition) {
-            // Even if not marked as listening, try to stop it
-            try {
-                this.recognition.stop();
-            } catch (error) {
-                console.warn('Recognition already stopped:', error);
-            }
+            try { this.recognition.stop(); } catch (e) {}
         }
-    }
-
-    speak(text, onComplete) {
-        if (!this.synthesis) {
-            onComplete();
-            return;
-        }
-
-        // Cancel any ongoing speech
-        this.synthesis.cancel();
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1;
-        utterance.pitch = 1;
-        utterance.volume = 1;
-
-        utterance.onstart = () => {
-            this.isSpeaking = true;
-        };
-
-        utterance.onend = () => {
-            this.isSpeaking = false;
-            onComplete();
-        };
-
-        utterance.onerror = () => {
-            this.isSpeaking = false;
-            onComplete();
-        };
-
-        this.synthesis.speak(utterance);
-    }
-
-    stopSpeaking() {
-        if (this.synthesis) {
-            this.synthesis.cancel();
-            this.isSpeaking = false;
-        }
+        this.isListening = false;
     }
 }
 
@@ -8191,19 +8019,14 @@ class Linen {
 
     startVoiceInput() {
         this._voiceInputActive = true;
-        this._lastInputWasVoice = false;
-        console.log("Linen: Starting voice input - mic stays on until user clicks again");
 
-        // Update voice button to show active state (red)
         const voiceBtn = document.getElementById('voice-btn');
         if (voiceBtn) {
             voiceBtn.classList.add('voice-active');
-            voiceBtn.style.backgroundColor = '';
             voiceBtn.title = 'Click to stop listening';
         }
 
-        // Store callbacks so we can re-attach them when restarting the mic after TTS
-        const onTranscript = (transcript, isInterim) => {
+        const onResult = (transcript, isInterim) => {
             const inputField = document.getElementById('chat-input');
             if (inputField) {
                 inputField.value = transcript;
@@ -8212,54 +8035,31 @@ class Linen {
         };
 
         const onError = (error) => {
-            console.error('Linen: Voice input error:', error);
             this.showToast(typeof error === 'string' ? error : 'Voice error', 'error');
             this.stopVoiceInput();
         };
 
-        const onPauseDetected = (finalTranscript) => {
-            console.log("Linen: Pause detected, sending:", finalTranscript);
+        const onDone = (finalTranscript) => {
             const inputField = document.getElementById('chat-input');
             if (inputField) {
                 inputField.value = finalTranscript;
                 inputField.style.opacity = '1.0';
             }
-
-            // Flag this turn as voice so TTS responds
-            this._lastInputWasVoice = true;
-
-            // Pause mic while AI processes — mic restarts after TTS finishes
-            this.voiceManager.shouldContinue = false;
-            this.voiceManager.stopListening();
-
-            setTimeout(() => {
-                this.sendChat();
-                // _voiceInputActive stays true — mic will restart in speakResponse().onend
-            }, 100);
+            this.stopVoiceInput();
         };
 
-        // Keep callbacks accessible for mic restart after TTS
-        this._voiceCallbacks = { onTranscript, onError, onPauseDetected };
-
-        this.voiceManager.shouldContinue = true;
-        this.voiceManager.startListening(onTranscript, onError, onPauseDetected);
+        this.voiceManager.startListening(onResult, onError, onDone);
     }
 
     stopVoiceInput() {
         this._voiceInputActive = false;
-        this._lastInputWasVoice = false;
-        this._voiceCallbacks = null;
-        if (this.voiceManager) this.voiceManager.shouldContinue = false;
-        console.log("Linen: Stopping voice input");
+        if (this.voiceManager) this.voiceManager.stopListening();
 
-        // Update voice button to show inactive state (green)
         const voiceBtn = document.getElementById('voice-btn');
         if (voiceBtn) {
             voiceBtn.classList.remove('voice-active');
-            voiceBtn.style.backgroundColor = ''; // Remove inline style, let CSS handle it
+            voiceBtn.title = 'Talk';
         }
-
-        this.voiceManager.stopListening();
     }
 
     async analyzeForEvents(userMessage) {
@@ -9033,22 +8833,8 @@ class Linen {
         }
     }
 
-    /** Restart mic listening after TTS finishes, if voice mode is still active */
     _restartMicAfterTTS() {
-        this._lastInputWasVoice = false;
-        if (this._voiceInputActive && this._voiceCallbacks && this.voiceManager) {
-            setTimeout(() => {
-                if (this._voiceInputActive) {
-                    console.log('Linen: Restarting mic after TTS');
-                    this.voiceManager.shouldContinue = true;
-                    this.voiceManager.startListening(
-                        this._voiceCallbacks.onTranscript,
-                        this._voiceCallbacks.onError,
-                        this._voiceCallbacks.onPauseDetected
-                    );
-                }
-            }, 400); // Small pause so mic doesn't catch the tail of TTS audio
-        }
+        // No-op: continuous voice loop removed. Mic is press-to-talk only.
     }
 }
 
