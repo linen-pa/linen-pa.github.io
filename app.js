@@ -5721,7 +5721,7 @@ class Linen {
         const voiceBtn = document.getElementById('voice-btn');
         if (voiceBtn) {
             voiceBtn.addEventListener('click', () => {
-                this.toggleVoiceInput();
+                this.showToast('🎤 Voice input coming soon!', 'info');
             });
         }
 
