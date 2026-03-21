@@ -4049,11 +4049,11 @@ class Linen {
 
         if (!chatInput || !chatMessages || !chatInputArea) return;
 
-        // Aggressively disable the iOS keyboard accessory bar
-        chatInput.setAttribute('autocorrect', 'off');
-        chatInput.setAttribute('autocapitalize', 'off');
+        // Keep native keyboard features (spellcheck, autocorrect, autocapitalize)
+        chatInput.setAttribute('autocorrect', 'on');
+        chatInput.setAttribute('autocapitalize', 'sentences');
         chatInput.setAttribute('autocomplete', 'off');
-        chatInput.setAttribute('spellcheck', 'false');
+        chatInput.setAttribute('spellcheck', 'true');
         chatInput.setAttribute('data-lpignore', 'true');
         chatInput.setAttribute('data-form-type', 'other');
 
