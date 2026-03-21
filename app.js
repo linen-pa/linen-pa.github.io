@@ -750,6 +750,9 @@ class TokenManager {
                 await this.db.setSetting('tier-token-balance', 0);
                 await this.db.setSetting('tier-msg-count', 0);
             }
+
+            // Start background midnight scheduler
+            this.scheduleMidnightRefill();
         } else {
             // Offline / not signed in: local only
             const balance = await this.db.getSetting('token-balance');
@@ -764,11 +767,49 @@ class TokenManager {
         }
     }
 
-    // Returns true if 24 hours have passed since the last refill timestamp
+    // Returns true if the last refill was before today's local midnight
     shouldRefillTokens(lastRefill) {
         if (!lastRefill) return true;
         const lastMs = lastRefill.toMillis ? lastRefill.toMillis() : lastRefill;
-        return (Date.now() - lastMs) / (1000 * 60 * 60) >= 24;
+        const now = new Date();
+        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+        return lastMs < todayMidnight;
+    }
+
+    // Schedules a one-time timeout to fire at the next local midnight, then reschedules itself
+    scheduleMidnightRefill() {
+        const now = new Date();
+        const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+        const msUntilMidnight = nextMidnight.getTime() - now.getTime();
+        console.log(`Linen: Next token refill in ${Math.round(msUntilMidnight / 60000)} minutes`);
+        setTimeout(async () => {
+            await this.runMidnightRefill();
+            this.scheduleMidnightRefill();
+        }, msUntilMidnight);
+    }
+
+    // Runs at midnight: resets free tokens and tier tokens for the new day
+    async runMidnightRefill() {
+        const user = this.authManager?.getCurrentUser();
+        if (!user) return;
+
+        // Reset free tokens
+        await this.authManager.updateDailyRefill(user.uid, this.FREE_TOKENS);
+        await this.db.setSetting('token-balance', this.FREE_TOKENS);
+        await this.db.setSetting('token-msg-count', 0);
+        console.log('Linen: Midnight refill — free tokens reset to 20');
+
+        // Reset tier tokens
+        const sub = await this.authManager.getSubscriptionData(user.uid);
+        const tierLimit = this.TIER_DAILY_LIMITS[sub.subscriptionTier] || 0;
+        if (sub.subscriptionActive && tierLimit > 0) {
+            await this.authManager.refillTierTokens(user.uid, tierLimit);
+            await this.db.setSetting('tier-token-balance', tierLimit);
+            await this.db.setSetting('tier-msg-count', 0);
+            console.log(`Linen: Midnight refill — tier tokens reset to ${tierLimit}`);
+        }
+
+        this.updateBadge(this.FREE_TOKENS + (sub.subscriptionActive ? tierLimit : 0));
     }
 
     async getBalance() {
