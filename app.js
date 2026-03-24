@@ -5539,6 +5539,14 @@ class Linen {
                     this.initPayPalButtons();
                 });
             }
+
+            const logoHardRefreshBtn = document.getElementById('logo-hard-refresh');
+            if (logoHardRefreshBtn) {
+                logoHardRefreshBtn.addEventListener('click', () => {
+                    logoMenu.classList.add('hidden');
+                    this.hardRefresh();
+                });
+            }
         }
 
         // Document-level click-outside handler — closes panels/modals when clicking outside them
@@ -5578,14 +5586,6 @@ class Linen {
         });
 
         if (logo && logoMenu) {
-            // Archive chat button
-            const logoArchiveBtn = document.getElementById('logo-archive-chat');
-            if (logoArchiveBtn) {
-                logoArchiveBtn.addEventListener('click', () => {
-                    logoMenu.classList.add('hidden');
-                    this.archiveCurrentChat();
-                });
-            }
 
             // Token badge → opens settings scrolled to tokens
             const tokenBadgeBtn = document.getElementById('token-badge-btn');
@@ -7830,6 +7830,18 @@ class Linen {
         window.location.reload();
     }
     async startNewChat() {
+        // Auto-archive current chat before starting fresh
+        try {
+            const messages = await this.db.getCurrentSessionMessages();
+            if (messages && messages.length > 0) {
+                const sessionTitle = this.generateSessionTitle(messages);
+                await this.db.archiveSession(sessionTitle, messages);
+                console.log('Linen: Auto-archived previous chat before new chat');
+            }
+        } catch (e) {
+            console.warn('Linen: Could not auto-archive chat:', e);
+        }
+
         // Clear currentSession from IndexedDB (temp working chat)
         // Keep all archived memories intact
         await this.db.clearCurrentSession();
@@ -7851,9 +7863,6 @@ class Linen {
         if (this.assistant && this.assistant.clearSession) {
             this.assistant.clearSession();
         }
-
-        // Update archive button visibility (should be hidden since chat is now empty)
-        await this.updateArchiveButtonVisibility();
 
         this.showToast('New chat started!', 'success');
 
