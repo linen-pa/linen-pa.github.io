@@ -4962,6 +4962,23 @@ class Linen {
         document.getElementById('memories-panel').classList.remove('active');
         document.getElementById('modal-backdrop').classList.remove('active');
 
+        // Archive any in-progress current session before replacing it
+        try {
+            const currentMessages = await this.db.getCurrentSessionMessages();
+            if (currentMessages && currentMessages.length > 0) {
+                const currentTitle = this.generateSessionTitle(currentMessages);
+                await this.db.archiveSession({
+                    title: currentTitle,
+                    messages: currentMessages,
+                    date: Date.now(),
+                    preview: currentMessages[currentMessages.length - 1]?.text,
+                    messageCount: currentMessages.length
+                });
+            }
+        } catch (e) {
+            console.warn('Linen: Could not archive current session before restore:', e);
+        }
+
         // Clear any existing currentSession before restoring archived messages
         await this.db.clearCurrentSession();
 
@@ -7863,7 +7880,13 @@ class Linen {
             const messages = await this.db.getCurrentSessionMessages();
             if (messages && messages.length > 0) {
                 const sessionTitle = this.generateSessionTitle(messages);
-                await this.db.archiveSession(sessionTitle, messages);
+                await this.db.archiveSession({
+                    title: sessionTitle,
+                    messages: messages,
+                    date: Date.now(),
+                    preview: messages[messages.length - 1]?.text,
+                    messageCount: messages.length
+                });
                 console.log('Linen: Auto-archived previous chat before new chat');
             }
         } catch (e) {
@@ -8019,21 +8042,22 @@ class Linen {
         const memoriesList = document.getElementById('memories-list');
         memoriesList.innerHTML = '';
 
-        const filtered = memories.filter(mem => {
+        // Only show conversation archives (entries with a messages array), not AI-generated semantic snippets
+        const conversations = memories.filter(mem => mem.messages && mem.messages.length > 0);
+
+        const filtered = conversations.filter(mem => {
             const s = filter.toLowerCase();
             if (!s) return true;
             return (mem.title && mem.title.toLowerCase().includes(s)) ||
-                (mem.text && mem.text.toLowerCase().includes(s)) ||
-                (mem.preview && mem.preview.toLowerCase().includes(s)) ||
-                (mem.tags && mem.tags.some(tag => tag.toLowerCase().includes(s)));
+                (mem.preview && mem.preview.toLowerCase().includes(s));
         });
 
         if (filtered.length === 0) {
             memoriesList.innerHTML = `
                 <div class="empty-state-container">
-                    <div class="empty-state-icon">📚</div>
-                    <h3 class="empty-state-title">No Memories Yet</h3>
-                    <p class="empty-state-text">Start chatting with Linen, and it will automatically save important memories from your conversations.</p>
+                    <div class="empty-state-icon">💬</div>
+                    <h3 class="empty-state-title">No Past Conversations</h3>
+                    <p class="empty-state-text">Your saved conversations will appear here. Start a new chat to begin.</p>
                 </div>`;
             return;
         }
@@ -8041,24 +8065,27 @@ class Linen {
         filtered.forEach(mem => {
             const card = document.createElement('div');
             card.className = 'memory-card';
-            // Add click event listener to view full memory
-            card.addEventListener('click', () => this.showMemoryModal(mem));
+            // Click directly restores the conversation — no modal preview step
+            card.addEventListener('click', () => {
+                document.getElementById('memories-panel').classList.remove('active');
+                document.getElementById('modal-backdrop').classList.remove('active');
+                this.restoreConversation(mem);
+            });
 
             const title = mem.title || 'Conversation';
-            const preview = mem.preview || mem.text || 'No preview available';
+            const preview = mem.preview || 'No preview available';
             const date = new Date(mem.date).toLocaleDateString();
+            const msgCount = mem.messageCount || mem.messages?.length || 0;
 
             card.innerHTML = `
                 <h3 class="memory-card-title">${title}</h3>
                 <p class="memory-card-preview">${preview}</p>
                 <p class="memory-meta">
-                    ${mem.emotion ? `<span class="emotion">${mem.emotion}</span>` : ''}
-                    ${mem.tags?.length ? `<span class="tags">${mem.tags.map(t => `#${t}`).join(' ')}</span>` : ''}
                     <span class="date">${date}</span>
+                    ${msgCount ? `<span class="msg-count">${msgCount} messages</span>` : ''}
                 </p>
                 <div class="memory-card-actions">
-                    <button class="edit-memory" data-id="${mem.id}" aria-label="Edit Memory">Edit</button>
-                    <button class="delete-memory" data-id="${mem.id}" aria-label="Delete Memory">Delete</button>
+                    <button class="delete-memory" data-id="${mem.id}" aria-label="Delete Conversation">Delete</button>
                 </div>
             `;
             memoriesList.appendChild(card);
@@ -8075,16 +8102,6 @@ class Linen {
             });
         });
 
-        memoriesList.querySelectorAll('.edit-memory').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation(); // Prevent card click event
-                const memoryId = parseInt(e.target.dataset.id);
-                const memory = filtered.find(m => m.id === memoryId);
-                if (memory) {
-                    this.showEditMemoryModal(memory);
-                }
-            });
-        });
     }
 
     toggleVoiceInput() {
