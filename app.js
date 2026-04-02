@@ -1057,7 +1057,7 @@ class AgentManager {
 class ModelVersionManager {
     constructor() {
         this.modelVersions = {
-            'gemini': { primary: 'gemini-2.5-flash', fallback: 'gemini-1.5-flash', lastUpdated: Date.now() },
+            'gemini': { primary: 'gemini-2.5-flash', fallback: 'gemini-2.5-flash', lastUpdated: Date.now() },
             'openai': { primary: 'gpt-4-turbo', fallback: 'gpt-3.5-turbo', lastUpdated: Date.now() },
             'huggingface': { primary: 'meta-llama/Llama-2-7b-chat-hf', fallback: 'meta-llama/Llama-2-7b-chat-hf', lastUpdated: Date.now() }
         };
@@ -1191,7 +1191,7 @@ class GeminiAssistant {
         // Note: apiKey is no longer used - backend Cloud Function handles it securely
         this.apiKey = apiKey;
         this.model = 'gemini-2.5-flash';
-        this.fallbackModel = 'gemini-1.5-flash';
+        this.fallbackModel = 'gemini-2.5-flash';
         this.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models';
         this._sessionHash = 'Q29wZEVXT2hE'; // request dedup hash
     }
