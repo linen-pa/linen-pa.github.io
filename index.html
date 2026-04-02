@@ -483,220 +483,254 @@
 
 
     <div class="modal" id="settings-modal" aria-label="Settings panel">
-        <button class="close-modal" id="close-settings-modal">×</button>
 
-        <!-- 1. Profile -->
-        <div class="settings-section" id="profile-section">
-            <div class="settings-account-bar">
-                <span class="settings-account-icon">👤</span>
-                <span class="account-email" id="settings-user-email">Not signed in</span>
-            </div>
-            <button type="button" class="accordion-header" id="profile-accordion-btn">
-                <span>Edit Profile</span>
-                <span class="accordion-icon">▼</span>
+        <!-- Fixed header -->
+        <div class="settings-modal-header">
+            <span class="settings-modal-title">Settings</span>
+            <button class="close-modal" id="close-settings-modal">×</button>
+        </div>
+
+        <!-- Tab bar -->
+        <nav class="settings-tabs" id="settings-tabs">
+            <button class="settings-tab active" data-panel="panel-profile">
+                <span class="settings-tab-icon">👤</span>
+                <span>Profile</span>
             </button>
-            <div id="profile-form" class="profile-form" style="display: none;">
-                <div class="form-group">
-                    <label for="profile-first-name">First Name</label>
-                    <input type="text" id="profile-first-name" placeholder="Your first name" autocomplete="given-name">
-                </div>
-                <div class="form-group">
-                    <label for="profile-last-name">Last Name</label>
-                    <input type="text" id="profile-last-name" placeholder="Your last name" autocomplete="family-name">
-                </div>
-                <div class="form-group">
-                    <label for="profile-email">Email (optional)</label>
-                    <input type="email" id="profile-email" placeholder="your@email.com" autocomplete="email">
-                </div>
-                <div class="form-group">
-                    <label for="profile-preferred-name">What should I call you?</label>
-                    <input type="text" id="profile-preferred-name" placeholder="e.g., Alex" maxlength="30" autocomplete="name">
-                    <span class="form-help">Your name helps me give you warm, personalized greetings. Leave blank to reset.</span>
-                </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: normal;">
-                        <input type="checkbox" id="profile-prefer-stranger">
-                        <span>Treat me as a stranger (use generic greetings)</span>
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label for="profile-pronouns">Pronouns</label>
-                    <select id="profile-pronouns">
-                        <option value="">Select pronouns</option>
-                        <option value="he/him">he/him</option>
-                        <option value="she/her">she/her</option>
-                        <option value="they/them">they/them</option>
-                        <option value="custom">Custom</option>
-                    </select>
-                    <input type="text" id="profile-pronouns-custom" placeholder="Enter your pronouns" style="display:none; margin-top:8px;">
-                </div>
-                <div class="form-group" id="profile-dob-group">
-                    <label for="profile-dob">Date of Birth</label>
-                    <input type="date" id="profile-dob">
-                    <span class="form-help">Used for birthday messages — stored only on your device</span>
-                </div>
-                <div id="profile-dob-saved" class="profile-dob-saved" style="display:none;">
-                    <span>✓ Birthday saved</span>
-                </div>
-                <div class="form-group">
-                    <label for="profile-timezone">Timezone</label>
-                    <select id="profile-timezone">
-                        <option value="">Auto-detect</option>
-                    </select>
-                </div>
-                <div class="settings-btn-group" style="margin-top: 8px;">
-                    <button id="save-profile" class="settings-btn settings-btn-primary">Save Profile</button>
-                    <button id="clear-profile" class="settings-btn settings-btn-danger">Clear Profile Data</button>
-                </div>
-            </div>
-        </div>
+            <button class="settings-tab" data-panel="panel-tiers">
+                <span class="settings-tab-icon">⭐</span>
+                <span>Tiers</span>
+            </button>
+            <button class="settings-tab" data-panel="panel-data">
+                <span class="settings-tab-icon">🗂️</span>
+                <span>Data</span>
+            </button>
+            <button class="settings-tab" data-panel="panel-app">
+                <span class="settings-tab-icon">🔄</span>
+                <span>App</span>
+            </button>
+            <button class="settings-tab" data-panel="panel-more">
+                <span class="settings-tab-icon">•••</span>
+                <span>More</span>
+            </button>
+        </nav>
 
-        <!-- 2. Tiers -->
-        <div class="settings-section">
-            <h3 class="settings-heading">⭐ Tiers</h3>
-            <div class="token-settings-info">
-                <div class="token-settings-balance">
-                    <span class="token-settings-label">Your balance</span>
-                    <span class="token-settings-count" id="settings-token-balance">0</span>
-                </div>
-                <p class="token-settings-desc">1 token = 20 AI messages.</p>
-            </div>
-            <div id="subscription-status-bar" style="display:none;" class="subscription-status-bar"></div>
-            <div class="token-packs-settings">
-                <div class="token-pack" data-tier="free">
-                    <div class="pack-name">Basic</div>
-                    <div class="pack-tokens">20 tokens/day</div>
-                    <div class="pack-price">Free</div>
-                </div>
-                <div class="token-pack" data-tier="pro">
-                    <div class="pack-name">Pro</div>
-                    <div class="pack-tokens">+200 tokens/day</div>
-                    <div class="pack-price">$1.99/month</div>
-                    <div class="pack-perks">Image generation unlocked</div>
-                    <div id="paypal-btn-pro" class="paypal-btn-container"></div>
-                </div>
-                <div class="token-pack popular" data-tier="popular">
-                    <div class="pack-badge">Best Value</div>
-                    <div class="pack-name">Popular</div>
-                    <div class="pack-tokens">+600 tokens/day</div>
-                    <div class="pack-price">$4.99/month</div>
-                    <div class="pack-perks">Image generation unlocked</div>
-                    <div id="paypal-btn-popular" class="paypal-btn-container"></div>
-                </div>
-                <div class="token-pack" data-tier="ultimate">
-                    <div class="pack-name">Ultimate</div>
-                    <div class="pack-tokens">+1,500 tokens/day</div>
-                    <div class="pack-price">$9.99/month</div>
-                    <div class="pack-perks">Image generation unlocked</div>
-                    <div id="paypal-btn-ultimate" class="paypal-btn-container"></div>
-                </div>
-            </div>
-        </div>
+        <!-- Scrollable content -->
+        <div class="settings-content">
 
-        <!-- 3. Data Management -->
-        <div class="settings-section">
-            <h3 class="settings-heading">🗂️ Data Management</h3>
-            <div class="settings-btn-grid">
-                <button id="export-data" class="settings-btn settings-btn-secondary">Export Memories</button>
-                <button id="export-learning-pack" class="settings-btn settings-btn-secondary">Export Learning Pack</button>
-                <button id="clear-chat-history" class="settings-btn settings-btn-danger">Clear Chat History</button>
-                <button id="clear-data" class="settings-btn settings-btn-danger">Clear All Data</button>
-            </div>
-        </div>
-
-        <!-- 4. Updates, Refresh & Mic -->
-        <div class="settings-section">
-            <h3 class="settings-heading">🔄 Updates & Audio</h3>
-
-            <div class="voice-toggle-row">
-                <div class="voice-toggle-info">
-                    <span class="voice-toggle-label">Voice Responses</span>
-                    <span class="voice-toggle-desc">Linen speaks its replies aloud</span>
+            <!-- Panel: Profile -->
+            <div class="settings-panel active" id="panel-profile">
+                <div class="settings-account-bar">
+                    <span class="settings-account-icon">👤</span>
+                    <span class="account-email" id="settings-user-email">Not signed in</span>
                 </div>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="enable-tts">
-                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                </label>
-            </div>
-
-            <button id="mic-permission-btn" class="settings-btn settings-btn-secondary" style="margin-top: 12px;">🎤 Request Microphone Permission</button>
-            <button id="force-refresh-btn" class="settings-btn settings-btn-primary" style="margin-top: 8px;">Check for Updates</button>
-            <button id="hard-refresh-btn" class="settings-btn settings-btn-hard-refresh">Hard Refresh (Clear Cache)</button>
-            <p id="refresh-status" class="settings-status"></p>
-        </div>
-
-        <!-- 5. Contact & Suggestions -->
-        <div class="settings-section">
-            <h3 class="settings-heading">📬 Contact & Feedback</h3>
-            <div class="feedback-tabs">
-                <button class="feedback-tab active" data-tab="support">Support</button>
-                <button class="feedback-tab" data-tab="suggestions">Suggestions</button>
-            </div>
-            <div id="feedback-support" class="feedback-panel active">
-                <div id="contact-form">
-                    <input type="text" id="contact-name" placeholder="Your Name">
-                    <input type="email" id="contact-email" placeholder="Your Email">
-                    <textarea id="contact-message" placeholder="Your Message"></textarea>
-                    <button id="submit-contact" class="settings-btn settings-btn-primary">Send</button>
-                    <p id="contact-status" class="settings-status"></p>
-                </div>
-            </div>
-            <div id="feedback-suggestions" class="feedback-panel">
-                <div id="suggestions-form">
-                    <textarea id="suggestion-text" placeholder="What would make Linen better for you?"></textarea>
-                    <button id="submit-suggestion" class="settings-btn settings-btn-primary">Send Suggestion</button>
-                    <p id="suggestion-status" class="settings-status"></p>
-                </div>
-            </div>
-        </div>
-
-        <!-- 6. Privacy & Terms -->
-        <div class="settings-section" id="privacy-section">
-            <h3 class="settings-heading">🔐 Privacy & Terms</h3>
-            <div class="trust-badges">
-                <div class="trust-badge">
-                    <span class="trust-badge-icon">🔒</span>
-                    <div class="trust-badge-text">
-                        <strong>Privacy First</strong>
-                        <span>Your data never leaves your device</span>
+                <button type="button" class="accordion-header" id="profile-accordion-btn">
+                    <span>Edit Profile</span>
+                    <span class="accordion-icon">▼</span>
+                </button>
+                <div id="profile-form" class="profile-form" style="display: none;">
+                    <div class="form-group">
+                        <label for="profile-first-name">First Name</label>
+                        <input type="text" id="profile-first-name" placeholder="Your first name" autocomplete="given-name">
                     </div>
-                </div>
-                <div class="trust-badge">
-                    <span class="trust-badge-icon">🚫</span>
-                    <div class="trust-badge-text">
-                        <strong>Never</strong>
-                        <span>Sell, share, or train AI on your data</span>
+                    <div class="form-group">
+                        <label for="profile-last-name">Last Name</label>
+                        <input type="text" id="profile-last-name" placeholder="Your last name" autocomplete="family-name">
                     </div>
-                </div>
-                <div class="trust-badge">
-                    <span class="trust-badge-icon">💯</span>
-                    <div class="trust-badge-text">
-                        <strong>Transparent</strong>
-                        <span>Simple token pricing, no ads</span>
+                    <div class="form-group">
+                        <label for="profile-email">Email (optional)</label>
+                        <input type="email" id="profile-email" placeholder="your@email.com" autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-preferred-name">What should I call you?</label>
+                        <input type="text" id="profile-preferred-name" placeholder="e.g., Alex" maxlength="30" autocomplete="name">
+                        <span class="form-help">Your name helps me give you warm, personalized greetings. Leave blank to reset.</span>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: normal;">
+                            <input type="checkbox" id="profile-prefer-stranger">
+                            <span>Treat me as a stranger (use generic greetings)</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-pronouns">Pronouns</label>
+                        <select id="profile-pronouns">
+                            <option value="">Select pronouns</option>
+                            <option value="he/him">he/him</option>
+                            <option value="she/her">she/her</option>
+                            <option value="they/them">they/them</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        <input type="text" id="profile-pronouns-custom" placeholder="Enter your pronouns" style="display:none; margin-top:8px;">
+                    </div>
+                    <div class="form-group" id="profile-dob-group">
+                        <label for="profile-dob">Date of Birth</label>
+                        <input type="date" id="profile-dob">
+                        <span class="form-help">Used for birthday messages — stored only on your device</span>
+                    </div>
+                    <div id="profile-dob-saved" class="profile-dob-saved" style="display:none;">
+                        <span>✓ Birthday saved</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-timezone">Timezone</label>
+                        <select id="profile-timezone">
+                            <option value="">Auto-detect</option>
+                        </select>
+                    </div>
+                    <div class="settings-btn-group" style="margin-top: 8px;">
+                        <button id="save-profile" class="settings-btn settings-btn-primary">Save Profile</button>
+                        <button id="clear-profile" class="settings-btn settings-btn-danger">Clear Profile Data</button>
                     </div>
                 </div>
             </div>
-            <div class="settings-btn-group">
-                <button id="show-privacy-policy" class="settings-btn settings-btn-secondary">Privacy Policy</button>
-                <button id="show-terms" class="settings-btn settings-btn-secondary">Terms of Service</button>
+
+            <!-- Panel: Tiers -->
+            <div class="settings-panel" id="panel-tiers">
+                <div class="token-settings-info">
+                    <div class="token-settings-balance">
+                        <span class="token-settings-label">Your balance</span>
+                        <span class="token-settings-count" id="settings-token-balance">0</span>
+                    </div>
+                    <p class="token-settings-desc">1 token = 20 AI messages.</p>
+                </div>
+                <div id="subscription-status-bar" style="display:none;" class="subscription-status-bar"></div>
+                <div class="token-packs-settings">
+                    <div class="token-pack" data-tier="free">
+                        <div class="pack-name">Basic</div>
+                        <div class="pack-tokens">20 tokens/day</div>
+                        <div class="pack-price">Free</div>
+                    </div>
+                    <div class="token-pack" data-tier="pro">
+                        <div class="pack-name">Pro</div>
+                        <div class="pack-tokens">+200 tokens/day</div>
+                        <div class="pack-price">$1.99/month</div>
+                        <div class="pack-perks">Image generation unlocked</div>
+                        <div id="paypal-btn-pro" class="paypal-btn-container"></div>
+                    </div>
+                    <div class="token-pack popular" data-tier="popular">
+                        <div class="pack-badge">Best Value</div>
+                        <div class="pack-name">Popular</div>
+                        <div class="pack-tokens">+600 tokens/day</div>
+                        <div class="pack-price">$4.99/month</div>
+                        <div class="pack-perks">Image generation unlocked</div>
+                        <div id="paypal-btn-popular" class="paypal-btn-container"></div>
+                    </div>
+                    <div class="token-pack" data-tier="ultimate">
+                        <div class="pack-name">Ultimate</div>
+                        <div class="pack-tokens">+1,500 tokens/day</div>
+                        <div class="pack-price">$9.99/month</div>
+                        <div class="pack-perks">Image generation unlocked</div>
+                        <div id="paypal-btn-ultimate" class="paypal-btn-container"></div>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- 7. Share & Install (side by side) -->
-        <div class="settings-section">
-            <div class="settings-btn-row">
-                <button type="button" id="share-linen-btn" class="settings-btn settings-btn-primary settings-btn-half">📤 Share</button>
-                <button id="install-app-btn" class="settings-btn settings-btn-primary settings-btn-half">📲 Install App</button>
+            <!-- Panel: Data -->
+            <div class="settings-panel" id="panel-data">
+                <h3 class="settings-heading">🗂️ Data Management</h3>
+                <div class="settings-btn-grid" style="margin-top: 16px;">
+                    <button id="export-data" class="settings-btn settings-btn-secondary">Export Memories</button>
+                    <button id="export-learning-pack" class="settings-btn settings-btn-secondary">Export Learning Pack</button>
+                    <button id="clear-chat-history" class="settings-btn settings-btn-danger">Clear Chat History</button>
+                    <button id="clear-data" class="settings-btn settings-btn-danger">Clear All Data</button>
+                </div>
             </div>
-        </div>
 
-        <!-- 8. Sign Out -->
-        <div class="settings-section" id="account-section">
-            <button type="button" id="sign-out-btn" class="settings-btn settings-btn-danger" style="width: 100%;">Sign Out</button>
-        </div>
+            <!-- Panel: App -->
+            <div class="settings-panel" id="panel-app">
+                <h3 class="settings-heading">🔄 Updates & Audio</h3>
+                <div style="margin-top: 16px;">
+                    <div class="voice-toggle-row">
+                        <div class="voice-toggle-info">
+                            <span class="voice-toggle-label">Voice Responses</span>
+                            <span class="voice-toggle-desc">Linen speaks its replies aloud</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="enable-tts">
+                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        </label>
+                    </div>
+                    <button id="mic-permission-btn" class="settings-btn settings-btn-secondary" style="margin-top: 12px;">🎤 Request Microphone Permission</button>
+                    <button id="force-refresh-btn" class="settings-btn settings-btn-primary" style="margin-top: 8px;">Check for Updates</button>
+                    <button id="hard-refresh-btn" class="settings-btn settings-btn-hard-refresh">Hard Refresh (Clear Cache)</button>
+                    <p id="refresh-status" class="settings-status"></p>
+                </div>
+            </div>
 
-        <!-- 9. Version -->
-        <p id="version-info">Version 2.0.0</p>
+            <!-- Panel: More -->
+            <div class="settings-panel" id="panel-more">
+                <!-- Contact & Feedback -->
+                <div class="settings-section" style="padding-top: 0;">
+                    <h3 class="settings-heading">📬 Contact & Feedback</h3>
+                    <div class="feedback-tabs">
+                        <button class="feedback-tab active" data-tab="support">Support</button>
+                        <button class="feedback-tab" data-tab="suggestions">Suggestions</button>
+                    </div>
+                    <div id="feedback-support" class="feedback-panel active">
+                        <div id="contact-form">
+                            <input type="text" id="contact-name" placeholder="Your Name">
+                            <input type="email" id="contact-email" placeholder="Your Email">
+                            <textarea id="contact-message" placeholder="Your Message"></textarea>
+                            <button id="submit-contact" class="settings-btn settings-btn-primary">Send</button>
+                            <p id="contact-status" class="settings-status"></p>
+                        </div>
+                    </div>
+                    <div id="feedback-suggestions" class="feedback-panel">
+                        <div id="suggestions-form">
+                            <textarea id="suggestion-text" placeholder="What would make Linen better for you?"></textarea>
+                            <button id="submit-suggestion" class="settings-btn settings-btn-primary">Send Suggestion</button>
+                            <p id="suggestion-status" class="settings-status"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Privacy & Terms -->
+                <div class="settings-section" id="privacy-section">
+                    <h3 class="settings-heading">🔐 Privacy & Terms</h3>
+                    <div class="trust-badges">
+                        <div class="trust-badge">
+                            <span class="trust-badge-icon">🔒</span>
+                            <div class="trust-badge-text">
+                                <strong>Privacy First</strong>
+                                <span>Your data never leaves your device</span>
+                            </div>
+                        </div>
+                        <div class="trust-badge">
+                            <span class="trust-badge-icon">🚫</span>
+                            <div class="trust-badge-text">
+                                <strong>Never</strong>
+                                <span>Sell, share, or train AI on your data</span>
+                            </div>
+                        </div>
+                        <div class="trust-badge">
+                            <span class="trust-badge-icon">💯</span>
+                            <div class="trust-badge-text">
+                                <strong>Transparent</strong>
+                                <span>Simple token pricing, no ads</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-btn-group">
+                        <button id="show-privacy-policy" class="settings-btn settings-btn-secondary">Privacy Policy</button>
+                        <button id="show-terms" class="settings-btn settings-btn-secondary">Terms of Service</button>
+                    </div>
+                </div>
+
+                <!-- Share & Install -->
+                <div class="settings-section">
+                    <div class="settings-btn-row">
+                        <button type="button" id="share-linen-btn" class="settings-btn settings-btn-primary settings-btn-half">📤 Share</button>
+                        <button id="install-app-btn" class="settings-btn settings-btn-primary settings-btn-half">📲 Install App</button>
+                    </div>
+                </div>
+
+                <!-- Sign Out + Version -->
+                <div class="settings-section" id="account-section" style="border-bottom: none;">
+                    <button type="button" id="sign-out-btn" class="settings-btn settings-btn-danger" style="width: 100%;">Sign Out</button>
+                    <p id="version-info" style="text-align:center; margin-top: 8px;">Version 2.0.0</p>
+                </div>
+            </div>
+
+        </div><!-- /settings-content -->
     </div>
 </div>
 

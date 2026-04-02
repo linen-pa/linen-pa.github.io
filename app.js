@@ -5653,6 +5653,25 @@ class Linen {
 
         document.getElementById('close-memories').addEventListener('click', closeModal);
         document.getElementById('close-settings-modal').addEventListener('click', closeModal);
+
+        // Settings tab switching
+        const settingsTabs = document.getElementById('settings-tabs');
+        if (settingsTabs) {
+            settingsTabs.addEventListener('click', (e) => {
+                const tab = e.target.closest('.settings-tab');
+                if (!tab) return;
+                const panelId = tab.dataset.panel;
+                if (!panelId) return;
+                settingsTabs.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+                const panel = document.getElementById(panelId);
+                if (panel) panel.classList.add('active');
+                // Reset scroll position in content area
+                const content = document.querySelector('.settings-content');
+                if (content) content.scrollTop = 0;
+            });
+        }
         document.getElementById('close-about-modal')?.addEventListener('click', closeModal);
         backdrop.addEventListener('click', closeModal);
 
@@ -8306,15 +8325,11 @@ class Linen {
             // Load PayPal buttons
             this.initPayPalButtons();
 
+            // Switch to the Tiers tab
             setTimeout(() => {
-                const sections = settingsModal.querySelectorAll('.settings-heading');
-                for (const s of sections) {
-                    if (s.textContent.includes('Tokens')) {
-                        s.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        break;
-                    }
-                }
-            }, 100);
+                const tiersTab = document.querySelector('[data-panel="panel-tiers"]');
+                if (tiersTab) tiersTab.click();
+            }, 50);
         }
     }
 

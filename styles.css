@@ -411,9 +411,91 @@ header {
     transform: translate(-50%, -50%) scale(1);
 }
 
+/* Settings modal — tabbed layout */
+#settings-modal {
+    padding: 0 !important;
+    height: 85vh;
+    max-height: 85vh;
+    overflow: hidden !important;
+}
+
 #settings-modal.active {
-    display: block;
+    display: flex !important;
+    flex-direction: column;
+    overflow: hidden !important;
+}
+
+.settings-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.settings-modal-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.settings-modal-header .close-modal {
+    position: static;
+    flex-shrink: 0;
+}
+
+.settings-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.settings-tabs::-webkit-scrollbar { display: none; }
+
+.settings-tab {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 4px 8px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.68rem;
+    color: var(--text-light);
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+}
+
+.settings-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.settings-tab-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.settings-content {
+    flex: 1;
     overflow-y: auto;
+    padding: 16px 20px 24px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.settings-panel {
+    display: none;
+}
+
+.settings-panel.active {
+    display: block;
 }
 
 .close-panel, .close-modal {
