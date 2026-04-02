@@ -498,6 +498,46 @@ header {
     display: block;
 }
 
+/* Consistent vertical spacing between buttons inside a panel */
+.settings-panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+/* Separator + spacing before Sign Out in Profile tab */
+.settings-panel-footer {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+/* Voice coming-soon block — visually disabled */
+.voice-coming-soon {
+    margin-top: 8px;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+    opacity: 0.5;
+    pointer-events: none;
+    user-select: none;
+}
+
+.coming-soon-note {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    font-style: italic;
+    margin: 6px 0 0;
+}
+
+/* Center-align headings and content in all panels */
+.settings-panel h3.settings-heading {
+    text-align: center;
+    margin-bottom: 4px;
+}
+
 .close-panel, .close-modal {
     position: absolute;
     top: 10px;
@@ -2753,18 +2793,9 @@ body.keyboard-nav [tabindex]:focus {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 1rem;
-    background: #1f1f1f;
-    border-top: 1px solid #333;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease, padding 0.3s ease;
-}
-
-.profile-form[style*="display: block"],
-#profile-section.active .profile-form {
-    max-height: 2000px;
-    padding: 1rem;
+    padding: 12px 0 0;
+    max-height: none;
+    overflow: visible;
 }
 
 .profile-form .form-group {
