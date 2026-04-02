@@ -685,15 +685,6 @@ class LinenDB {
         });
     }
 
-    async clearCurrentSession() {
-        return new Promise((r, j) => {
-            const t = this.db.transaction(['conversations'], 'readwrite');
-            t.objectStore('conversations').clear();
-            t.oncomplete = () => r();
-            t.onerror = () => j(t.error);
-        });
-    }
-
     async updateMemory(memory) {
         return new Promise((r, j) => {
             const t = this.db.transaction(['memories'], 'readwrite');
@@ -3873,6 +3864,9 @@ class Linen {
                     const isNewChat = localStorage.getItem('linen-is-new-chat') === '1';
                     if (isNewChat) {
                         await this.db.clearCurrentSession();
+                        // Also re-clear Firebase in case a fire-and-forget write from the
+                        // previous session landed after startNewChat()'s clearConversations call
+                        try { await this.authManager.clearConversations(currentUser.uid); } catch(e) {}
                         console.log('Linen: Skipping Firebase restore — user is in a new chat');
                     } else {
                         // Replace local conversations with cloud versions
