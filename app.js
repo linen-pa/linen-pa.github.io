@@ -4806,7 +4806,17 @@ class Linen {
             contentHtml = `<div class="memory-text-content">${safeText}</div>`;
         }
 
-        modal.innerHTML = `<div class="memory-modal-content"><div class="memory-modal-header"><h2>${title}</h2><button class="close-modal" id="close-memory-modal">×</button></div><p class="memory-modal-date">${date}</p><div class="memory-messages-container">${contentHtml}</div><div class="memory-modal-actions">${continueButton}</div></div>`;
+        modal.innerHTML = `
+            <div class="memory-modal-header">
+                <h2>${title}</h2>
+                <button class="close-modal" id="close-memory-modal">×</button>
+            </div>
+            <div class="memory-modal-content">
+                <p class="memory-modal-date">${date}</p>
+                <div class="memory-messages-container">${contentHtml}</div>
+                <div class="memory-modal-actions">${continueButton}</div>
+            </div>
+        `;
         modal.classList.add('active');
         backdrop.classList.add('active');
 
