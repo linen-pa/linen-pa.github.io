@@ -4802,8 +4802,8 @@ class Linen {
             <div class="memory-modal-content">
                 <p class="memory-modal-date">${date}</p>
                 <div class="memory-messages-container">${contentHtml}</div>
-                <div class="memory-modal-actions">${continueButton}</div>
             </div>
+            ${continueButton ? `<div class="memory-modal-footer">${continueButton}</div>` : ''}
         `;
         modal.classList.add('active');
         backdrop.classList.add('active');
