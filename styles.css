@@ -2049,10 +2049,12 @@ hr {
 .memory-modal {
     max-width: 600px;
     width: 90%;
+    height: 80vh;
     max-height: 80vh;
-    overflow: hidden;
-    display: flex;
+    overflow: hidden !important; /* override base .modal overflow-y: auto */
+    display: flex !important;    /* override base .modal display:none / .modal.active display:flex */
     flex-direction: column;
+    padding: 0 !important;       /* header/content/footer manage their own padding */
 }
 
 .memory-modal-content {
