@@ -2050,7 +2050,7 @@ hr {
     max-width: 600px;
     width: 90%;
     max-height: 80vh;
-    overflow-y: auto;
+    overflow-y: hidden; /* scroll is inside .memory-modal-content */
     display: flex;
     flex-direction: column;
 }
@@ -2058,6 +2058,36 @@ hr {
 .memory-modal-content {
     position: relative;
     padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Sticky header bar inside memory modal — title + close button always visible */
+.memory-modal-header {
+    position: sticky;
+    top: 0;
+    background: #2a2a2a;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+}
+
+.memory-modal-header h2 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--primary);
+    flex: 1;
+    text-align: left;
+    padding-right: 8px;
+}
+
+.memory-modal-header .close-modal {
+    position: static; /* overrides the absolute from .close-modal default */
+    flex-shrink: 0;
 }
 
 .memory-modal-content h2 {
