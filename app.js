@@ -3867,9 +3867,12 @@ class Linen {
                     const dedupedConvs = smartDedup(cloudConversations);
                     const hadDuplicates = dedupedConvs.length < cloudConversations.length;
 
-                    // Skip Firebase restore if the user intentionally started a new chat
-                    const viewState = sessionStorage.getItem('linen-view-state');
-                    if (viewState === 'new') {
+                    // Skip Firebase restore if the user intentionally started a new chat.
+                    // Uses localStorage so the flag survives multiple hard refreshes until
+                    // the user actually sends a real message (cleared in sendChat).
+                    const isNewChat = localStorage.getItem('linen-is-new-chat') === '1';
+                    if (isNewChat) {
+                        await this.db.clearCurrentSession();
                         console.log('Linen: Skipping Firebase restore — user is in a new chat');
                     } else {
                         // Replace local conversations with cloud versions
@@ -4035,15 +4038,6 @@ class Linen {
         } catch (err) {
             console.error("Linen: Error in bindEvents():", err);
         }
-        // Respect the user's intended view state across hard refreshes
-        const viewState = sessionStorage.getItem('linen-view-state');
-        if (viewState === 'new') {
-            // User started a new chat — don't let Firebase restore overwrite it
-            await this.db.clearCurrentSession();
-            sessionStorage.removeItem('linen-view-state');
-            console.log('Linen: Respecting new-chat state across refresh');
-        }
-
         console.log("Linen: Loading chat history");
         try {
             await this.loadChatHistory();
@@ -7747,6 +7741,11 @@ class Linen {
 
             // Save conversation if it's a real user message
             if (!initialMessage && !isInitialGreeting) {
+                // User sent a real message — the new-chat flag is no longer needed.
+                // Clearing it here means the next hard refresh will load from Firebase normally
+                // only once this chat has actual content.
+                localStorage.removeItem('linen-is-new-chat');
+
                 // Save to local IndexedDB
                 await this.db.addConversation({ text: msg, sender: 'user', date: Date.now() });
                 await this.db.addConversation({ text: reply, sender: 'assistant', date: Date.now() });
@@ -7927,8 +7926,10 @@ class Linen {
             this.assistant.clearSession();
         }
 
-        // Mark that the user intentionally started a new chat so hard refresh stays here
-        sessionStorage.setItem('linen-view-state', 'new');
+        // Mark that the user intentionally started a new chat so hard refresh stays here.
+        // localStorage persists across hard refreshes (unlike sessionStorage which survives
+        // only one reload). The flag is cleared only when the user sends a real message.
+        localStorage.setItem('linen-is-new-chat', '1');
 
         this.showToast('New chat started!', 'success');
 
