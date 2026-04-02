@@ -3867,17 +3867,23 @@ class Linen {
                     const dedupedConvs = smartDedup(cloudConversations);
                     const hadDuplicates = dedupedConvs.length < cloudConversations.length;
 
-                    // Replace local conversations with cloud versions
-                    // Clear BOTH tables — currentSession (normal) and conversations (fallback for older browsers)
-                    console.log(`Linen: Loading ${dedupedConvs.length} conversations from cloud`);
-                    await this.db.clearCurrentSession();
-                    await this.db.clearConversations();
-                    for (const conv of dedupedConvs) {
-                        await this.db.addConversation({
-                            text: conv.text,
-                            sender: conv.sender,
-                            date: conv.timestamp || Date.now()
-                        });
+                    // Skip Firebase restore if the user intentionally started a new chat
+                    const viewState = sessionStorage.getItem('linen-view-state');
+                    if (viewState === 'new') {
+                        console.log('Linen: Skipping Firebase restore — user is in a new chat');
+                    } else {
+                        // Replace local conversations with cloud versions
+                        // Clear BOTH tables — currentSession (normal) and conversations (fallback for older browsers)
+                        console.log(`Linen: Loading ${dedupedConvs.length} conversations from cloud`);
+                        await this.db.clearCurrentSession();
+                        await this.db.clearConversations();
+                        for (const conv of dedupedConvs) {
+                            await this.db.addConversation({
+                                text: conv.text,
+                                sender: conv.sender,
+                                date: conv.timestamp || Date.now()
+                            });
+                        }
                     }
 
                     // If duplicates were found, clean up Firebase so future loads stay clean
@@ -4197,23 +4203,10 @@ class Linen {
                 const currentVersion = sessionStorage.getItem('linen-app-version') || '2.0.0';
 
                 if (newVersion !== currentVersion) {
-                    console.log(`Linen: New version available (${currentVersion} → ${newVersion}). Initiating smart reload...`);
+                    console.log(`Linen: New version available (${currentVersion} → ${newVersion}). Notifying user.`);
                     sessionStorage.setItem('linen-app-version', newVersion);
-
-                    // Save current state before reload
-                    const currentConversationId = sessionStorage.getItem('current-conversation-id');
-                    const scrollPosition = window.scrollY;
-
-                    // Store reload metadata
-                    sessionStorage.setItem('linen-smart-reload', JSON.stringify({
-                        conversationId: currentConversationId,
-                        scrollPosition: scrollPosition,
-                        timestamp: Date.now()
-                    }));
-
-                    console.log("Linen: Reloading app with new version...");
-                    // Reload silently - will restore state on next load
-                    location.reload();
+                    // Show a non-intrusive notification — never auto-reload mid-session
+                    this.showUpdateNotification();
                 }
             } catch (err) {
                 console.warn("Linen: Error checking for code updates:", err);
@@ -4840,15 +4833,11 @@ class Linen {
         });
     }
 
-    showEditMemoryModal(memory) {
-        const backdrop = document.getElementById('modal-backdrop');
-        let modal = document.getElementById('edit-memory-modal');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'edit-memory-modal';
-            modal.className = 'modal memory-modal';
-            document.body.appendChild(modal);
-        }
+    showEditMemoryPanel(memory) {
+        // Inline edit within the memories panel — no popup, Claude-style
+        const panel = document.getElementById('memories-panel');
+        const searchBar = document.getElementById('memory-search');
+        const list = document.getElementById('memories-list');
 
         const title = memory.title || '';
         const text = memory.text || '';
@@ -4856,85 +4845,91 @@ class Linen {
         const emotion = memory.emotion || '';
         const instructions = memory.instructions || '';
         const isPrivate = memory.privacy === true;
+        const date = memory.date ? new Date(memory.date).toLocaleDateString() : '';
 
-        modal.innerHTML = `
-            <div class="memory-modal-content">
-                <button class="close-modal" id="close-edit-memory-modal">×</button>
-                <h2>Edit Memory</h2>
-                <form id="edit-memory-form">
-                    <div class="form-group">
-                        <label for="edit-memory-title">Title</label>
-                        <input type="text" id="edit-memory-title" value="${this.escapeHtml(title)}" placeholder="Memory title">
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-memory-text">Summary</label>
-                        <textarea id="edit-memory-text" placeholder="What happened in this conversation">${this.escapeHtml(text)}</textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-memory-instructions">Instructions for Linen</label>
-                        <textarea id="edit-memory-instructions" placeholder="e.g. Bring this up when I seem stressed about work">${this.escapeHtml(instructions)}</textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-memory-tags">Tags (comma-separated)</label>
-                        <input type="text" id="edit-memory-tags" value="${this.escapeHtml(tags)}" placeholder="e.g. work, anxiety, family">
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-memory-emotion">Emotion</label>
-                        <input type="text" id="edit-memory-emotion" value="${this.escapeHtml(emotion)}" placeholder="e.g. anxious, hopeful, overwhelmed">
-                    </div>
-                    <div class="form-group form-group-checkbox">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="edit-memory-privacy" ${isPrivate ? 'checked' : ''}>
-                            <span>Private — keep this memory out of AI context</span>
-                        </label>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                        <button type="button" class="btn btn-secondary" id="cancel-edit-memory">Cancel</button>
-                    </div>
-                </form>
+        // Hide the search + list, inject inline edit form
+        searchBar.style.display = 'none';
+        list.style.display = 'none';
+
+        let editView = document.getElementById('memory-inline-edit');
+        if (!editView) {
+            editView = document.createElement('div');
+            editView.id = 'memory-inline-edit';
+            panel.appendChild(editView);
+        }
+
+        editView.innerHTML = `
+            <div class="mem-edit-header">
+                <button class="mem-edit-back" id="mem-edit-back">← Back</button>
+                <span class="mem-edit-date">${date}</span>
+            </div>
+            <div class="mem-edit-body">
+                <div class="mem-edit-section">
+                    <label class="mem-edit-label">Title</label>
+                    <input class="mem-edit-input" id="mef-title" type="text" value="${this.escapeHtml(title)}" placeholder="Conversation title">
+                </div>
+                <div class="mem-edit-section">
+                    <label class="mem-edit-label">Summary</label>
+                    <textarea class="mem-edit-textarea" id="mef-summary" placeholder="What this conversation was about">${this.escapeHtml(text)}</textarea>
+                </div>
+                <div class="mem-edit-section">
+                    <label class="mem-edit-label">Instructions for Linen</label>
+                    <div class="mem-edit-hint">Tell Linen when and how to use this memory</div>
+                    <textarea class="mem-edit-textarea" id="mef-instructions" placeholder="e.g. Bring this up when I'm stressed about work">${this.escapeHtml(instructions)}</textarea>
+                </div>
+                <div class="mem-edit-section">
+                    <label class="mem-edit-label">Tags</label>
+                    <input class="mem-edit-input" id="mef-tags" type="text" value="${this.escapeHtml(tags)}" placeholder="work, anxiety, family">
+                </div>
+                <div class="mem-edit-section">
+                    <label class="mem-edit-label">Emotion</label>
+                    <input class="mem-edit-input" id="mef-emotion" type="text" value="${this.escapeHtml(emotion)}" placeholder="anxious, hopeful, overwhelmed">
+                </div>
+                <div class="mem-edit-section mem-edit-privacy">
+                    <label class="mem-edit-toggle-label">
+                        <div class="mem-edit-toggle-text">
+                            <span class="mem-edit-label">Private</span>
+                            <span class="mem-edit-hint">Keep out of AI context</span>
+                        </div>
+                        <input type="checkbox" id="mef-privacy" class="mem-edit-checkbox" ${isPrivate ? 'checked' : ''}>
+                        <span class="mem-edit-toggle-track"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="mem-edit-footer">
+                <button class="mem-edit-save" id="mem-edit-save">Save</button>
             </div>
         `;
+        editView.style.display = 'flex';
 
-        modal.classList.add('active');
-        backdrop.classList.add('active');
-
-        const form = document.getElementById('edit-memory-form');
-        const closeBtn = document.getElementById('close-edit-memory-modal');
-        const cancelBtn = document.getElementById('cancel-edit-memory');
-
-        const closeModal = () => {
-            modal.classList.remove('active');
-            backdrop.classList.remove('active');
+        const closeEdit = () => {
+            editView.style.display = 'none';
+            searchBar.style.display = '';
+            list.style.display = '';
         };
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        document.getElementById('mem-edit-back').addEventListener('click', closeEdit);
+
+        document.getElementById('mem-edit-save').addEventListener('click', async () => {
             const updatedMemory = {
-                ...memory, // preserve all existing fields (messages, preview, etc.)
-                title: document.getElementById('edit-memory-title').value.trim(),
-                text: document.getElementById('edit-memory-text').value.trim(),
-                instructions: document.getElementById('edit-memory-instructions').value.trim(),
-                tags: document.getElementById('edit-memory-tags').value.split(',').map(t => t.trim()).filter(t => t),
-                emotion: document.getElementById('edit-memory-emotion').value.trim(),
-                privacy: document.getElementById('edit-memory-privacy').checked,
+                ...memory,
+                title: document.getElementById('mef-title').value.trim(),
+                text: document.getElementById('mef-summary').value.trim(),
+                instructions: document.getElementById('mef-instructions').value.trim(),
+                tags: document.getElementById('mef-tags').value.split(',').map(t => t.trim()).filter(t => t),
+                emotion: document.getElementById('mef-emotion').value.trim(),
+                privacy: document.getElementById('mef-privacy').checked,
                 date: memory.date
             };
-
             await this.db.updateMemory(updatedMemory);
-            closeModal();
-            this.loadMemories(document.getElementById('memory-search').value);
-            this.showToast('Memory updated!', 'success');
-        });
-
-        closeBtn.addEventListener('click', closeModal);
-        cancelBtn.addEventListener('click', closeModal);
-        backdrop.addEventListener('click', (e) => {
-            if (e.target === backdrop) {
-                closeModal();
-            }
+            this.showToast('Saved', 'success');
+            closeEdit();
+            this.loadMemories('');
         });
     }
+
+    // Keep old name as alias for any other callers
+    showEditMemoryModal(memory) { this.showEditMemoryPanel(memory); }
 
     escapeHtml(text) {
         const div = document.createElement('div');
@@ -7861,20 +7856,40 @@ class Linen {
         localStorage.removeItem('linen-birthday-shown-date');
         window.location.reload();
     }
+    _deduplicateMessages(messages) {
+        // Remove consecutive exact duplicates, then cap at 500 messages
+        const deduped = messages.filter((m, i, arr) =>
+            i === 0 || !(m.sender === arr[i-1].sender && m.text === arr[i-1].text)
+        );
+        return deduped.slice(-500); // keep most recent 500
+    }
+
     async startNewChat() {
         // Auto-archive current chat before starting fresh
         try {
-            const messages = await this.db.getCurrentSessionMessages();
+            const rawMessages = await this.db.getCurrentSessionMessages();
+            const messages = this._deduplicateMessages(rawMessages || []);
             if (messages && messages.length > 0) {
-                const sessionTitle = this.generateSessionTitle(messages);
-                await this.db.archiveSession({
-                    title: sessionTitle,
-                    messages: messages,
-                    date: Date.now(),
-                    preview: messages[messages.length - 1]?.text,
-                    messageCount: messages.length
-                });
-                console.log('Linen: Auto-archived previous chat before new chat');
+                // Don't re-archive if this exact conversation was just archived recently
+                const allMems = await this.db.getAllMemories();
+                const recentArchive = allMems.find(m =>
+                    m.messages && m.messages.length === messages.length &&
+                    m.messages[0]?.text === messages[0]?.text &&
+                    Date.now() - m.date < 60000 // within last minute
+                );
+                if (!recentArchive) {
+                    const sessionTitle = this.generateSessionTitle(messages);
+                    await this.db.archiveSession({
+                        title: sessionTitle,
+                        messages: messages,
+                        date: Date.now(),
+                        preview: messages[messages.length - 1]?.text,
+                        messageCount: messages.length
+                    });
+                    console.log('Linen: Auto-archived previous chat before new chat');
+                } else {
+                    console.log('Linen: Skipping duplicate archive — same session already archived recently');
+                }
             }
         } catch (e) {
             console.warn('Linen: Could not auto-archive chat:', e);
@@ -8087,7 +8102,7 @@ class Linen {
                 const id = parseInt(e.target.dataset.id);
                 const allMems = await this.db.getAllMemories();
                 const mem = allMems.find(m => m.id === id);
-                if (mem) this.showEditMemoryModal(mem);
+                if (mem) this.showEditMemoryPanel(mem);
             });
         });
 
