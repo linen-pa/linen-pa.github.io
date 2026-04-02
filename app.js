@@ -1517,10 +1517,13 @@ Be intelligent about response length. Someone saying "I'm anxious about my prese
 
     buildMemoryContext(mems) {
         if (!mems || mems.length === 0) return 'No memories yet.';
+        // Exclude memories the user marked as private
+        const visible = mems.filter(m => m.privacy !== true);
+        if (visible.length === 0) return 'No memories yet.';
         let c = 'Relevant memories for context:\n';
-        mems.slice(0, 25).forEach(m => {
+        visible.slice(0, 25).forEach(m => {
             const d = new Date(m.date).toLocaleDateString();
-            c += `- ${d}: ${m.text}${m.emotion ? ` (felt ${m.emotion})` : ''}${m.tags?.length ? ` [${m.tags.join(',')}]` : ''}\n`;
+            c += `- ${d}: ${m.text}${m.emotion ? ` (felt ${m.emotion})` : ''}${m.tags?.length ? ` [${m.tags.join(',')}]` : ''}${m.instructions ? ` | Note: ${m.instructions}` : ''}\n`;
         });
         return c;
     }
@@ -1855,10 +1858,13 @@ Be intelligent about response length. Someone saying "I'm anxious about my prese
 
     buildMemoryContext(mems) {
         if (!mems || mems.length === 0) return 'No memories yet.';
+        // Exclude memories the user marked as private
+        const visible = mems.filter(m => m.privacy !== true);
+        if (visible.length === 0) return 'No memories yet.';
         let c = 'Relevant memories for context:\n';
-        mems.slice(0, 25).forEach(m => {
+        visible.slice(0, 25).forEach(m => {
             const d = new Date(m.date).toLocaleDateString();
-            c += `- ${d}: ${m.text}${m.emotion ? ` (felt ${m.emotion})` : ''}${m.tags?.length ? ` [${m.tags.join(',')}]` : ''}\n`;
+            c += `- ${d}: ${m.text}${m.emotion ? ` (felt ${m.emotion})` : ''}${m.tags?.length ? ` [${m.tags.join(',')}]` : ''}${m.instructions ? ` | Note: ${m.instructions}` : ''}\n`;
         });
         return c;
     }
@@ -4023,6 +4029,15 @@ class Linen {
         } catch (err) {
             console.error("Linen: Error in bindEvents():", err);
         }
+        // Respect the user's intended view state across hard refreshes
+        const viewState = sessionStorage.getItem('linen-view-state');
+        if (viewState === 'new') {
+            // User started a new chat — don't let Firebase restore overwrite it
+            await this.db.clearCurrentSession();
+            sessionStorage.removeItem('linen-view-state');
+            console.log('Linen: Respecting new-chat state across refresh');
+        }
+
         console.log("Linen: Loading chat history");
         try {
             await this.loadChatHistory();
@@ -4839,6 +4854,8 @@ class Linen {
         const text = memory.text || '';
         const tags = (memory.tags || []).join(', ');
         const emotion = memory.emotion || '';
+        const instructions = memory.instructions || '';
+        const isPrivate = memory.privacy === true;
 
         modal.innerHTML = `
             <div class="memory-modal-content">
@@ -4850,16 +4867,26 @@ class Linen {
                         <input type="text" id="edit-memory-title" value="${this.escapeHtml(title)}" placeholder="Memory title">
                     </div>
                     <div class="form-group">
-                        <label for="edit-memory-text">Text</label>
-                        <textarea id="edit-memory-text" placeholder="Memory text">${this.escapeHtml(text)}</textarea>
+                        <label for="edit-memory-text">Summary</label>
+                        <textarea id="edit-memory-text" placeholder="What happened in this conversation">${this.escapeHtml(text)}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-memory-instructions">Instructions for Linen</label>
+                        <textarea id="edit-memory-instructions" placeholder="e.g. Bring this up when I seem stressed about work">${this.escapeHtml(instructions)}</textarea>
                     </div>
                     <div class="form-group">
                         <label for="edit-memory-tags">Tags (comma-separated)</label>
-                        <input type="text" id="edit-memory-tags" value="${this.escapeHtml(tags)}" placeholder="e.g. work, project, learning">
+                        <input type="text" id="edit-memory-tags" value="${this.escapeHtml(tags)}" placeholder="e.g. work, anxiety, family">
                     </div>
                     <div class="form-group">
                         <label for="edit-memory-emotion">Emotion</label>
-                        <input type="text" id="edit-memory-emotion" value="${this.escapeHtml(emotion)}" placeholder="e.g. happy, stressed, excited">
+                        <input type="text" id="edit-memory-emotion" value="${this.escapeHtml(emotion)}" placeholder="e.g. anxious, hopeful, overwhelmed">
+                    </div>
+                    <div class="form-group form-group-checkbox">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="edit-memory-privacy" ${isPrivate ? 'checked' : ''}>
+                            <span>Private — keep this memory out of AI context</span>
+                        </label>
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -4884,11 +4911,13 @@ class Linen {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const updatedMemory = {
-                id: memory.id,
+                ...memory, // preserve all existing fields (messages, preview, etc.)
                 title: document.getElementById('edit-memory-title').value.trim(),
                 text: document.getElementById('edit-memory-text').value.trim(),
+                instructions: document.getElementById('edit-memory-instructions').value.trim(),
                 tags: document.getElementById('edit-memory-tags').value.split(',').map(t => t.trim()).filter(t => t),
                 emotion: document.getElementById('edit-memory-emotion').value.trim(),
+                privacy: document.getElementById('edit-memory-privacy').checked,
                 date: memory.date
             };
 
@@ -7873,6 +7902,9 @@ class Linen {
             this.assistant.clearSession();
         }
 
+        // Mark that the user intentionally started a new chat so hard refresh stays here
+        sessionStorage.setItem('linen-view-state', 'new');
+
         this.showToast('New chat started!', 'success');
 
         // Start with greeting
@@ -8023,35 +8055,45 @@ class Linen {
         filtered.forEach(mem => {
             const card = document.createElement('div');
             card.className = 'memory-card';
-            // Click directly restores the conversation — no modal preview step
+            // Click opens a read-only preview — user chooses to continue from there
             card.addEventListener('click', () => {
-                document.getElementById('memories-panel').classList.remove('active');
-                document.getElementById('modal-backdrop').classList.remove('active');
-                this.restoreConversation(mem);
+                this.showMemoryModal(mem);
             });
 
             const title = mem.title || 'Conversation';
             const preview = mem.preview || 'No preview available';
             const date = new Date(mem.date).toLocaleDateString();
             const msgCount = mem.messageCount || mem.messages?.length || 0;
+            const isPrivate = mem.privacy === true;
 
             card.innerHTML = `
-                <h3 class="memory-card-title">${title}</h3>
+                <h3 class="memory-card-title">${title}${isPrivate ? ' <span class="memory-private-badge" title="Private">🔒</span>' : ''}</h3>
                 <p class="memory-card-preview">${preview}</p>
                 <p class="memory-meta">
                     <span class="date">${date}</span>
                     ${msgCount ? `<span class="msg-count">${msgCount} messages</span>` : ''}
                 </p>
                 <div class="memory-card-actions">
-                    <button class="delete-memory" data-id="${mem.id}" aria-label="Delete Conversation">Delete</button>
+                    <button class="edit-memory" data-id="${mem.id}" aria-label="Edit Memory">Edit</button>
+                    <button class="delete-memory" data-id="${mem.id}" aria-label="Delete Memory">Delete</button>
                 </div>
             `;
             memoriesList.appendChild(card);
         });
 
+        memoriesList.querySelectorAll('.edit-memory').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = parseInt(e.target.dataset.id);
+                const allMems = await this.db.getAllMemories();
+                const mem = allMems.find(m => m.id === id);
+                if (mem) this.showEditMemoryModal(mem);
+            });
+        });
+
         memoriesList.querySelectorAll('.delete-memory').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                e.stopPropagation(); // Prevent card click event
+                e.stopPropagation();
                 const confirmed = await this.showConfirmation('Delete Memory', 'Are you sure you want to delete this memory?');
                 if (confirmed) {
                     await this.db.deleteMemory(parseInt(e.target.dataset.id));
