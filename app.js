@@ -1057,7 +1057,7 @@ class AgentManager {
 class ModelVersionManager {
     constructor() {
         this.modelVersions = {
-            'gemini': { primary: 'gemini-2.5-flash', fallback: 'gemini-2.0-flash-lite', lastUpdated: Date.now() },
+            'gemini': { primary: 'gemini-2.0-flash', fallback: 'gemini-1.5-flash', lastUpdated: Date.now() },
             'openai': { primary: 'gpt-4-turbo', fallback: 'gpt-3.5-turbo', lastUpdated: Date.now() },
             'huggingface': { primary: 'meta-llama/Llama-2-7b-chat-hf', fallback: 'meta-llama/Llama-2-7b-chat-hf', lastUpdated: Date.now() }
         };
@@ -1134,10 +1134,10 @@ const _callGeminiViaBackend = async (requestBodyOrMessages, model) => {
         let body;
         if (requestBodyOrMessages.contents !== undefined) {
             // Full request body with systemInstruction
-            body = JSON.stringify({ ...requestBodyOrMessages, model: model || 'gemini-2.5-flash' });
+            body = JSON.stringify({ ...requestBodyOrMessages, model: model || 'gemini-2.0-flash' });
         } else {
             // Just messages array (legacy)
-            body = JSON.stringify({ contents: requestBodyOrMessages, model: model || 'gemini-2.5-flash' });
+            body = JSON.stringify({ contents: requestBodyOrMessages, model: model || 'gemini-2.0-flash' });
         }
 
         const response = await fetch(functionUrl, {
@@ -1190,8 +1190,8 @@ class GeminiAssistant {
     constructor(apiKey) {
         // Note: apiKey is no longer used - backend Cloud Function handles it securely
         this.apiKey = apiKey;
-        this.model = 'gemini-2.5-flash';
-        this.fallbackModel = 'gemini-2.0-flash-lite';
+        this.model = 'gemini-2.0-flash';
+        this.fallbackModel = 'gemini-1.5-flash';
         this.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models';
         this._sessionHash = 'Q29wZEVXT2hE'; // request dedup hash
     }
@@ -1469,9 +1469,13 @@ Be intelligent about response length. Someone saying "I'm anxious about my prese
                 if (!reply) throw new Error('No response from assistant');
                 return reply;
             } catch (e) {
-                // If it's a rate limit and we have more models to try, continue
-                if (e.message && (e.message.includes('429') || e.message.includes('quota'))) {
-                    console.warn(`Model ${model} rate limited, trying next...`);
+                const isRetryable = e.message && (
+                    e.message.includes('429') ||
+                    e.message.includes('quota') ||
+                    e.message.includes('No response from assistant')
+                );
+                if (isRetryable && modelsToTry.indexOf(model) < modelsToTry.length - 1) {
+                    console.warn(`Model ${model} failed (${e.message}), trying fallback...`);
                     continue;
                 }
                 document.getElementById(loadingId)?.remove();
@@ -8809,7 +8813,7 @@ class Linen {
                     { text: userMessage },
                     { inlineData: { mimeType, data: base64Image } }
                 ]
-            }], 'gemini-2.5-flash');
+            }], 'gemini-2.0-flash');
 
             const reply = result.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not analyze image';
 
