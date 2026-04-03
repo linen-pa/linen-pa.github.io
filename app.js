@@ -4316,31 +4316,41 @@ class Linen {
             }, 300); // Wait for keyboard animation to complete
         });
 
-        // Stick input area to the top of the keyboard on iOS using visualViewport API.
-        // Resize #app-container to the visible area, then scroll messages to bottom
-        // so the latest message is always visible above the input bar.
+        // iOS keyboard fix using visualViewport API.
+        // Use height (not bottom) so the container shrinks from the bottom only,
+        // keeping the header pinned at top and input sitting above the keyboard.
         if (window.visualViewport) {
             const appContainer = document.getElementById('app-container');
-            let lastKeyboardHeight = 0;
+            let lastHeight = 0;
 
             const onViewportChange = () => {
                 if (!appContainer) return;
                 const vv = window.visualViewport;
-                const keyboardHeight = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
 
-                // Resize container to fit the visible area above the keyboard
-                appContainer.style.bottom = keyboardHeight + 'px';
+                // Set container height to exactly the visible area
+                // top: 0 is fixed so this shrinks from the bottom — header stays put
+                if (vv.height !== lastHeight) {
+                    lastHeight = vv.height;
+                    appContainer.style.height = vv.height + 'px';
 
-                // Scroll messages to bottom whenever keyboard height changes
-                if (keyboardHeight !== lastKeyboardHeight) {
-                    lastKeyboardHeight = keyboardHeight;
+                    // Scroll messages to show latest after resize
                     requestAnimationFrame(() => {
                         chatMessages.scrollTop = chatMessages.scrollHeight;
                     });
                 }
             };
+
             window.visualViewport.addEventListener('resize', onViewportChange);
-            window.visualViewport.addEventListener('scroll', onViewportChange);
+
+            // Reset when keyboard fully dismissed
+            window.addEventListener('focusout', () => {
+                setTimeout(() => {
+                    if (document.activeElement !== chatInput) {
+                        appContainer.style.height = '';
+                        lastHeight = 0;
+                    }
+                }, 100);
+            });
         }
 
         // Flag to prevent auto-scroll while user is actively scrolling
