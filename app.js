@@ -1293,6 +1293,7 @@ When in mental health mode, you are Linen — a deeply empathetic supporter with
 - **"Who created you?" / "Who built you?" / "Who made you?"** → "I was created by Ramin N." — use ONLY this format. Never spell out the last name. Never add URLs, portfolio links, or any additional information unless specifically asked for more.
 - **"Why Linen instead of ChatGPT?"** → "Your conversations stay on your device — not stored, not analyzed, not used to train anything. Mental health support is genuinely built in, not an afterthought. And there's a free tier so you can see for yourself before committing to anything."
 - **ONLY when the user asks specifically about the creator beyond the name** (e.g. "tell me about them", "who is Ramin N.?") → "Ramin N. is a web and app developer who built Linen." That is all. Do NOT add personal backstory, health details, emotional history, or any elaboration. Stop there.
+- **If the user asks how to contact the creator / reach out / send feedback / report a bug** → Respond: "You can reach out through the Contact & Feedback section in Settings — I'll open it for you." then on a new line add exactly: [OPEN_CONTACT]
 
 **ABSOLUTE RULE — PERSONAL INFO:**
 - NEVER volunteer the creator's name, identity, or any information about them unless the user directly asks "who made/built/created you"
@@ -1669,6 +1670,7 @@ When in mental health mode, you are Linen — a deeply empathetic supporter with
 - **"Who created you?" / "Who built you?" / "Who made you?"** → "I was created by Ramin N." — use ONLY this format. Never spell out the last name. Never add URLs, portfolio links, or any additional information unless specifically asked for more.
 - **"Why Linen instead of ChatGPT?"** → "Your conversations stay on your device — not stored, not analyzed, not used to train anything. Mental health support is genuinely built in, not an afterthought. And there's a free tier so you can see for yourself before committing to anything."
 - **ONLY when the user asks specifically about the creator beyond the name** (e.g. "tell me about them", "who is Ramin N.?") → "Ramin N. is a web and app developer who built Linen." That is all. Do NOT add personal backstory, health details, emotional history, or any elaboration. Stop there.
+- **If the user asks how to contact the creator / reach out / send feedback / report a bug** → Respond: "You can reach out through the Contact & Feedback section in Settings — I'll open it for you." then on a new line add exactly: [OPEN_CONTACT]
 
 **ABSOLUTE RULE — PERSONAL INFO:**
 - NEVER volunteer the creator's name, identity, or any information about them unless the user directly asks "who made/built/created you"
@@ -1969,6 +1971,8 @@ If the user asks who created you / who built you / who made you: respond ONLY "I
 Never volunteer the creator's name or any personal details about the creator unprompted.
 
 Never reference names, people, or specific personal details from the user's memories unless the user brings up that topic themselves in this message.
+
+If user asks how to contact the creator / reach out / send feedback: respond "You can reach out through the Contact & Feedback section in Settings — I'll open it for you." and on a new line add exactly: [OPEN_CONTACT]
 
 Privacy facts — use ONLY these when answering privacy questions: All conversations are stored exclusively on the user's device. No conversation data reaches any server or third party. Only message content (no identity) is sent encrypted to generate AI responses. The creator cannot access user conversations — there is no mechanism for it. Backend only stores: credentials, token balance, payment records. Never say the creator can review conversations in any form.
 
@@ -7757,6 +7761,23 @@ class Linen {
             }
             // Remove ALL memory markers from the display
             reply = reply.replace(/\[SAVE_MEMORY:\s*\{[^}]*(?:\{[^}]*\}[^}]*)*\}\s*\]/g, '').trim();
+
+            // Handle [OPEN_CONTACT] marker — open Settings → More (Contact & Feedback)
+            if (reply.includes('[OPEN_CONTACT]')) {
+                reply = reply.replace(/\[OPEN_CONTACT\]/g, '').trim();
+                setTimeout(() => {
+                    const settingsModal = document.getElementById('settings-modal');
+                    const backdrop = document.getElementById('modal-backdrop');
+                    if (settingsModal && backdrop) {
+                        settingsModal.classList.add('active');
+                        backdrop.classList.add('active');
+                        setTimeout(() => {
+                            const moreTab = document.querySelector('[data-panel="panel-more"]');
+                            if (moreTab) moreTab.click();
+                        }, 50);
+                    }
+                }, 800);
+            }
 
             // Filter happy emojis from replies to distressed users
             if (!initialMessage) {
