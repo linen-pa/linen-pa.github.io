@@ -4317,16 +4317,19 @@ class Linen {
         });
 
         // iOS keyboard: shrink container so input sits above keyboard.
+        // Listens to both resize and scroll — iOS can fire either when keyboard opens.
         if (window.visualViewport) {
             const appContainer = document.getElementById('app-container');
-            window.visualViewport.addEventListener('resize', () => {
+            const handleViewportChange = () => {
                 const vv = window.visualViewport;
                 const keyboardHeight = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
                 appContainer.style.bottom = keyboardHeight + 'px';
                 requestAnimationFrame(() => {
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                 });
-            });
+            };
+            window.visualViewport.addEventListener('resize', handleViewportChange);
+            window.visualViewport.addEventListener('scroll', handleViewportChange);
         }
 
         // Flag to prevent auto-scroll while user is actively scrolling
@@ -9191,24 +9194,6 @@ class Linen {
 
 window.addEventListener('DOMContentLoaded', () => {
     try {
-        // Mobile keyboard viewport fix — resize container when keyboard opens/closes
-        if (window.visualViewport) {
-            const appContainer = document.getElementById('app-container');
-
-            const adjustForKeyboard = () => {
-                if (!appContainer) return;
-                const vv = window.visualViewport;
-                // Set bottom to account for keyboard height, offset for any scroll
-                appContainer.style.bottom = (window.innerHeight - vv.height - vv.offsetTop) + 'px';
-                // Scroll chat to bottom when keyboard opens
-                const chatMessages = document.getElementById('chat-messages');
-                if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
-            };
-
-            window.visualViewport.addEventListener('resize', adjustForKeyboard);
-            window.visualViewport.addEventListener('scroll', adjustForKeyboard);
-        }
-
         // Keyboard navigation detection — add golden focus outlines only when using Tab
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Tab') {
