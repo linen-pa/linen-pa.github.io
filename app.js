@@ -4317,29 +4317,26 @@ class Linen {
         });
 
         // Stick input area to the top of the keyboard on iOS using visualViewport API.
-        // KEY: only translate the input bar — never resize #app-container.
-        // Resizing the container shrinks the message area and pushes content off screen.
+        // Resize #app-container to the visible area, then scroll messages to bottom
+        // so the latest message is always visible above the input bar.
         if (window.visualViewport) {
+            const appContainer = document.getElementById('app-container');
+            let lastKeyboardHeight = 0;
+
             const onViewportChange = () => {
+                if (!appContainer) return;
                 const vv = window.visualViewport;
                 const keyboardHeight = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
 
-                // Slide input bar up exactly as far as the keyboard is tall
-                chatInputArea.style.transform = keyboardHeight > 0
-                    ? `translateY(-${keyboardHeight}px)`
-                    : '';
+                // Resize container to fit the visible area above the keyboard
+                appContainer.style.bottom = keyboardHeight + 'px';
 
-                // Pad the bottom of the message list so the last message
-                // stays visible above the keyboard + input bar
-                chatMessages.style.paddingBottom = keyboardHeight > 0
-                    ? `${keyboardHeight + chatInputArea.offsetHeight}px`
-                    : '';
-
-                // Keep latest message in view
-                if (keyboardHeight > 0) {
-                    setTimeout(() => {
+                // Scroll messages to bottom whenever keyboard height changes
+                if (keyboardHeight !== lastKeyboardHeight) {
+                    lastKeyboardHeight = keyboardHeight;
+                    requestAnimationFrame(() => {
                         chatMessages.scrollTop = chatMessages.scrollHeight;
-                    }, 50);
+                    });
                 }
             };
             window.visualViewport.addEventListener('resize', onViewportChange);

@@ -1810,11 +1810,6 @@ hr {
     flex-basis: auto;
     margin: 0;
     margin-bottom: 0;
-    /* iOS keyboard: transform moves it above keyboard without touching layout */
-    will-change: transform;
-    transition: transform 0.05s linear;
-    position: relative;
-    z-index: 10;
 }
 
 @media (max-width: 768px) {
