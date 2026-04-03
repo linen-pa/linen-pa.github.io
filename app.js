@@ -4317,16 +4317,30 @@ class Linen {
         });
 
         // Stick input area to the top of the keyboard on iOS using visualViewport API.
-        // On iOS, position:fixed elements stay anchored to the layout viewport bottom,
-        // so the keyboard covers them. visualViewport tells us the visible area.
+        // KEY: only translate the input bar — never resize #app-container.
+        // Resizing the container shrinks the message area and pushes content off screen.
         if (window.visualViewport) {
-            const appContainer = document.getElementById('app-container');
             const onViewportChange = () => {
-                if (!appContainer) return;
                 const vv = window.visualViewport;
-                // Keyboard height = window height minus visible viewport height and its top offset
                 const keyboardHeight = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
-                appContainer.style.bottom = keyboardHeight + 'px';
+
+                // Slide input bar up exactly as far as the keyboard is tall
+                chatInputArea.style.transform = keyboardHeight > 0
+                    ? `translateY(-${keyboardHeight}px)`
+                    : '';
+
+                // Pad the bottom of the message list so the last message
+                // stays visible above the keyboard + input bar
+                chatMessages.style.paddingBottom = keyboardHeight > 0
+                    ? `${keyboardHeight + chatInputArea.offsetHeight}px`
+                    : '';
+
+                // Keep latest message in view
+                if (keyboardHeight > 0) {
+                    setTimeout(() => {
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }, 50);
+                }
             };
             window.visualViewport.addEventListener('resize', onViewportChange);
             window.visualViewport.addEventListener('scroll', onViewportChange);
