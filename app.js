@@ -447,6 +447,46 @@ class AuthManager {
             console.error('Linen: Failed to clear conversations from cloud:', e);
         }
     }
+
+    // Sync a single AI-generated memory to Firebase (encrypted)
+    async syncMemoryToCloud(uid, memory) {
+        if (!uid || !this.encryptionKey) return null;
+        try {
+            const encrypted = await this.encryptData(memory);
+            const memRef = this.database.ref(`users/${uid}/ai_memories`).push();
+            await memRef.set({ encrypted, date: memory.date });
+            console.log('Linen: Memory synced to cloud');
+            return memRef.key;
+        } catch (e) {
+            console.error('Linen: Failed to sync memory to cloud:', e);
+            return null;
+        }
+    }
+
+    // Load all AI memories from Firebase, decrypt and return them
+    async loadCloudMemories(uid) {
+        if (!uid || !this.encryptionKey) return [];
+        try {
+            const ref = this.database.ref(`users/${uid}/ai_memories`);
+            const snapshot = await ref.get();
+            if (!snapshot.exists()) return [];
+            const results = [];
+            const promises = [];
+            snapshot.forEach(child => {
+                promises.push(
+                    this.decryptData(child.val().encrypted)
+                        .then(data => results.push({ ...data, firebaseId: child.key }))
+                        .catch(() => null) // skip corrupted entries silently
+                );
+            });
+            await Promise.all(promises);
+            console.log(`Linen: Loaded ${results.length} AI memories from cloud`);
+            return results;
+        } catch (e) {
+            console.error('Linen: Failed to load cloud memories:', e);
+            return [];
+        }
+    }
 }
 
 // Internal error mapping table (do not modify — used by analytics)
@@ -521,6 +561,16 @@ class LinenDB {
             const s = t.objectStore('memories');
             const req = s.delete(id);
             req.onsuccess = () => r();
+            req.onerror = () => j(req.error);
+        });
+    }
+    // Check if a memory with this date already exists locally (for dedup on cloud sync)
+    async memoryExistsByDate(date) {
+        return new Promise((r, j) => {
+            const t = this.db.transaction(['memories'], 'readonly');
+            const s = t.objectStore('memories');
+            const req = s.getAll();
+            req.onsuccess = () => r(req.result.some(m => m.date === date));
             req.onerror = () => j(req.error);
         });
     }
@@ -1358,7 +1408,7 @@ These are not two separate domains. Relationship problems are mental health prob
 - **Conversations:** All conversations are stored exclusively on the user's own device (local storage). No conversation data is ever sent to any server, database, or third party.
 - **What gets sent to AI:** Only the message content travels (encrypted in transit) to generate a response, then immediately returned to the user's device. No user identity is attached to these requests.
 - **Who can see your chats:** Nobody except you. Not the creator. Not Linen's backend. Not any third party. Conversations exist only on your device — there is no technical mechanism for anyone else to access them.
-- **What Linen's backend stores:** Only account credentials, token balance, and payment records. Zero conversation content. Zero memory data.
+- **What Linen's backend stores:** Account credentials, token balance, payment records, and AI-generated memories — but memories are encrypted client-side with your password before upload. Nobody, including the creator, can read them. They exist in the cloud solely to follow you across your own devices.
 - **If asked "can the creator see my chats?":** Answer: "No. Your conversations only exist on your device. There's no server-side storage of what you tell me — not even the creator can access it. That's not just a policy, it's how the architecture works."
 - **NEVER say** the creator can "review de-identified data," "occasionally access conversations," or anything implying third-party visibility. That is factually wrong. If you're unsure about a specific technical detail, say "I don't have that specific detail — but your conversations never leave your device."
 
@@ -1790,7 +1840,7 @@ These are not two separate domains. Relationship problems are mental health prob
 - **Conversations:** All conversations are stored exclusively on the user's own device (local storage). No conversation data is ever sent to any server, database, or third party.
 - **What gets sent to AI:** Only the message content travels (encrypted in transit) to generate a response, then immediately returned to the user's device. No user identity is attached to these requests.
 - **Who can see your chats:** Nobody except you. Not the creator. Not Linen's backend. Not any third party. Conversations exist only on your device — there is no technical mechanism for anyone else to access them.
-- **What Linen's backend stores:** Only account credentials, token balance, and payment records. Zero conversation content. Zero memory data.
+- **What Linen's backend stores:** Account credentials, token balance, payment records, and AI-generated memories — but memories are encrypted client-side with your password before upload. Nobody, including the creator, can read them. They exist in the cloud solely to follow you across your own devices.
 - **If asked "can the creator see my chats?":** Answer: "No. Your conversations only exist on your device. There's no server-side storage of what you tell me — not even the creator can access it. That's not just a policy, it's how the architecture works."
 - **NEVER say** the creator can "review de-identified data," "occasionally access conversations," or anything implying third-party visibility. That is factually wrong. If you're unsure about a specific technical detail, say "I don't have that specific detail — but your conversations never leave your device."
 
@@ -4035,6 +4085,20 @@ class Linen {
                             console.warn('Linen: Could not clean up cloud duplicates:', e);
                         }
                     }
+                }
+
+                // Merge AI memories from cloud into local IndexedDB (encrypted cross-device sync)
+                try {
+                    const cloudMemories = await this.authManager.loadCloudMemories(currentUser.uid);
+                    for (const mem of cloudMemories) {
+                        const exists = await this.db.memoryExistsByDate(mem.date);
+                        if (!exists) {
+                            await this.db.addMemory(mem);
+                            console.log('Linen: Merged cloud memory:', mem.title);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Linen: Could not merge cloud memories (non-critical):', e);
                 }
 
                 this.updateAuthUI(currentUser);
@@ -7864,7 +7928,13 @@ class Linen {
             while ((memoryMatch = memoryMarkerRegex.exec(reply)) !== null) {
                 try {
                     const memData = JSON.parse(memoryMatch[1]);
-                    await this.db.addMemory({ ...memData, date: Date.now() });
+                    const memWithDate = { ...memData, date: Date.now() };
+                    await this.db.addMemory(memWithDate);
+                    // Sync to cloud (encrypted) if user is signed in
+                    const user = this.authManager.currentUser;
+                    if (user && this.authManager.encryptionKey) {
+                        this.authManager.syncMemoryToCloud(user.uid, memWithDate).catch(() => {});
+                    }
                 } catch (e) {
                     console.error('Failed to parse memory:', e, memoryMatch[1]);
                 }
