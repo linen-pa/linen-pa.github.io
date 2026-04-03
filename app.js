@@ -4316,17 +4316,13 @@ class Linen {
             }, 300); // Wait for keyboard animation to complete
         });
 
-        // iOS keyboard fix: resize #app-container to the visual viewport height.
-        // #app-container is position:fixed top:0, so shrinking height clips from
-        // the bottom only — header stays at top, input sits right above keyboard.
-        // No focusout reset: the resize event fires again when keyboard dismisses,
-        // naturally restoring the full height.
+        // iOS keyboard: shrink container bottom by keyboard height so input
+        // sits flush above the keyboard. offsetTop is scroll position — exclude it.
         if (window.visualViewport) {
             const appContainer = document.getElementById('app-container');
-
             window.visualViewport.addEventListener('resize', () => {
-                const h = Math.round(window.visualViewport.height);
-                appContainer.style.height = h + 'px';
+                const keyboardHeight = Math.max(0, window.innerHeight - window.visualViewport.height);
+                appContainer.style.bottom = keyboardHeight + 'px';
                 requestAnimationFrame(() => {
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                 });
