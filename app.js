@@ -4316,12 +4316,12 @@ class Linen {
             }, 300); // Wait for keyboard animation to complete
         });
 
-        // iOS keyboard: shrink container bottom by keyboard height so input
-        // sits flush above the keyboard. offsetTop is scroll position — exclude it.
+        // iOS keyboard: shrink container so input sits above keyboard.
         if (window.visualViewport) {
             const appContainer = document.getElementById('app-container');
             window.visualViewport.addEventListener('resize', () => {
-                const keyboardHeight = Math.max(0, window.innerHeight - window.visualViewport.height);
+                const vv = window.visualViewport;
+                const keyboardHeight = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
                 appContainer.style.bottom = keyboardHeight + 'px';
                 requestAnimationFrame(() => {
                     chatMessages.scrollTop = chatMessages.scrollHeight;
