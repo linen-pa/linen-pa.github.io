@@ -500,13 +500,9 @@
                 <span class="settings-tab-icon">⭐</span>
                 <span>Tiers</span>
             </button>
-            <button class="settings-tab" data-panel="panel-data">
-                <span class="settings-tab-icon">🗂️</span>
-                <span>Data</span>
-            </button>
             <button class="settings-tab" data-panel="panel-app">
                 <span class="settings-tab-icon">🔄</span>
-                <span>App</span>
+                <span>App & Data</span>
             </button>
             <button class="settings-tab" data-panel="panel-more">
                 <span class="settings-tab-icon">•••</span>
@@ -624,18 +620,7 @@
                 </div>
             </div>
 
-            <!-- Panel: Data -->
-            <div class="settings-panel" id="panel-data">
-                <h3 class="settings-heading">🗂️ Data Management</h3>
-                <div class="settings-btn-grid" style="margin-top: 16px;">
-                    <button id="export-data" class="settings-btn settings-btn-secondary">Export Memories</button>
-                    <button id="export-learning-pack" class="settings-btn settings-btn-secondary">Export Learning Pack</button>
-                    <button id="clear-chat-history" class="settings-btn settings-btn-danger">Clear Chat History</button>
-                    <button id="clear-data" class="settings-btn settings-btn-danger">Clear All Data</button>
-                </div>
-            </div>
-
-            <!-- Panel: App -->
+            <!-- Panel: App & Data (merged) -->
             <div class="settings-panel" id="panel-app">
                 <h3 class="settings-heading">🔄 Updates</h3>
                 <div class="settings-panel-body">
@@ -662,6 +647,13 @@
                         </div>
                         <p class="coming-soon-note">Feature coming soon</p>
                     </div>
+                </div>
+                <h3 class="settings-heading" style="margin-top: 24px;">🗂️ Data Management</h3>
+                <div class="settings-btn-grid" style="margin-top: 16px;">
+                    <button id="export-data" class="settings-btn settings-btn-secondary">Export Memories</button>
+                    <button id="export-learning-pack" class="settings-btn settings-btn-secondary">Export Learning Pack</button>
+                    <button id="clear-chat-history" class="settings-btn settings-btn-danger">Clear Chat History</button>
+                    <button id="clear-data" class="settings-btn settings-btn-danger">Clear All Data</button>
                 </div>
             </div>
 
