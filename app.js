@@ -4316,40 +4316,20 @@ class Linen {
             }, 300); // Wait for keyboard animation to complete
         });
 
-        // iOS keyboard fix using visualViewport API.
-        // Use height (not bottom) so the container shrinks from the bottom only,
-        // keeping the header pinned at top and input sitting above the keyboard.
+        // iOS keyboard fix: resize #app-container to the visual viewport height.
+        // #app-container is position:fixed top:0, so shrinking height clips from
+        // the bottom only — header stays at top, input sits right above keyboard.
+        // No focusout reset: the resize event fires again when keyboard dismisses,
+        // naturally restoring the full height.
         if (window.visualViewport) {
             const appContainer = document.getElementById('app-container');
-            let lastHeight = 0;
 
-            const onViewportChange = () => {
-                if (!appContainer) return;
-                const vv = window.visualViewport;
-
-                // Set container height to exactly the visible area
-                // top: 0 is fixed so this shrinks from the bottom — header stays put
-                if (vv.height !== lastHeight) {
-                    lastHeight = vv.height;
-                    appContainer.style.height = vv.height + 'px';
-
-                    // Scroll messages to show latest after resize
-                    requestAnimationFrame(() => {
-                        chatMessages.scrollTop = chatMessages.scrollHeight;
-                    });
-                }
-            };
-
-            window.visualViewport.addEventListener('resize', onViewportChange);
-
-            // Reset when keyboard fully dismissed
-            window.addEventListener('focusout', () => {
-                setTimeout(() => {
-                    if (document.activeElement !== chatInput) {
-                        appContainer.style.height = '';
-                        lastHeight = 0;
-                    }
-                }, 100);
+            window.visualViewport.addEventListener('resize', () => {
+                const h = Math.round(window.visualViewport.height);
+                appContainer.style.height = h + 'px';
+                requestAnimationFrame(() => {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                });
             });
         }
 
