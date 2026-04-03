@@ -5,7 +5,7 @@
  * See LICENSE file for details.
  */
 
-const CACHE_NAME = 'linen-v206'; // Increment this on every update
+const CACHE_NAME = 'linen-v207'; // Increment this on every update
 
 // Push notification key managed via Cloud Functions (if/when implemented)
 const BASE_PATH = '';
