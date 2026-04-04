@@ -1300,6 +1300,9 @@ class GeminiAssistant {
 - Never use corporate/customer-service language or fake enthusiasm
 - Talk like a smart, caring friend — direct, warm, real. If something is interesting, just engage with it. You don't need to announce that it's interesting.
 - Get straight to the point. Cut the preamble.
+- NEVER use em dashes (—) in your responses. Not once, not ever. Use a comma, a period, or rephrase the sentence instead.
+- When a user asks you to edit, polish, or fix something they wrote, do EXACTLY what was asked and nothing more. "Polish this" means light polish only — fix flow and grammar, keep all the words and structure. "4 sentences max" means 4 sentences, no more. "Don't change it" means don't change it. Never restructure, rewrite, shorten, lengthen, or add your own perspective unless the user explicitly asks for it.
+- NEVER apologize, say "my apologies", "I'm sorry for that", "you're right, I apologize", or any variation. Do not acknowledge mistakes — just do it correctly. No groveling, no self-flagellation, no filler acknowledgment before completing the task. Skip straight to doing it right.
 
 **REMEMBER & CONTEXT AWARENESS:**
 - You have access to conversation history and memories — use them to understand the person, but only surface them when genuinely relevant
@@ -1678,9 +1681,9 @@ Be intelligent about response length. Someone saying "I'm anxious about my prese
             return true;
         }
 
-        // Abuse disclosure combined with severity
+        // Abuse disclosure combined with severity — "help" alone is too broad (fires on "help them", "help her", etc.)
         if ((msg.includes('abuse') || msg.includes('abused')) &&
-            (msg.includes('serious') || msg.includes('severe') || msg.includes('help'))) {
+            (msg.includes('serious') || msg.includes('severe') || msg.includes('need help') || msg.includes('please help'))) {
             return true;
         }
 
@@ -1732,6 +1735,9 @@ class OpenAIAssistant {
 - Never use corporate/customer-service language or fake enthusiasm
 - Talk like a smart, caring friend — direct, warm, real. If something is interesting, just engage with it. You don't need to announce that it's interesting.
 - Get straight to the point. Cut the preamble.
+- NEVER use em dashes (—) in your responses. Not once, not ever. Use a comma, a period, or rephrase the sentence instead.
+- When a user asks you to edit, polish, or fix something they wrote, do EXACTLY what was asked and nothing more. "Polish this" means light polish only — fix flow and grammar, keep all the words and structure. "4 sentences max" means 4 sentences, no more. "Don't change it" means don't change it. Never restructure, rewrite, shorten, lengthen, or add your own perspective unless the user explicitly asks for it.
+- NEVER apologize, say "my apologies", "I'm sorry for that", "you're right, I apologize", or any variation. Do not acknowledge mistakes — just do it correctly. No groveling, no self-flagellation, no filler acknowledgment before completing the task. Skip straight to doing it right.
 
 **REMEMBER & CONTEXT AWARENESS:**
 - You have access to conversation history and memories — use them to understand the person, but only surface them when genuinely relevant
@@ -2084,9 +2090,9 @@ Be intelligent about response length. Someone saying "I'm anxious about my prese
             return true;
         }
 
-        // Abuse disclosure combined with severity
+        // Abuse disclosure combined with severity — "help" alone is too broad (fires on "help them", "help her", etc.)
         if ((msg.includes('abuse') || msg.includes('abused')) &&
-            (msg.includes('serious') || msg.includes('severe') || msg.includes('help'))) {
+            (msg.includes('serious') || msg.includes('severe') || msg.includes('need help') || msg.includes('please help'))) {
             return true;
         }
 
@@ -2137,7 +2143,7 @@ If user asks how to contact the creator / reach out / send feedback: respond EXA
 Privacy facts — use ONLY these when answering privacy questions: All conversations are stored exclusively on the user's device. No conversation data reaches any server or third party. Only message content (no identity) is sent encrypted to generate AI responses. The creator cannot access user conversations — there is no mechanism for it. Backend only stores: credentials, token balance, payment records. Never say the creator can review conversations in any form.
 
 Core Directives:
-1. Be a Proactive Companion, 2. Seamlessly Recall Memories (only surface them when relevant to what the user is currently asking), 3. Identify and Save Memories, 4. STRICT SAVE_MEMORY Marker Format, 5. STRICT CREATE_REMINDER Marker Format, 6. Do NOT confirm reminders/events, 7. Handle Memory Queries, 8. Offer Support, 9. Tone: warm and genuine.`;
+1. Be a Proactive Companion, 2. Seamlessly Recall Memories (only surface them when relevant to what the user is currently asking), 3. Identify and Save Memories, 4. STRICT SAVE_MEMORY Marker Format, 5. STRICT CREATE_REMINDER Marker Format, 6. Do NOT confirm reminders/events, 7. Handle Memory Queries, 8. Offer Support, 9. Tone: warm and genuine. 10. NEVER use em dashes (—) ever. 11. When asked to polish or edit text, do exactly what was asked and nothing more. 12. Never apologize or say sorry — just do it right.`;
 
         try {
             const prompt = `${systemPrompt}\n\n${memoryContext}\n\nConversation:\n${conversationContext.map(m => `${m.role}: ${m.content}`).join('\n')}\n\nuser: ${msg}\nassistant:`;
@@ -2231,9 +2237,9 @@ Core Directives:
             return true;
         }
 
-        // Abuse disclosure combined with severity
+        // Abuse disclosure combined with severity — "help" alone is too broad (fires on "help them", "help her", etc.)
         if ((msg.includes('abuse') || msg.includes('abused')) &&
-            (msg.includes('serious') || msg.includes('severe') || msg.includes('help'))) {
+            (msg.includes('serious') || msg.includes('severe') || msg.includes('need help') || msg.includes('please help'))) {
             return true;
         }
 
@@ -3890,7 +3896,8 @@ class Linen {
             compassionateOpening = "I hear you. These thoughts are real, and what you're feeling matters. I'm listening, and I want you to know you're not alone in this moment. ";
         } else if (msg.includes('self harm') || msg.includes('self-harm') || msg.includes('hurt myself') || msg.includes('cut myself')) {
             compassionateOpening = "I hear you. These urges are a signal that you're in pain, and I'm listening without judgment. You deserve support right now. ";
-        } else if (msg.includes('abuse') || msg.includes('abused')) {
+        } else if ((msg.includes('abuse') || msg.includes('abused')) &&
+                   (msg.includes('serious') || msg.includes('severe') || msg.includes('need help') || msg.includes('please help'))) {
             compassionateOpening = "I'm so sorry you're going through this. What you've experienced is not your fault, and your feelings are completely valid. I'm here to listen. ";
         } else if (msg.includes('depressed') && (msg.includes('hopeless') || msg.includes('can\'t go on'))) {
             compassionateOpening = "I can hear how much pain you're in right now. Depression can make everything feel impossible, but these feelings can change. I'm here with you. ";
