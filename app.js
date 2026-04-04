@@ -853,6 +853,29 @@ class TokenManager {
         this.updateBadge(this.FREE_TOKENS + (sub.subscriptionActive ? tierLimit : 0));
     }
 
+    async checkAndRefillIfNeeded() {
+        const user = this.authManager?.getCurrentUser();
+        if (!user) return;
+        try {
+            const data = await this.authManager.getTokenData(user.uid);
+            if (this.shouldRefillTokens(data.lastDailyRefill)) {
+                await this.authManager.updateDailyRefill(user.uid, this.FREE_TOKENS);
+                await this.db.setSetting('token-balance', this.FREE_TOKENS);
+                await this.db.setSetting('token-msg-count', 0);
+                const sub = await this.authManager.getSubscriptionData(user.uid);
+                const tierLimit = this.TIER_DAILY_LIMITS[sub.subscriptionTier] || 0;
+                if (sub.subscriptionActive && tierLimit > 0) {
+                    await this.authManager.refillTierTokens(user.uid, tierLimit);
+                    await this.db.setSetting('tier-token-balance', tierLimit);
+                    await this.db.setSetting('tier-msg-count', 0);
+                }
+                this.updateBadge(this.FREE_TOKENS + (sub.subscriptionActive ? tierLimit : 0));
+            }
+        } catch (e) {
+            console.warn('Linen: checkAndRefillIfNeeded failed:', e);
+        }
+    }
+
     async getBalance() {
         const balance = await this.db.getSetting('token-balance');
         return balance ?? 0;
@@ -875,7 +898,23 @@ class TokenManager {
     }
 
     async deductToken() {
-        // Always consume free tokens first
+        // Consume emergency tokens first — protects the user's regular balance during distress.
+        // When emergency tokens are depleted, falls back to normal pools transparently.
+        const emergencyBalance = await this.getEmergencyBalance();
+        if (emergencyBalance > 0) {
+            let emergencyMsgCount = (await this.db.getSetting('emergency-msg-count')) ?? 0;
+            emergencyMsgCount++;
+            if (emergencyMsgCount >= this.MESSAGES_PER_TOKEN) {
+                await this.db.setSetting('emergency-token-balance', emergencyBalance - 1);
+                await this.db.setSetting('emergency-msg-count', 0);
+            } else {
+                await this.db.setSetting('emergency-msg-count', emergencyMsgCount);
+            }
+            // No badge update — user never sees emergency tokens
+            return true;
+        }
+
+        // No emergency tokens — consume free tokens
         const freeBalance = await this.getBalance();
         if (freeBalance > 0) {
             let msgCount = (await this.db.getSetting('token-msg-count')) ?? 0;
@@ -925,7 +964,7 @@ class TokenManager {
             return true;
         }
 
-        // Both pools exhausted
+        // All pools exhausted
         return false;
     }
 
@@ -963,18 +1002,16 @@ class TokenManager {
     }
 
     async addTokens(amount) {
-        // Emergency grants always go into the free pool
-        const balance = await this.getBalance();
-        const newBalance = balance + amount;
-        await this.db.setSetting('token-balance', newBalance);
-        this.updateBadge(newBalance + await this.getTierBalance());
-        const user = this.authManager?.getCurrentUser();
-        if (user) {
-            try {
-                await this.authManager.updateTokenData(user.uid, newBalance, await this.db.getSetting('token-msg-count') ?? 0);
-            } catch (e) { console.warn('Linen: Token sync failed:', e); }
-        }
-        return newBalance;
+        // Emergency grants are stored in a hidden pool — never shown to the user, never synced to Firebase
+        const current = (await this.db.getSetting('emergency-token-balance')) ?? 0;
+        const newEmergency = current + amount;
+        await this.db.setSetting('emergency-token-balance', newEmergency);
+        // Badge is intentionally NOT updated — user never sees emergency tokens
+        return newEmergency;
+    }
+
+    async getEmergencyBalance() {
+        return (await this.db.getSetting('emergency-token-balance')) ?? 0;
     }
 
     updateBadge(balance) {
@@ -7884,9 +7921,14 @@ class Linen {
             return;
         }
 
-        // Token check — check combined free + tier balance
+        // Check if a new day has started and refill is due — catches cases where the app
+        // stayed open past midnight and the setTimeout-based scheduler didn't fire (common on iOS PWA)
+        await this.tokenManager.checkAndRefillIfNeeded();
+
+        // Token check — check combined free + tier balance, then hidden emergency pool
         const totalBalance = await this.tokenManager.getTotalBalance();
-        if (totalBalance <= 0) {
+        const emergencyBalance = await this.tokenManager.getEmergencyBalance();
+        if (totalBalance <= 0 && emergencyBalance <= 0) {
             // If they have an active subscription, they simply hit their daily limit
             const user = this.authManager?.getCurrentUser();
             const sub = user ? await this.authManager.getSubscriptionData(user.uid) : null;
